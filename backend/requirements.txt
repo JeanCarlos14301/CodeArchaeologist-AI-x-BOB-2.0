@@ -1,0 +1,11 @@
+# TODO (H0): fijar versiones.
+fastapi
+uvicorn
+pydantic
+python-docx
+jinja2
+networkx
+radon
+sqlglot
+pytest
+# TODO: python-multipart (subida de ZIP) y python-pptx (PPTX, P1) cuando se necesiten.

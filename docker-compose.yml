@@ -1,0 +1,11 @@
+# Placeholder — J-02 (Jean).
+# Uso previsto: desarrollo local del contenedor único.
+#
+# TODO:
+# services:
+#   app:
+#     build: .
+#     env_file: .env
+#     ports: ["8000:8000"]
+#     volumes:
+#       - ./artifacts:/app/artifacts

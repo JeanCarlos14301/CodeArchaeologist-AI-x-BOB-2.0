@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Datos y salidas
+artifacts/
+*.db
+*.sqlite3
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.idea/
