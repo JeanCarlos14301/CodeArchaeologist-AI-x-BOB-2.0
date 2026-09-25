@@ -1,13 +1,18 @@
-# TODO (H0): fijar versiones.
-fastapi
-uvicorn
-pydantic
+# Runtime del API y pipeline
+fastapi==0.141.1
+uvicorn==0.54.0
+pydantic==2.13.5
+PyYAML==6.0.3
+# Pruebas
+pytest==9.1.1
+pytest-cov==7.1.0
+httpx==0.28.1
+# Módulos de etapas posteriores (sin fijar hasta que se integren al pipeline)
 python-docx
 jinja2
 networkx
 radon
 sqlglot
-pytest
 pydriller
 duckdb
 fastmcp

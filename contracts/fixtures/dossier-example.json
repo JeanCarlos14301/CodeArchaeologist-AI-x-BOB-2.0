@@ -1,0 +1,369 @@
+{
+  "schema_version": "1.0",
+  "execution_mode": "example",
+  "repo_name": "facturaya-v1",
+  "generated_at": "2026-09-25T18:33:57+00:00",
+  "bob_task_id": null,
+  "findings": [
+    {
+      "id": "F-1",
+      "title": "Inyección SQL en búsqueda de facturas — concatenación directa de parámetro HTTP en query",
+      "category": "security",
+      "subcategory": "SQL Injection",
+      "severity": "critical",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 78,
+          "line_end": 79,
+          "snippet": "sql = \"SELECT id, number, issue_date, total FROM invoices WHERE owner_id = \" + str(session[\"user_id\"]) + \" AND number LIKE '%\" + search + \"%' ORDER BY id DESC\""
+        }
+      ],
+      "explanation": "El parámetro `q` obtenido directamente de `request.args` (línea 75) se interpola sin sanitizar en una cadena SQL (línea 78). Cualquier usuario autenticado puede inyectar SQL arbitrario como `' UNION SELECT ...` para leer datos de otros usuarios o tablas del sistema. El resto del módulo usa parámetros ligados `?`, lo que demuestra que el patrón correcto es conocido pero no se aplicó aquí.",
+      "recommendation": "Reemplazar la concatenación por un parámetro ligado: `connection.execute('SELECT ... WHERE owner_id = ? AND number LIKE ? ORDER BY id DESC', (session[\"user_id\"], f'%{search}%'))`. Eliminar la rama `if search` que construye la SQL a mano."
+    },
+    {
+      "id": "F-2",
+      "title": "IDOR en endpoint JSON de factura — ausencia de verificación de propietario",
+      "category": "security",
+      "subcategory": "Broken Access Control",
+      "severity": "high",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 91,
+          "line_end": 107,
+          "snippet": "@app.get(\"/invoices/<int:invoice_id>\")\n    @login_required\n    def invoice_json(invoice_id):\n        invoice = invoice_by_id(get_db(), invoice_id)\n        if invoice is None:\n            abort(404)"
+        }
+      ],
+      "explanation": "La función `invoice_json` recupera la factura solo por `invoice_id` sin comparar `invoice['owner_id']` con `session['user_id']`. Cualquier usuario autenticado puede leer el JSON completo de la factura de otro usuario conociendo su ID. El endpoint HTML en `/invoices/<id>/view` sí hace la comprobación (línea 113), lo que evidencia la inconsistencia.",
+      "recommendation": "Agregar inmediatamente después de obtener la factura: `if invoice is None or invoice['owner_id'] != session['user_id']: abort(404)`, igual que en `invoice_html`."
+    },
+    {
+      "id": "F-3",
+      "title": "Secreto hardcodeado en config.py — SECRET_KEY y PAYMENT_GATEWAY_KEY en texto claro",
+      "category": "security",
+      "subcategory": "Secrets Management",
+      "severity": "high",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "config.py",
+          "line_start": 3,
+          "line_end": 4,
+          "snippet": "SECRET_KEY = \"DEMO_ONLY_NOT_A_REAL_SECRET\"\nPAYMENT_GATEWAY_KEY = \"DEMO_ONLY_NOT_A_REAL_GATEWAY_KEY\""
+        }
+      ],
+      "explanation": "Ambas claves están hardcodeadas en el repositorio. `SECRET_KEY` firma las cookies de sesión Flask; si se despliega con este valor o se filtra a través del historial de Git, cualquier atacante puede forjar sesiones. `PAYMENT_GATEWAY_KEY` expone credenciales de pago. A diferencia de `DATABASE`, estas claves no leen de variables de entorno.",
+      "recommendation": "Leer los valores desde variables de entorno con valor por defecto solo aceptable en desarrollo: `SECRET_KEY = os.environ.get('SECRET_KEY')` y lanzar excepción en arranque si es `None` en entorno productivo. Rotar cualquier valor que haya llegado a un repositorio real."
+    },
+    {
+      "id": "F-4",
+      "title": "Regla de descuento duplicada e inconsistente entre billing.py y reports.py",
+      "category": "business-rule",
+      "subcategory": "Lógica de descuento duplicada",
+      "severity": "high",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "billing.py",
+          "line_start": 6,
+          "line_end": 28,
+          "snippet": "RATE = Decimal(\"0.075\")\nTHRESHOLD = Decimal(\"100.00\")\n...discount = (subtotal * RATE).quantize(CENT, rounding=ROUND_HALF_UP) if subtotal >= THRESHOLD else Decimal(\"0.00\")"
+        },
+        {
+          "path": "reports.py",
+          "line_start": 5,
+          "line_end": 16,
+          "snippet": "RATE = Decimal(\"0.075\")\nTHRESHOLD = Decimal(\"100.00\")\n...return sum(\n        ((Decimal(str(item[\"line_total\"])) * RATE).quantize(CENT, rounding=ROUND_HALF_UP) for item in items),\n        Decimal(\"0.00\"),\n    )"
+        }
+      ],
+      "explanation": "La constante `RATE` y la lógica de umbral (`THRESHOLD`) están copiadas en dos módulos independientes. Además, los algoritmos difieren: `billing.calculate` aplica el descuento sobre el subtotal global (`subtotal * RATE`), mientras que `reports.report_discount` aplica la tasa sobre cada ítem individualmente y suma los resultados. Debido al redondeo por ítem, los totales pueden diferir de los almacenados en la factura, como lo ilustra el caso 0 del seed ('Caso redondeo A/B'). Esto significa que el reporte muestra cifras distintas de las facturadas.",
+      "recommendation": "Extraer la constante y la función de descuento a un módulo compartido (p.ej. `billing.py` o un nuevo `pricing.py`). El reporte debe usar la misma función `calculate` o leer el campo `discount` ya persistido en la tabla `invoices` en lugar de recalcularlo."
+    },
+    {
+      "id": "F-5",
+      "title": "Número de factura generado con condición de carrera — MAX(id) sin bloqueo",
+      "category": "data-integrity",
+      "subcategory": "Race condition en numeración",
+      "severity": "high",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "billing.py",
+          "line_start": 45,
+          "line_end": 46,
+          "snippet": "next_number = connection.execute(\"SELECT coalesce(max(id), 0) + 1 FROM invoices\").fetchone()[0]\nnumber = f\"FY-{next_number:05d}\""
+        }
+      ],
+      "explanation": "El número de factura se calcula con `MAX(id)+1` en una lectura y luego se inserta en una escritura posterior, sin serialización transaccional. En SQLite con WAL o múltiples workers, dos peticiones concurrentes pueden leer el mismo `MAX(id)`, producir el mismo número y fallar por la restricción `UNIQUE` (esquema línea 17), o bien generar facturas duplicadas si la restricción falla. Además, si se eliminan facturas el contador podría retroceder.",
+      "recommendation": "Usar `AUTOINCREMENT` implícito de SQLite o una tabla de secuencia con `INSERT OR REPLACE` dentro de la misma transacción. Alternativamente, leer `cursor.lastrowid` después del `INSERT` y actualizar el número en un segundo `UPDATE` dentro del mismo bloque atómico."
+    },
+    {
+      "id": "F-6",
+      "title": "invoice_count_for_customer no filtra por owner_id — permite contar facturas de otros usuarios",
+      "category": "security",
+      "subcategory": "Information Disclosure",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "billing.py",
+          "line_start": 32,
+          "line_end": 35,
+          "snippet": "def count_customer_invoices(connection, customer_id):\n    return connection.execute(\n        \"SELECT count(*) FROM invoices WHERE customer_id = ?\", (customer_id,)\n    ).fetchone()[0]"
+        }
+      ],
+      "explanation": "La función cuenta todas las facturas de un cliente sin restringir por `owner_id`. Es llamada desde `customer_detail` (app.py línea 67), donde el cliente ya está validado para el usuario en sesión. Sin embargo, la función en sí expone un canal de fuga de información: si se reutiliza en otro contexto, cualquier usuario podría descubrir cuántas facturas tiene un cliente ajeno conociendo su ID.",
+      "recommendation": "Agregar el parámetro `owner_id` a la query: `WHERE customer_id = ? AND owner_id = ?` y propagarlo desde todos los sitios de llamada."
+    },
+    {
+      "id": "F-7",
+      "title": "Contraseñas en seed.py hasheadas con PBKDF2/1000 iteraciones — factor de costo insuficiente",
+      "category": "security",
+      "subcategory": "Weak Password Hashing",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "seed.py",
+          "line_start": 26,
+          "line_end": 29,
+          "snippet": "salt = f\"demo{index:02d}salt\"\ndigest = hashlib.pbkdf2_hmac(\"sha256\", password.encode(), salt.encode(), 1000).hex()\npassword_hash = f\"pbkdf2:sha256:1000${salt}${digest}\""
+        }
+      ],
+      "explanation": "El seed usa solo 1 000 iteraciones de PBKDF2-SHA256 con un salt predecible (`demo01salt`, etc.). Werkzeug recomienda ≥260 000 iteraciones (OWASP 2023). Aunque es un script de semilla de desarrollo, el formato `pbkdf2:sha256:1000$…` es idéntico al producido por `generate_password_hash`, por lo que si estos hashes llegan a producción (como suele ocurrir con DB de demo), son trivialmente crackeables.",
+      "recommendation": "Usar `werkzeug.security.generate_password_hash(password)` en el seed, que aplica el número de iteraciones recomendado automáticamente. Eliminar los salts estáticos."
+    },
+    {
+      "id": "F-8",
+      "title": "render_template_string con datos sin escapar en invoice_html — potencial XSS almacenado",
+      "category": "security",
+      "subcategory": "Cross-Site Scripting (XSS)",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 116,
+          "line_end": 123,
+          "snippet": "return render_template_string(\"\"\"<!doctype html>...\n        <h1>{{ i['number'] }}</h1><p>Cliente: {{ i['customer_name'] }}</p>\n        ...{% for item in items %}<tr><td>{{ item['description'] }}</td>...\"\"\", i=invoice, items=items)"
+        }
+      ],
+      "explanation": "Las variables `i['number']`, `i['customer_name']` e `item['description']` se renderizan con la sintaxis `{{ }}` de Jinja2, que escapa HTML por defecto. Sin embargo, los datos provienen de SQLite sin ningún saneamiento previo al almacenamiento; si en algún momento se inserta HTML malicioso en la BD (p.ej. vía un seed o acceso directo), se servirá escapado pero el contexto de `render_template_string` con autoescaping podría no estar activo si la app configura `autoescape=False`. Adicionalmente, `invoice_new` en líneas 273-274 inserta valores directamente en la cadena HTML sin `escape()`: `\"<td>\" + item[\"unit_price\"] + \"</td>\"`.",
+      "recommendation": "Verificar que `autoescape=True` esté activo (es el default para `.html` templates pero no garantizado con `render_template_string`). En `invoice_new`, envolver `item['unit_price']` y `item['line_total']` con `escape()` al igual que ya se hace con `item['description']` en la línea 271."
+    },
+    {
+      "id": "F-9",
+      "title": "Sin protección CSRF en formularios POST — sesión vulnerable a ataques cross-site",
+      "category": "security",
+      "subcategory": "CSRF",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 47,
+          "line_end": 50,
+          "snippet": "@app.post(\"/logout\")\n    def logout():\n        session.clear()\n        return redirect(url_for(\"login\"))"
+        },
+        {
+          "path": "app.py",
+          "line_start": 125,
+          "line_end": 127,
+          "snippet": "@app.route(\"/invoices/new\", methods=[\"GET\", \"POST\"])\n    @login_required\n    def invoice_new():"
+        }
+      ],
+      "explanation": "Ningún formulario POST (logout, nueva factura) incluye token CSRF. Flask no activa protección CSRF por defecto. Un atacante puede inducir a un usuario autenticado a visitar una página externa que envíe un POST a `/logout` o `/invoices/new`, cerrando su sesión o creando facturas falsas en su nombre.",
+      "recommendation": "Integrar Flask-WTF o implementar manualmente tokens CSRF: generar un token aleatorio en sesión, incluirlo como campo oculto en cada formulario, y verificarlo en cada handler POST."
+    },
+    {
+      "id": "F-10",
+      "title": "Función invoice_new supera 140 líneas — complejidad ciclomática excesiva",
+      "category": "maintainability",
+      "subcategory": "Función demasiado grande",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 125,
+          "line_end": 281,
+          "snippet": "@app.route(\"/invoices/new\", methods=[\"GET\", \"POST\"])\n    @login_required\n    def invoice_new():"
+        }
+      ],
+      "explanation": "El handler `invoice_new` abarca desde la línea 125 hasta la 281 (157 líneas), mezclando validación de entrada, cálculo, persistencia, construcción de HTML por concatenación de strings y renderizado. Tiene múltiples niveles de anidamiento (bucles dentro de condicionales dentro de bloque POST). Esto dificulta las pruebas unitarias, el mantenimiento y la detección de errores.",
+      "recommendation": "Extraer la validación de ítems a una función pura `validate_items(raw_descriptions, raw_quantities, raw_prices) -> (items, errors)`, mover la construcción del HTML a una plantilla Jinja2 real (archivo `.html`), y dejar el handler solo con la orquestación."
+    },
+    {
+      "id": "F-11",
+      "title": "Acoplamiento circular entre customers.py y billing.py",
+      "category": "architecture",
+      "subcategory": "Dependencia circular",
+      "severity": "low",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "customers.py",
+          "line_start": 22,
+          "line_end": 24,
+          "snippet": "def invoice_count_for_customer(connection, customer_id):\n    from billing import count_customer_invoices\n    return count_customer_invoices(connection, customer_id)"
+        },
+        {
+          "path": "billing.py",
+          "line_start": 3,
+          "line_end": 3,
+          "snippet": "from customers import get_customer"
+        }
+      ],
+      "explanation": "`billing.py` importa `get_customer` de `customers.py` en el nivel de módulo, y `customers.py` importa `count_customer_invoices` de `billing.py` dentro de la función para evitar el error de importación circular. Esta dependencia bidireccional indica que las responsabilidades no están bien separadas y hace que el grafo de módulos sea difícil de razonar.",
+      "recommendation": "Mover `count_customer_invoices` a `db.py` o a un módulo `queries.py` sin dependencias hacia `customers` ni `billing`, rompiendo la circularidad. O bien pasar la conexión directamente desde el handler sin el indirection de `customers.py`."
+    },
+    {
+      "id": "F-12",
+      "title": "Ausencia total de pruebas automatizadas",
+      "category": "testing",
+      "subcategory": "Cobertura de pruebas",
+      "severity": "high",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "requirements.txt",
+          "line_start": 1,
+          "line_end": 2,
+          "snippet": "Flask==3.1.0\nWerkzeug==3.1.3"
+        }
+      ],
+      "explanation": "No existe ningún archivo de pruebas en el repositorio (no hay `test_*.py`, `*_test.py`, ni directorio `tests/`). `requirements.txt` no lista `pytest`, `unittest` ni ninguna librería de testing. La función `create_app(test_config)` sugiere que se planificaron pruebas pero nunca se escribieron. Los hallazgos F-1, F-2 y F-4 podrían haberse detectado con pruebas de integración básicas.",
+      "recommendation": "Crear un directorio `tests/` con al menos: prueba de autenticación, prueba de aislamiento entre usuarios (IDOR), prueba de la lógica de descuento y prueba del endpoint de búsqueda. Agregar `pytest` y `pytest-flask` a `requirements.txt` (o a un `requirements-dev.txt`)."
+    },
+    {
+      "id": "F-13",
+      "title": "Columnas monetarias almacenadas como TEXT en SQLite — imposible realizar sumas y comparaciones correctas en SQL",
+      "category": "data-integrity",
+      "subcategory": "Tipo de dato incorrecto",
+      "severity": "medium",
+      "observed_or_inferred": "observed",
+      "evidence": [
+        {
+          "path": "schema.sql",
+          "line_start": 19,
+          "line_end": 23,
+          "snippet": "    subtotal TEXT NOT NULL,\n    discount TEXT NOT NULL,\n    total TEXT NOT NULL"
+        }
+      ],
+      "explanation": "Los campos `subtotal`, `discount`, `total` (y `unit_price`, `line_total` en `invoice_items`) se definen como `TEXT`. SQLite compara y ordena texto lexicográficamente, por lo que `ORDER BY total` o `SUM(total)` en consultas futuras producirían resultados incorrectos. El módulo `reports.py` ya está afectado: debe convertir manualmente con `Decimal(row['subtotal'])` (línea 35) porque no puede confiar en el tipo nativo.",
+      "recommendation": "Cambiar las columnas a `NUMERIC` o `REAL` (o almacenar en centavos como `INTEGER`). Si se mantiene TEXT para precisión decimal exacta, documentarlo explícitamente y prohibir agregaciones SQL directas sobre esas columnas mediante una convención de equipo."
+    }
+  ],
+  "rejected_findings": [],
+  "evidence_checks": [
+    {
+      "finding_id": "F-1",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-2",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-3",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-4",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-4",
+      "evidence_index": 1,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-5",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-6",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-7",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-8",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-9",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-9",
+      "evidence_index": 1,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-10",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-11",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-11",
+      "evidence_index": 1,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-12",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    },
+    {
+      "finding_id": "F-13",
+      "evidence_index": 0,
+      "status": "valid",
+      "reason": "fragmento encontrado en el rango citado"
+    }
+  ],
+  "stats": {
+    "findings_reported": 13,
+    "findings_validated": 13,
+    "evidence_total": 16,
+    "evidence_valid": 16,
+    "evidence_valid_ratio": 1.0,
+    "bob_cost": 0.567604,
+    "bob_duration_ms": 86921
+  }
+}

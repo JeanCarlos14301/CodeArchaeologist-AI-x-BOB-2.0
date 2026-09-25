@@ -3,8 +3,8 @@
 Etapa 6 · Bob Agent · Escribe pruebas de caracterización (Golden Master con pytest) que fijan el comportamiento observable del endpoint elegido como primer corte.
 
 - **Dueño:** Felipe (F-02, F-05).
-- **Agente ECC equivalente:** `agents/contract-keeper.md`.
-- **Skills asociadas:** `skills/characterization-testing/SKILL.md`.
+- **Agente ECC equivalente:** `.bob/agents/contract-keeper.md`.
+- **Skills asociadas:** `.bob/skills/characterization-testing/SKILL.md`.
 
 ## Alcance y Permisos
 - **Lectura:** Repositorio legacy y contratos de endpoint.

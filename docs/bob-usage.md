@@ -13,6 +13,9 @@ Este documento registra las sesiones de invocación de IBM Bob Shell (`bob run`)
 | 2026-09-24 21:40 | Felipe | `blast-radius-guard` | F-11: Simulación de fallo en cascada de `db_pool.py` antes de PR | CBRS: 78/100 (Veredicto RED_BLOCK por mutación compartida) |
 | 2026-09-24 21:55 | Felipe | `code-skeptic` | F-12: Debate adversarial contra propuesta de migración FastAPI | 3 vulnerabilidades de concurrencia y rollback detectadas |
 | 2026-09-24 22:15 | Felipe | `git-archaeologist` | F-13: Minería PyDriller de commits y matriz de hotspots | Archivo `legacy_db.py` identificado como mayor churn (82%) |
+| 2026-09-25 13:20 | Felipe | `ask`, `evidence-auditor` | F-01 / F-02: instalación de Bob Shell 2.0.5 y prueba de humo con API key vía `BobAdapter` | `status: success`, ~0.046 bobcoins por llamada; modo personalizado cargado desde `.bob/custom_modes.yaml` |
+| 2026-09-25 13:50 | Felipe | `evidence-auditor` | F-03: etapas 2-3 sobre FacturaYa (`python -m app.pipeline.run_audit`) | 13 hallazgos, 16/16 evidencias válidas tras el validador; 6/6 hallazgos esperados detectados y 0 sobre el control EF-7; 0,57 bobcoins, 87 s |
+| 2026-09-25 13:45 | Felipe | `evidence-auditor` + subagentes | Integración de `.bob/agents` y `.bob/skills`: auditoría live con delegación | Delegó en `legacy-sql-auditor`, `legacy-security-scanner` y `legacy-dependency-tracer` (log de Bob); 12/12 hallazgos y 18/18 evidencias válidas; 1,13 bobcoins, 189 s |
 
 ## Modos Personalizados Registrados (`.bob/custom_modes.yaml`)
 
@@ -83,3 +86,43 @@ blast-radius-simulator:
         ├─ 25 <= CBRS < 60 ──► YELLOW (Requiere tests adicionales)
         └─ CBRS >= 60 ──► RED (BLOQUEO preventivo automático)
 ```
+
+
+## Instalación y ejecución de Bob Shell
+
+```bash
+curl -fsSL https://bob.ibm.com/download/bobshell.sh | bash -s -- --pm npm   # requiere Node 24+
+cp .env.example .env    # y rellena BOB_API_KEY (scope: Inference)
+```
+
+La primera ejecución exige aceptar la licencia de IBM (`bob` en interactivo, o `--accept-license`).
+El pipeline invoca a Bob solo a través de `backend/app/adapters/bob_adapter.py`:
+
+```python
+from pathlib import Path
+from app.adapters.bob_adapter import BobAdapter
+result = BobAdapter(Path("samples/facturaya-v1")).run("evidence-auditor", prompt)
+```
+
+Pruebas: `cd backend && pytest` (la prueba `live` se omite si no hay `bob` o `BOB_API_KEY`).
+
+### Auditoría de evidencia de punta a punta (etapas 2 y 3)
+
+```bash
+cd backend
+python -m app.pipeline.run_audit ../samples/facturaya-v1/samples/facturaya-v1          # live
+python -m app.pipeline.run_audit <repo> --import ../contracts/fixtures/bob-evidence-auditor-facturaya.json  # imported
+```
+
+El repo se copia a `artifacts/jobs/<id>/workspace` sin `evaluation/` ni `expected-findings*.json`,
+de modo que Bob nunca ve el material de evaluación. La salida queda en `artifacts/jobs/<id>/dossier.json`.
+
+### Cómo descubre Bob Shell los activos del proyecto (verificado en 2.0.5)
+- Subagentes: `.bob/agents/*.md`. Frontmatter línea a línea: `name`, `description` en **una sola línea**,
+  `groups` (lista), opcional `modelTier` (`fast|premium|ultra|explorer`). **`model:` hace que Bob descarte el agente.**
+- Skills: `.bob/skills/<nombre>/SKILL.md`, con `name` igual a la carpeta.
+- Comandos: Bob convierte `.bob/commands/*.md` en `.bob/skills/<nombre>/` al arrancar (y pisa skills homónimas),
+  por eso los comandos viven directamente como skills con `user-invocable: true`.
+- Grupos válidos en modos y subagentes: `read, edit, execute, browser, mcp, skill, todo, subagent, mode`.
+  Un modo necesita `subagent` para delegar y `skill` para activar skills.
+- Bob también carga skills globales de `~/.bob/skills`, `~/.agents/skills` y `~/.claude/skills`.

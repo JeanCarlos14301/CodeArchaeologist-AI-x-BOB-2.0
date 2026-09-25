@@ -1,0 +1,437 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CodeArchaeologist contract v1",
+  "dossier": {
+    "$defs": {
+      "DossierStats": {
+        "description": "Métricas calculadas por código, nunca por la IA (D7).",
+        "properties": {
+          "findings_reported": {
+            "title": "Findings Reported",
+            "type": "integer"
+          },
+          "findings_validated": {
+            "title": "Findings Validated",
+            "type": "integer"
+          },
+          "evidence_total": {
+            "title": "Evidence Total",
+            "type": "integer"
+          },
+          "evidence_valid": {
+            "title": "Evidence Valid",
+            "type": "integer"
+          },
+          "evidence_valid_ratio": {
+            "title": "Evidence Valid Ratio",
+            "type": "number"
+          },
+          "bob_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bob Cost"
+          },
+          "bob_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bob Duration Ms"
+          }
+        },
+        "required": [
+          "findings_reported",
+          "findings_validated",
+          "evidence_total",
+          "evidence_valid",
+          "evidence_valid_ratio"
+        ],
+        "title": "DossierStats",
+        "type": "object"
+      },
+      "Evidence": {
+        "additionalProperties": false,
+        "description": "Referencia verificable a un fragmento del repositorio analizado.",
+        "properties": {
+          "path": {
+            "description": "Ruta relativa a la raíz del repo analizado.",
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "line_start": {
+            "description": "Primera línea, 1-indexada.",
+            "minimum": 1,
+            "title": "Line Start",
+            "type": "integer"
+          },
+          "line_end": {
+            "description": "Última línea, inclusiva.",
+            "minimum": 1,
+            "title": "Line End",
+            "type": "integer"
+          },
+          "snippet": {
+            "description": "Fragmento literal presente en esas líneas.",
+            "minLength": 1,
+            "title": "Snippet",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "line_start",
+          "line_end",
+          "snippet"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "EvidenceCheck": {
+        "description": "Resultado del validador determinista para una evidencia (etapa 3).",
+        "properties": {
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "evidence_index": {
+            "title": "Evidence Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finding_id",
+          "evidence_index",
+          "status",
+          "reason"
+        ],
+        "title": "EvidenceCheck",
+        "type": "object"
+      },
+      "Finding": {
+        "additionalProperties": false,
+        "description": "Hallazgo tal como lo emite Bob (evidence-auditor).",
+        "properties": {
+          "id": {
+            "pattern": "^F-\\d+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "security",
+              "maintainability",
+              "business-rule",
+              "data-integrity",
+              "performance",
+              "architecture",
+              "testing"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "subcategory": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Subcategory",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "observed_or_inferred": {
+            "enum": [
+              "observed",
+              "inferred"
+            ],
+            "title": "Observed Or Inferred",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/$defs/Evidence"
+            },
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "explanation": {
+            "minLength": 10,
+            "title": "Explanation",
+            "type": "string"
+          },
+          "recommendation": {
+            "minLength": 5,
+            "title": "Recommendation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "subcategory",
+          "severity",
+          "observed_or_inferred",
+          "evidence",
+          "explanation",
+          "recommendation"
+        ],
+        "title": "Finding",
+        "type": "object"
+      }
+    },
+    "description": "Expediente técnico validado: salida de las etapas 2 y 3.",
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "execution_mode": {
+        "enum": [
+          "live",
+          "imported",
+          "example"
+        ],
+        "title": "Execution Mode",
+        "type": "string"
+      },
+      "repo_name": {
+        "title": "Repo Name",
+        "type": "string"
+      },
+      "generated_at": {
+        "title": "Generated At",
+        "type": "string"
+      },
+      "bob_task_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Bob Task Id"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "rejected_findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Rejected Findings",
+        "type": "array"
+      },
+      "evidence_checks": {
+        "items": {
+          "$ref": "#/$defs/EvidenceCheck"
+        },
+        "title": "Evidence Checks",
+        "type": "array"
+      },
+      "stats": {
+        "$ref": "#/$defs/DossierStats"
+      }
+    },
+    "required": [
+      "execution_mode",
+      "repo_name",
+      "generated_at",
+      "findings",
+      "evidence_checks",
+      "stats"
+    ],
+    "title": "Dossier",
+    "type": "object"
+  },
+  "auditor_output": {
+    "$defs": {
+      "Evidence": {
+        "additionalProperties": false,
+        "description": "Referencia verificable a un fragmento del repositorio analizado.",
+        "properties": {
+          "path": {
+            "description": "Ruta relativa a la raíz del repo analizado.",
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "line_start": {
+            "description": "Primera línea, 1-indexada.",
+            "minimum": 1,
+            "title": "Line Start",
+            "type": "integer"
+          },
+          "line_end": {
+            "description": "Última línea, inclusiva.",
+            "minimum": 1,
+            "title": "Line End",
+            "type": "integer"
+          },
+          "snippet": {
+            "description": "Fragmento literal presente en esas líneas.",
+            "minLength": 1,
+            "title": "Snippet",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "line_start",
+          "line_end",
+          "snippet"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "Finding": {
+        "additionalProperties": false,
+        "description": "Hallazgo tal como lo emite Bob (evidence-auditor).",
+        "properties": {
+          "id": {
+            "pattern": "^F-\\d+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "security",
+              "maintainability",
+              "business-rule",
+              "data-integrity",
+              "performance",
+              "architecture",
+              "testing"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "subcategory": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Subcategory",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "observed_or_inferred": {
+            "enum": [
+              "observed",
+              "inferred"
+            ],
+            "title": "Observed Or Inferred",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/$defs/Evidence"
+            },
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "explanation": {
+            "minLength": 10,
+            "title": "Explanation",
+            "type": "string"
+          },
+          "recommendation": {
+            "minLength": 5,
+            "title": "Recommendation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "subcategory",
+          "severity",
+          "observed_or_inferred",
+          "evidence",
+          "explanation",
+          "recommendation"
+        ],
+        "title": "Finding",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Salida esperada de Bob en modo evidence-auditor.",
+    "properties": {
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/Finding"
+        },
+        "title": "Findings",
+        "type": "array"
+      }
+    },
+    "required": [
+      "findings"
+    ],
+    "title": "AuditorOutput",
+    "type": "object"
+  }
+}
