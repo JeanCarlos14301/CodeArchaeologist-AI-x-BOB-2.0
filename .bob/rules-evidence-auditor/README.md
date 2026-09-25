@@ -3,8 +3,8 @@
 Etapa 2 · Bob Ask · Modo de solo lectura. Inspecciona repositorios legacy Python 3 + Flask + SQLite y emite hallazgos con evidencia verificable línea por línea.
 
 - **Dueño:** Felipe (F-02, F-03).
-- **Agente ECC equivalente:** `agents/legacy-archaeologist.md` (con sub-agentes `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-dependency-tracer`, `legacy-security-scanner`).
-- **Skills asociadas:** `skills/legacy-audit/SKILL.md`, `skills/legacy-evidence-validation/SKILL.md`, `skills/legacy-flask-patterns/SKILL.md`.
+- **Agente ECC equivalente:** `.bob/agents/legacy-archaeologist.md` (con sub-agentes `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-dependency-tracer`, `legacy-security-scanner`).
+- **Skills asociadas:** `.bob/skills/legacy-audit-workflow/SKILL.md`, `.bob/skills/legacy-evidence-validation/SKILL.md`, `.bob/skills/legacy-flask-patterns/SKILL.md`.
 
 ## Alcance y Permisos
 - **Lectura:** Total sobre el repositorio analizado.

@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "facturaya-v1",
+  "source": "https://github.com/JeanCarlos14301/FacturaYa (evaluation/expected-findings.json, evidence paths rebased from samples/facturaya-v1/ to the sample root)",
+  "findings": [
+    {
+      "id": "EF-1",
+      "title": "SQL concatenado en busqueda de facturas",
+      "category": "security/sql-injection",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 78,
+          "line_end": 78,
+          "fragment": "sql = \"SELECT id, number, issue_date, total FROM invoices WHERE owner_id = \""
+        }
+      ],
+      "explanation": "El parametro q se inserta directamente en SQL en la ruta de busqueda.",
+      "verification_method": "La prueba heredada obtiene resultados ajenos con una expresion SQL."
+    },
+    {
+      "id": "EF-2",
+      "title": "Ruta extensa con responsabilidades mezcladas",
+      "category": "maintainability/large-function",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 127,
+          "line_end": 281,
+          "fragment": "def invoice_new():"
+        }
+      ],
+      "explanation": "La ruta valida, calcula, guarda y construye HTML en una sola funcion de 155 lineas.",
+      "verification_method": "Inspeccion AST y prueba de creacion de factura."
+    },
+    {
+      "id": "EF-3",
+      "title": "Regla de descuento duplicada con redondeo divergente",
+      "category": "business-rule/duplication",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "billing.py",
+          "line_start": 28,
+          "line_end": 28,
+          "fragment": "discount = (subtotal * RATE).quantize"
+        },
+        {
+          "path": "reports.py",
+          "line_start": 14,
+          "line_end": 14,
+          "fragment": "((Decimal(str(item[\"line_total\"])) * RATE).quantize"
+        }
+      ],
+      "explanation": "Facturacion redondea el descuento global; reporte redondea por linea y suma.",
+      "verification_method": "FY-00001 tiene descuento facturado 7.51 y reportado 7.50."
+    },
+    {
+      "id": "EF-4",
+      "title": "Valores secretos ficticios en codigo",
+      "category": "security/hardcoded-secret",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "config.py",
+          "line_start": 3,
+          "line_end": 3,
+          "fragment": "SECRET_KEY = \"DEMO_ONLY_NOT_A_REAL_SECRET\""
+        },
+        {
+          "path": "config.py",
+          "line_start": 4,
+          "line_end": 4,
+          "fragment": "PAYMENT_GATEWAY_KEY = \"DEMO_ONLY_NOT_A_REAL_GATEWAY_KEY\""
+        }
+      ],
+      "explanation": "Ambas constantes de demostracion estan escritas en el codigo.",
+      "verification_method": "Inspeccion de config.py."
+    },
+    {
+      "id": "EF-5",
+      "title": "Dependencia circular diferida",
+      "category": "architecture/cyclic-dependency",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "billing.py",
+          "line_start": 3,
+          "line_end": 3,
+          "fragment": "from customers import get_customer"
+        },
+        {
+          "path": "customers.py",
+          "line_start": 22,
+          "line_end": 22,
+          "fragment": "from billing import count_customer_invoices"
+        }
+      ],
+      "explanation": "billing importa customers y customers importa billing dentro de invoice_count_for_customer.",
+      "verification_method": "Inspeccion de imports y prueba de consulta de cliente."
+    },
+    {
+      "id": "EF-6",
+      "title": "JSON de factura sin autorizacion por propietario",
+      "category": "security/broken-object-authorization",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "app.py",
+          "line_start": 93,
+          "line_end": 107,
+          "fragment": "def invoice_json(invoice_id):"
+        }
+      ],
+      "explanation": "La ruta JSON autentica, pero no comprueba owner_id contra el usuario de sesion.",
+      "verification_method": "La prueba heredada entra como bruno y recibe la factura 1 de ana con 200."
+    },
+    {
+      "id": "EF-7",
+      "title": "Consulta de correo correctamente parametrizada",
+      "category": "control/parameterized-query",
+      "expected_detection": false,
+      "evidence": [
+        {
+          "path": "db.py",
+          "line_start": 33,
+          "line_end": 33,
+          "fragment": "SELECT id, owner_id, name, email FROM customers WHERE email = ?"
+        }
+      ],
+      "explanation": "El correo del usuario se pasa como parametro y no se concatena al SQL.",
+      "verification_method": "La prueba pasa una expresion SQL como correo y no obtiene fila."
+    }
+  ]
+}
