@@ -1,8 +1,10 @@
 """Rutas HTTP de auditorías y diagnóstico de Bob. Los routers solo traducen HTTP ↔ servicio."""
 
+import hmac
+import os
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
 from app.contracts.schema_v1 import Dossier
@@ -39,6 +41,18 @@ def get_service(request: Request) -> AuditService:
     return request.app.state.audit_service
 
 
+def require_live_token(execution_mode: ExecutionMode, token: str | None) -> None:
+    """Si LIVE_AUDIT_TOKEN está definido (despliegue público), live exige ese token.
+
+    Sin la variable (desarrollo local) live queda abierto. imported y example nunca lo piden.
+    """
+    expected = os.environ.get("LIVE_AUDIT_TOKEN", "")
+    if execution_mode != "live" or not expected:
+        return
+    if not token or not hmac.compare_digest(token.encode(), expected.encode()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El modo live requiere un token válido.")
+
+
 Service = Annotated[AuditService, Depends(get_service)]
 
 
@@ -53,7 +67,12 @@ def list_samples() -> list[SampleInfo]:
 
 
 @router.post("/audits", response_model=Job, status_code=status.HTTP_202_ACCEPTED)
-def start_audit(body: StartAuditRequest, service: Service) -> Job:
+def start_audit(
+    body: StartAuditRequest,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> Job:
+    require_live_token(body.execution_mode, x_live_token)
     try:
         return service.start(body.sample, body.execution_mode)
     except NotFoundError as exc:

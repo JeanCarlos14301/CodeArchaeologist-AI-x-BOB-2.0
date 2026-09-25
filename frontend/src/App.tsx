@@ -60,10 +60,10 @@ export default function App() {
     };
   }, [selectedId, refreshJobs]);
 
-  const startAudit = (sample: string, mode: ExecutionMode) => {
+  const startAudit = (sample: string, mode: ExecutionMode, liveToken: string) => {
     setError(null);
     api
-      .startAudit(sample, mode)
+      .startAudit(sample, mode, liveToken)
       .then((job) => {
         setDetail(null);
         setSelection(null);
@@ -100,7 +100,12 @@ export default function App() {
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         <aside className="space-y-6">
           <div className="rounded-lg border border-stone-200 bg-white p-4">
-            <AuditLauncher samples={samples} busy={running} onStart={startAudit} />
+            <AuditLauncher
+              samples={samples}
+              busy={running}
+              liveRequiresToken={bob?.live_requires_token ?? false}
+              onStart={startAudit}
+            />
           </div>
           <div className="rounded-lg border border-stone-200 bg-white p-4">
             <BobStatusPanel status={bob} error={bobError} />

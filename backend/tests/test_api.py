@@ -88,3 +88,36 @@ def test_second_live_audit_is_rejected_while_one_is_active(client: TestClient) -
 
 def test_unknown_job_is_404(client: TestClient) -> None:
     assert client.get("/api/audits/nope").status_code == 404
+
+
+@pytest.mark.parametrize("token", [None, "incorrecto"])
+def test_live_requires_token_when_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, token: str | None
+) -> None:
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "secreto-de-prueba")
+    headers = {"X-Live-Token": token} if token else {}
+    response = client.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"},
+                           headers=headers)
+    assert response.status_code == 403
+    assert client.get("/api/bob/status").json()["live_requires_token"] is True
+
+
+def test_live_token_is_accepted_when_correct(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "secreto-de-prueba")
+    # Un live ya activo hace que la petición válida responda 409 sin invocar Bob:
+    # así se prueba que el token pasó la puerta sin gastar bobcoins.
+    client.app.state.audit_service.store.create("facturaya-v1", "live")
+    response = client.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"},
+                           headers={"X-Live-Token": "secreto-de-prueba"})
+    assert response.status_code == 409
+
+
+def test_token_never_required_for_example_mode(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "secreto-de-prueba")
+    response = client.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "example"})
+    assert response.status_code == 202
+
+
+def test_live_is_open_without_configured_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LIVE_AUDIT_TOKEN", raising=False)
+    assert client.get("/api/bob/status").json()["live_requires_token"] is False

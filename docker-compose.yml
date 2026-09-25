@@ -1,11 +1,18 @@
-# Placeholder — J-02 (Jean).
-# Uso previsto: desarrollo local del contenedor único.
-#
-# TODO:
-# services:
-#   app:
-#     build: .
-#     env_file: .env
-#     ports: ["8000:8000"]
-#     volumes:
-#       - ./artifacts:/app/artifacts
+# Desarrollo local del contenedor único (mismo Dockerfile que Render).
+#   docker compose up --build   → http://127.0.0.1:8000
+# Lee BOB_API_KEY y demás variables de .env si existe (ver .env.example).
+services:
+  app:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      # Volumen con nombre: conserva jobs.db y los expedientes entre reinicios
+      # sin problemas de permisos del usuario no root del contenedor.
+      - artifacts:/app/artifacts
+
+volumes:
+  artifacts:

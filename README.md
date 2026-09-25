@@ -66,6 +66,7 @@ cd frontend && npm install && npm run build && cd ..
 
 Abre http://127.0.0.1:8000, elige un modo (`live`, `imported` o `example`) y pulsa **Auditar**.
 
+- Docker (same image as production): `docker compose up --build`. Deployment to Render with auto-deploy from `main`: [docs/deploy.md](docs/deploy.md).
 - CLI: `cd backend && ../.venv/bin/python -m app.pipeline.run_audit ../samples/facturaya-v1`
 - Pruebas: `cd backend && ../.venv/bin/pytest -m "not live"` (añade `-m live` para invocar Bob real)
 

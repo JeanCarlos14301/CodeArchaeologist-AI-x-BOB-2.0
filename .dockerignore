@@ -1,0 +1,29 @@
+# Credenciales: nunca entran a la imagen (SECURITY.md).
+.env
+.env.*
+*.pem
+*.key
+
+# Git, CI y dependencias/artefactos locales
+.git
+.github
+**/node_modules
+**/__pycache__
+**/*.pyc
+.venv
+venv
+backend/.venv*
+frontend/dist
+artifacts
+backend/artifacts
+**/*.db
+**/*.sqlite3
+
+# Material que el contenedor no necesita. evaluation/ queda fuera a propósito:
+# la verdad de referencia nunca debe estar al alcance de Bob (AGENTS.md).
+evaluation
+backend/tests
+bob-report
+bob-sessions
+docs
+scripts
