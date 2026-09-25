@@ -63,6 +63,7 @@ class BobStatus(BaseModel):
     skills: list[str]
     max_cost_per_run: float
     timeout_s: int
+    live_requires_token: bool
 
 
 class AuditService:
@@ -120,9 +121,11 @@ class AuditService:
         return job
 
     def get_dossier(self, job_id: str) -> Dossier | None:
-        self.get_job(job_id)
+        job = self.get_job(job_id)
         path = self.job_dir(job_id) / DOSSIER_FILE
-        if not path.is_file():
+        # El worker escribe dossier.json antes de marcar el job como done; leerlo antes
+        # puede toparse con el archivo a medio escribir (o bloqueado, en Windows).
+        if job.status != "done" or not path.is_file():
             return None
         return Dossier.model_validate_json(path.read_text(encoding="utf-8"))
 
@@ -166,4 +169,5 @@ def bob_status() -> BobStatus:
         skills=sorted(p.parent.name for p in (bob_dir / "skills").glob("*/SKILL.md")),
         max_cost_per_run=settings.max_cost,
         timeout_s=settings.timeout_s,
+        live_requires_token=bool(os.environ.get("LIVE_AUDIT_TOKEN")),
     )

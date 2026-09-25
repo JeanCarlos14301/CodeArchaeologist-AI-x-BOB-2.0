@@ -53,7 +53,7 @@ def create_app(artifacts_dir: Path = ARTIFACTS_DIR, frontend_dist: Path = FRONTE
         from fastapi.middleware.cors import CORSMiddleware
 
         app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
-                           allow_headers=["Content-Type"])
+                           allow_headers=["Content-Type", "X-Live-Token"])
 
     @app.get("/health")
     def health() -> dict[str, str]:

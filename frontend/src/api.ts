@@ -34,9 +34,13 @@ export const api = {
   samples: () => request<SampleInfo[]>("/api/samples"),
   audits: () => request<Job[]>("/api/audits"),
   audit: (id: string) => request<AuditDetail>(`/api/audits/${encodeURIComponent(id)}`),
-  startAudit: (sample: string, executionMode: ExecutionMode) =>
+  startAudit: (sample: string, executionMode: ExecutionMode, liveToken = "") =>
     request<Job>("/api/audits", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(executionMode === "live" && liveToken ? { "X-Live-Token": liveToken } : {}),
+      },
       body: JSON.stringify({ sample, execution_mode: executionMode }),
     }),
   source: (id: string, path: string, start: number, end: number) => {

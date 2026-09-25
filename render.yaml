@@ -1,0 +1,25 @@
+# Blueprint de Render (J-03). Render construye el Dockerfile y redespliega en cada push a main,
+# solo cuando el workflow de CI (.github/workflows/ci.yml) pasa. Pasos: docs/deploy.md.
+services:
+  - type: web
+    name: codearchaeologist
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # Se cargan a mano en el dashboard de Render; nunca en este archivo.
+      - key: BOB_API_KEY
+        sync: false
+      # Token que exige el modo live en la URL pública. Render genera un valor aleatorio;
+      # se consulta en el dashboard (Environment) y se comparte solo con el equipo/jurado.
+      - key: LIVE_AUDIT_TOKEN
+        generateValue: true
+      # El equipo ya aceptó la licencia de Bob Shell al instalarlo; sin esto `bob run` falla
+      # en un contenedor no interactivo.
+      - key: BOB_ACCEPT_LICENSE
+        value: "true"
+      - key: ENABLE_DEV_CORS
+        value: "false"

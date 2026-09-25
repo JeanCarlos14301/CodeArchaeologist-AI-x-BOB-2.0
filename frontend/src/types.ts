@@ -77,6 +77,7 @@ export interface BobStatus {
   skills: string[];
   max_cost_per_run: number;
   timeout_s: number;
+  live_requires_token: boolean;
 }
 
 export interface SampleInfo {
