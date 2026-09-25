@@ -1,7 +1,7 @@
 spec_version: "0.1.0"
 name: code-archaeologist-ecc
-version: "1.0.0"
-description: "Legacy codebase forensic auditing and incremental Strangler Fig migration extension for IBM Bob."
+version: "1.1.0"
+description: "Legacy codebase forensic auditing, polyglot framework migrations, shift-left risk gating, and adversarial tribunal extension for IBM Bob."
 author: "Felipe Gonzalez"
 license: "MIT"
 model:
@@ -17,6 +17,11 @@ skills:
   - legacy-evidence-validation
   - board-memo-writing
   - legacy-codebase-onboarding
+  - polyglot-migration
+  - blast-radius-simulation
+  - adversarial-tribunal
+  - git-archaeology
+  - ast-analysis
 commands:
   - legacy-audit
   - legacy-migrate
@@ -24,6 +29,10 @@ commands:
   - legacy-report
   - legacy-test
   - legacy-onboard
+  - migrate-framework
+  - risk-simulate
+  - code-tribunal
+  - code-archaeology
 tags:
   - legacy-migration
   - code-archaeology
@@ -32,3 +41,11 @@ tags:
   - flask
   - sqlite
   - fastapi
+  - polyglot
+  - nestjs
+  - shift-left
+  - blast-radius
+  - adversarial-tribunal
+  - pydriller
+  - tree-sitter
+  - fastmcp
