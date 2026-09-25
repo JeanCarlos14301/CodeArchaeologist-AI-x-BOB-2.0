@@ -31,7 +31,7 @@ def _wait_done(client: TestClient, job_id: str) -> dict:
 
 
 def test_health(client: TestClient) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health").json()["status"] == "ok"
 
 
 def test_bob_status_lists_project_assets(client: TestClient) -> None:

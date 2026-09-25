@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "sample_id": "facturaya-v1",
   "source": "https://github.com/JeanCarlos14301/FacturaYa (evaluation/expected-findings.json, evidence paths rebased from samples/facturaya-v1/ to the sample root)",
+  "snapshot_sha256": "d45791058ac483aba258df1e4a2d5b8d53e66bcf891b63363ee1feb33ace479a",
   "findings": [
     {
       "id": "EF-1",
