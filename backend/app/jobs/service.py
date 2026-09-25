@@ -22,7 +22,7 @@ from app.validators.evidence import resolve_inside
 logger = logging.getLogger(__name__)
 
 SAMPLES: dict[str, Path] = {
-    "facturaya-v1": REPO_ROOT / "samples" / "facturaya-v1" / "samples" / "facturaya-v1",
+    "facturaya-v1": REPO_ROOT / "samples" / "facturaya-v1",
 }
 FIXTURES_DIR = REPO_ROOT / "contracts" / "fixtures"
 IMPORTED_FIXTURES: dict[str, Path] = {

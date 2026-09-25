@@ -17,7 +17,7 @@ from app.pipeline.evidence_audit import (
 )
 from app.validators.evidence import check_evidence, validate_findings
 
-DEMO_REPO = REPO_ROOT / "samples" / "facturaya-v1" / "samples" / "facturaya-v1"
+DEMO_REPO = REPO_ROOT / "samples" / "facturaya-v1"
 FIXTURES = REPO_ROOT / "contracts" / "fixtures"
 BOB_FIXTURE = FIXTURES / "bob-evidence-auditor-facturaya.json"
 

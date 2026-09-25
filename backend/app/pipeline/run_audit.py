@@ -1,7 +1,7 @@
 """CLI de las etapas 2 y 3.
 
 Uso (desde backend/):
-    python -m app.pipeline.run_audit ../samples/facturaya-v1/samples/facturaya-v1
+    python -m app.pipeline.run_audit ../samples/facturaya-v1
     python -m app.pipeline.run_audit <repo> --import ../artifacts/jobs/<id>/bob-result.json
 """
 

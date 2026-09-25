@@ -66,7 +66,7 @@ cd frontend && npm install && npm run build && cd ..
 
 Abre http://127.0.0.1:8000, elige un modo (`live`, `imported` o `example`) y pulsa **Auditar**.
 
-- CLI: `cd backend && ../.venv/bin/python -m app.pipeline.run_audit ../samples/facturaya-v1/samples/facturaya-v1`
+- CLI: `cd backend && ../.venv/bin/python -m app.pipeline.run_audit ../samples/facturaya-v1`
 - Pruebas: `cd backend && ../.venv/bin/pytest -m "not live"` (añade `-m live` para invocar Bob real)
 
 ### Activos de Bob (`.bob/`)

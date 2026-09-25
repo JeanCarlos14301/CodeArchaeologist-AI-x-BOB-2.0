@@ -110,7 +110,7 @@ Pruebas: `cd backend && pytest` (la prueba `live` se omite si no hay `bob` o `BO
 
 ```bash
 cd backend
-python -m app.pipeline.run_audit ../samples/facturaya-v1/samples/facturaya-v1          # live
+python -m app.pipeline.run_audit ../samples/facturaya-v1          # live
 python -m app.pipeline.run_audit <repo> --import ../contracts/fixtures/bob-evidence-auditor-facturaya.json  # imported
 ```
 
