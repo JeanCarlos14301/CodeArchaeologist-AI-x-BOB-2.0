@@ -92,3 +92,58 @@ export interface SourceExcerpt {
   total_lines: number;
   lines: { number: number; text: string }[];
 }
+
+// --- Contratos PROVISIONALES (aún no definidos por Daniel) -------------------------------
+// Arquitectura (E-05), migración (E-06) y descargas (E-07). Cuando se congele el contrato en
+// contracts/, alinear estos tipos con schema_v1.py. Mientras tanto se alimentan con fixtures.
+
+export interface MigrationOption {
+  id: string;
+  name: string;
+  summary: string;
+  pros: string[];
+  cons: string[];
+  risk: "low" | "medium" | "high";
+  /** Horas PERT: el valor esperado lo calcula el código (src/lib/pert.ts), no la IA. */
+  effort_hours: { optimistic: number; likely: number; pessimistic: number };
+  recommended: boolean;
+}
+
+export interface ArchitectureView {
+  execution_mode: ExecutionMode;
+  current_mermaid: string;
+  target_mermaid: string;
+  options: MigrationOption[];
+}
+
+export type TestStatus = "passed" | "failed" | "not_run";
+
+export interface MigrationTest {
+  id: string;
+  name: string;
+  status: TestStatus;
+  detail: string;
+}
+
+export interface MigrationView {
+  execution_mode: ExecutionMode;
+  slice_name: string;
+  description: string;
+  legacy: { path: string; code: string };
+  modern: { path: string; code: string };
+  tests: MigrationTest[];
+}
+
+export interface DownloadItem {
+  id: string;
+  label: string;
+  description: string;
+  filename: string;
+  format: "DOCX" | "JSON" | "MD" | "ZIP";
+  url: string | null;
+}
+
+export interface DownloadsView {
+  execution_mode: ExecutionMode;
+  items: DownloadItem[];
+}
