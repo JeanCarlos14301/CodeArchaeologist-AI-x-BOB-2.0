@@ -13,7 +13,7 @@ from backend.app.models import MigrateRequest, MigrationSummary
 from backend.app.sandbox.migration_runner import apply_strangler_cut
 
 router = APIRouter(prefix="/api/jobs", tags=["migration"])
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 @router.post("/{job_id}/migrate")

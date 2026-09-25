@@ -16,7 +16,7 @@ from backend.app.renderers.html_renderer import render_dossier_to_html
 from backend.app.renderers.pptx_renderer import create_executive_pptx
 
 router = APIRouter(prefix="/api/jobs", tags=["artifacts"])
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 KIND_CONFIG = {
