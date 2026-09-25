@@ -30,3 +30,7 @@ artifacts/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Samples
+ECC-main
+
