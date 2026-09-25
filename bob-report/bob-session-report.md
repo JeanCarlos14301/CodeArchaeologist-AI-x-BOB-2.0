@@ -3,8 +3,8 @@
 **Autor:** Felipe Gonzalez  
 **Fecha:** 2026-09-24  
 **Versión del Ecosistema:** v1.1.0  
-**Referencia de Tareas:** F-01 a F-14 ([docs/tasks.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/docs/tasks.md))  
-**Registro de Decisiones:** D1 a D17 ([docs/decisions.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/docs/decisions.md))  
+**Referencia de Tareas:** F-01 a F-14 ([docs/tasks.md](../docs/tasks.md))  
+**Registro de Decisiones:** D1 a D17 ([docs/decisions.md](../docs/decisions.md))  
 
 ---
 
@@ -39,34 +39,34 @@ Toda decisión o recomendación emitida por los agentes de Bob está respaldada 
 ### Pilar 1: Simulador de Riesgos y Radio de Explosión (Shift-Left)
 - **Objetivo**: Proteger el ancho de banda de los revisores humanos frente a aludes de PRs generadas por agentes autónomos.
 - **Implementación**:
-  - Código: [backend/app/pipeline/blast_radius.py](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/backend/app/pipeline/blast_radius.py)
-  - Modo Bob: `blast-radius-guard` ([.bob/custom_modes.yaml](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/.bob/custom_modes.yaml))
-  - Skill: [skills/blast-radius-simulation/SKILL.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/skills/blast-radius-simulation/SKILL.md)
-  - Comando: `/risk-simulate` ([commands/risk-simulate.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/commands/risk-simulate.md))
+  - Código: [backend/app/pipeline/blast_radius.py](../backend/app/pipeline/blast_radius.py)
+  - Modo Bob: `blast-radius-guard` ([.bob/custom_modes.yaml](../.bob/custom_modes.yaml))
+  - Skill: [.bob/skills/blast-radius-simulation/SKILL.md](../.bob/skills/blast-radius-simulation/SKILL.md)
+  - Comando: `/risk-simulate` ([.bob/skills/risk-simulate/SKILL.md](../.bob/skills/risk-simulate/SKILL.md))
 
 ### Pilar 2: Tribunales Multi-Agente Adversariales
 - **Objetivo**: Terminar con los agentes complacientes. La IA debate contra la IA bajo reglas de evidencia estricta.
 - **Implementación**:
-  - Agente Fiscal: [agents/code-skeptic.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/agents/code-skeptic.md)
+  - Agente Fiscal: [.bob/agents/code-skeptic.md](../.bob/agents/code-skeptic.md)
   - Modo Bob: `code-skeptic` vs `migration-architect` / `polyglot-architect`
-  - Skill: [skills/adversarial-tribunal/SKILL.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/skills/adversarial-tribunal/SKILL.md)
-  - Comando: `/code-tribunal` ([commands/code-tribunal.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/commands/code-tribunal.md))
+  - Skill: [.bob/skills/adversarial-tribunal/SKILL.md](../.bob/skills/adversarial-tribunal/SKILL.md)
+  - Comando: `/code-tribunal` ([.bob/skills/code-tribunal/SKILL.md](../.bob/skills/code-tribunal/SKILL.md))
 
 ### Pilar 3: Arqueología de Código y Cartografía AST
 - **Objetivo**: Extraer la verdad histórica del repositorio a través de commits y topología sintáctica.
 - **Implementación**:
-  - Minería Git: [backend/app/extractors/git_archaeology.py](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/backend/app/extractors/git_archaeology.py) (PyDriller)
-  - Cartografía AST: [backend/app/extractors/ast_cartography.py](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/backend/app/extractors/ast_cartography.py)
+  - Minería Git: [backend/app/extractors/git_archaeology.py](../backend/app/extractors/git_archaeology.py) (PyDriller)
+  - Cartografía AST: [backend/app/extractors/ast_cartography.py](../backend/app/extractors/ast_cartography.py)
   - Modos Bob: `git-archaeologist`, `ast-cartographer`
-  - Skills: [skills/git-archaeology/SKILL.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/skills/git-archaeology/SKILL.md), [skills/ast-analysis/SKILL.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/skills/ast-analysis/SKILL.md)
-  - Comando: `/code-archaeology` ([commands/code-archaeology.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/commands/code-archaeology.md))
+  - Skills: [.bob/skills/git-archaeology/SKILL.md](../.bob/skills/git-archaeology/SKILL.md), [.bob/skills/ast-analysis/SKILL.md](../.bob/skills/ast-analysis/SKILL.md)
+  - Comando: `/code-archaeology` ([.bob/skills/code-archaeology/SKILL.md](../.bob/skills/code-archaeology/SKILL.md))
 
 ### Pilar 4: Inyección de Telemetría Externa (FastMCP)
 - **Objetivo**: Conectar a Bob con el comportamiento real de producción sin arriesgar datos ni permitir mutaciones no autorizadas.
 - **Implementación**:
-  - Código: [backend/app/adapters/telemetry_mcp.py](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/backend/app/adapters/telemetry_mcp.py)
+  - Código: [backend/app/adapters/telemetry_mcp.py](../backend/app/adapters/telemetry_mcp.py)
   - Conexiones: DuckDB en memoria/parquets, SQLite en modo solo lectura (`mode=ro`), issues de GitHub.
-  - Agente: [agents/telemetry-bridge.md](file:///Users/felipegonzalez/Documents/Proyectos/Hackathon/CodeArchaeologist-AI-x-BOB-2.0/agents/telemetry-bridge.md)
+  - Agente: [.bob/agents/telemetry-bridge.md](../.bob/agents/telemetry-bridge.md)
 
 ---
 
@@ -74,9 +74,9 @@ Toda decisión o recomendación emitida por los agentes de Bob está respaldada 
 
 | Tipo de Componente | Cantidad | Ubicación Principal |
 |---|---|---|
-| **Agentes Especializados** | 16 | `agents/*.md` |
-| **Habilidades (Skills)** | 13 | `skills/*/SKILL.md` |
-| **Comandos Slash** | 10 | `commands/*.md` |
+| **Agentes Especializados** | 16 | `.bob/agents/*.md` |
+| **Habilidades (Skills)** | 13 | `.bob/skills/*/SKILL.md` |
+| **Comandos Slash** | 10 | `.bob/skills/<comando>/SKILL.md` |
 | **Modos en Bob Shell** | 9 | `.bob/custom_modes.yaml` |
 | **Contextos Blindados** | 5 | `contexts/*.md` |
 | **Módulos Deterministas en Python** | 4 | `backend/app/pipeline/`, `backend/app/extractors/`, `backend/app/adapters/` |

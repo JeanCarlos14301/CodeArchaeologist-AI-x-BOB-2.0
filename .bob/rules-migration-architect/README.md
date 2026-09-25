@@ -3,8 +3,8 @@
 Etapa 4 · Bob Plan · Propone 3 opciones de migración Strangler Fig y justifica la selección del primer corte con la mejor relación valor/riesgo.
 
 - **Dueño:** Felipe (F-02, F-04).
-- **Agente ECC equivalente:** `agents/migration-architect.md`.
-- **Skills asociadas:** `skills/strangler-fig-migration/SKILL.md`, `skills/legacy-risk-assessment/SKILL.md`.
+- **Agente ECC equivalente:** `.bob/agents/migration-architect.md`.
+- **Skills asociadas:** `.bob/skills/strangler-fig-migration/SKILL.md`, `.bob/skills/legacy-risk-assessment/SKILL.md`.
 
 ## Alcance y Permisos
 - **Lectura:** Hallazgos validados de la etapa de auditoría (JSON) y código fuente.

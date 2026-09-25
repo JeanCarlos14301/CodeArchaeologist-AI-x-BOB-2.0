@@ -3,8 +3,8 @@
 Etapa 8 · Bob Agent · Implementa el primer corte de migración en FastAPI detrás de una fachada Strangler Fig, garantizando que las pruebas de caracterización pasen contra ambos sistemas.
 
 - **Dueño:** Felipe (F-02, F-06).
-- **Agente ECC equivalente:** `agents/strangler-surgeon.md` y `agents/migration-validator.md`.
-- **Skills asociadas:** `skills/strangler-fig-migration/SKILL.md`.
+- **Agente ECC equivalente:** `.bob/agents/strangler-surgeon.md` y `.bob/agents/migration-validator.md`.
+- **Skills asociadas:** `.bob/skills/strangler-fig-migration/SKILL.md`.
 
 ## Alcance y Permisos
 - **Lectura:** Repositorio legado y pruebas en `tests/characterization/`.

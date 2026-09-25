@@ -3,8 +3,8 @@
 Etapa 10 · Bob Ask · Redacta el memorándum ejecutivo para la junta directiva a partir del expediente técnico y los rangos PERT calculados por el pipeline.
 
 - **Dueño:** Felipe (F-02, F-08).
-- **Agente ECC equivalente:** `agents/board-narrator.md`.
-- **Skills asociadas:** `skills/board-memo-writing/SKILL.md`.
+- **Agente ECC equivalente:** `.bob/agents/board-narrator.md`.
+- **Skills asociadas:** `.bob/skills/board-memo-writing/SKILL.md`.
 
 ## Alcance y Permisos
 - **Lectura:** JSON consolidado del pipeline (hallazgos, estimaciones PERT, certificados de caracterización).
