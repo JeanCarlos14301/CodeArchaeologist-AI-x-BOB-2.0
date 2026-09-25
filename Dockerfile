@@ -61,8 +61,16 @@ RUN useradd --create-home --uid 10001 app \
     && chown app:app /app/artifacts
 USER app
 
-ENV ARTIFACTS_DIR=/app/artifacts \
+# DATABASE_PATH: la base del motor de 11 etapas debe vivir en el único directorio escribible.
+# ENABLE_JOBS_API=false: /api/jobs acepta ZIP arbitrarios y lanza Bob sin token ni tope de
+# coste; queda apagado en público hasta que aplique las mismas protecciones que /api/audits.
+# PYTHONPATH=/app: parte del backend se importa como `backend.app.*` (raíz del repo) y otra
+# como `app.*` (--app-dir backend en el CMD); ambos deben resolverse.
+ENV PYTHONPATH=/app \
+    ARTIFACTS_DIR=/app/artifacts \
+    DATABASE_PATH=/app/artifacts/pipeline.db \
     ENABLE_DEV_CORS=false \
+    ENABLE_JOBS_API=false \
     PORT=8000
 EXPOSE 8000
 

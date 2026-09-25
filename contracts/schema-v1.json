@@ -1,437 +1,731 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "CodeArchaeologist contract v1",
-  "dossier": {
-    "$defs": {
-      "DossierStats": {
-        "description": "Métricas calculadas por código, nunca por la IA (D7).",
-        "properties": {
-          "findings_reported": {
-            "title": "Findings Reported",
-            "type": "integer"
-          },
-          "findings_validated": {
-            "title": "Findings Validated",
-            "type": "integer"
-          },
-          "evidence_total": {
-            "title": "Evidence Total",
-            "type": "integer"
-          },
-          "evidence_valid": {
-            "title": "Evidence Valid",
-            "type": "integer"
-          },
-          "evidence_valid_ratio": {
-            "title": "Evidence Valid Ratio",
-            "type": "number"
-          },
-          "bob_cost": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Bob Cost"
-          },
-          "bob_duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Bob Duration Ms"
-          }
+  "$defs": {
+    "ArchitectureOption": {
+      "description": "Opción arquitectónica de modernización comparada.",
+      "properties": {
+        "id": {
+          "description": "Identificador de la opción (ej. OPT-1, OPT-2)",
+          "title": "Id",
+          "type": "string"
         },
-        "required": [
-          "findings_reported",
-          "findings_validated",
-          "evidence_total",
-          "evidence_valid",
-          "evidence_valid_ratio"
-        ],
-        "title": "DossierStats",
-        "type": "object"
-      },
-      "Evidence": {
-        "additionalProperties": false,
-        "description": "Referencia verificable a un fragmento del repositorio analizado.",
-        "properties": {
-          "path": {
-            "description": "Ruta relativa a la raíz del repo analizado.",
-            "minLength": 1,
-            "title": "Path",
-            "type": "string"
-          },
-          "line_start": {
-            "description": "Primera línea, 1-indexada.",
-            "minimum": 1,
-            "title": "Line Start",
-            "type": "integer"
-          },
-          "line_end": {
-            "description": "Última línea, inclusiva.",
-            "minimum": 1,
-            "title": "Line End",
-            "type": "integer"
-          },
-          "snippet": {
-            "description": "Fragmento literal presente en esas líneas.",
-            "minLength": 1,
-            "title": "Snippet",
-            "type": "string"
-          }
+        "name": {
+          "description": "Nombre de la alternativa",
+          "title": "Name",
+          "type": "string"
         },
-        "required": [
-          "path",
-          "line_start",
-          "line_end",
-          "snippet"
-        ],
-        "title": "Evidence",
-        "type": "object"
-      },
-      "EvidenceCheck": {
-        "description": "Resultado del validador determinista para una evidencia (etapa 3).",
-        "properties": {
-          "finding_id": {
-            "title": "Finding Id",
-            "type": "string"
-          },
-          "evidence_index": {
-            "title": "Evidence Index",
-            "type": "integer"
-          },
-          "status": {
-            "enum": [
-              "valid",
-              "invalid"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          }
+        "pattern": {
+          "description": "Patrón de modernización (ej. Strangler Fig, Leaf Cut, Big Bang)",
+          "title": "Pattern",
+          "type": "string"
         },
-        "required": [
-          "finding_id",
-          "evidence_index",
-          "status",
-          "reason"
-        ],
-        "title": "EvidenceCheck",
-        "type": "object"
+        "pros": {
+          "description": "Ventajas clave",
+          "items": {
+            "type": "string"
+          },
+          "title": "Pros",
+          "type": "array"
+        },
+        "cons": {
+          "description": "Desventajas y riesgos",
+          "items": {
+            "type": "string"
+          },
+          "title": "Cons",
+          "type": "array"
+        },
+        "target_stack": {
+          "description": "Stack tecnológico de destino (ej. FastAPI + SQLite/PostgreSQL)",
+          "title": "Target Stack",
+          "type": "string"
+        },
+        "risk_level": {
+          "description": "Nivel de riesgo operativo",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ],
+          "title": "Risk Level",
+          "type": "string"
+        },
+        "estimated_effort_days": {
+          "description": "Esfuerzo estimado en días hábiles",
+          "minimum": 0.0,
+          "title": "Estimated Effort Days",
+          "type": "number"
+        },
+        "recommended": {
+          "default": false,
+          "description": "True si es la opción recomendada",
+          "title": "Recommended",
+          "type": "boolean"
+        }
       },
-      "Finding": {
-        "additionalProperties": false,
-        "description": "Hallazgo tal como lo emite Bob (evidence-auditor).",
-        "properties": {
-          "id": {
-            "pattern": "^F-\\d+$",
-            "title": "Id",
-            "type": "string"
-          },
-          "title": {
-            "maxLength": 160,
-            "minLength": 3,
-            "title": "Title",
-            "type": "string"
-          },
-          "category": {
-            "enum": [
-              "security",
-              "maintainability",
-              "business-rule",
-              "data-integrity",
-              "performance",
-              "architecture",
-              "testing"
-            ],
-            "title": "Category",
-            "type": "string"
-          },
-          "subcategory": {
-            "maxLength": 60,
-            "minLength": 1,
-            "title": "Subcategory",
-            "type": "string"
-          },
-          "severity": {
-            "enum": [
-              "critical",
-              "high",
-              "medium",
-              "low"
-            ],
-            "title": "Severity",
-            "type": "string"
-          },
-          "observed_or_inferred": {
-            "enum": [
-              "observed",
-              "inferred"
-            ],
-            "title": "Observed Or Inferred",
-            "type": "string"
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/$defs/Evidence"
+      "required": [
+        "id",
+        "name",
+        "pattern",
+        "target_stack",
+        "risk_level",
+        "estimated_effort_days"
+      ],
+      "title": "ArchitectureOption",
+      "type": "object"
+    },
+    "CharacterizationTestCase": {
+      "description": "Resultado individual de una prueba de caracterización.",
+      "properties": {
+        "name": {
+          "description": "Nombre del test (ej. test_invoice_owner_access)",
+          "title": "Name",
+          "type": "string"
+        },
+        "target_endpoint": {
+          "description": "Endpoint evaluado (ej. GET /invoices/{id})",
+          "title": "Target Endpoint",
+          "type": "string"
+        },
+        "test_type": {
+          "description": "Tipo de prueba (contract, security, business_rule)",
+          "title": "Test Type",
+          "type": "string"
+        },
+        "status": {
+          "description": "Veredicto de la prueba",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "SKIPPED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "duration_ms": {
+          "default": 0.0,
+          "description": "Duración en milisegundos",
+          "minimum": 0.0,
+          "title": "Duration Ms",
+          "type": "number"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "type": "string"
             },
-            "minItems": 1,
-            "title": "Evidence",
-            "type": "array"
-          },
-          "explanation": {
-            "minLength": 10,
-            "title": "Explanation",
-            "type": "string"
-          },
-          "recommendation": {
-            "minLength": 5,
-            "title": "Recommendation",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "category",
-          "subcategory",
-          "severity",
-          "observed_or_inferred",
-          "evidence",
-          "explanation",
-          "recommendation"
-        ],
-        "title": "Finding",
-        "type": "object"
-      }
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mensaje de error si falló",
+          "title": "Error Message"
+        }
+      },
+      "required": [
+        "name",
+        "target_endpoint",
+        "test_type",
+        "status"
+      ],
+      "title": "CharacterizationTestCase",
+      "type": "object"
     },
-    "description": "Expediente técnico validado: salida de las etapas 2 y 3.",
-    "properties": {
-      "schema_version": {
-        "const": "1.0",
-        "default": "1.0",
-        "title": "Schema Version",
-        "type": "string"
+    "CharacterizationTestReport": {
+      "description": "Reporte de la suite de pruebas de caracterización ejecutada en sandbox.",
+      "properties": {
+        "total_tests": {
+          "minimum": 0,
+          "title": "Total Tests",
+          "type": "integer"
+        },
+        "passed_count": {
+          "minimum": 0,
+          "title": "Passed Count",
+          "type": "integer"
+        },
+        "failed_count": {
+          "minimum": 0,
+          "title": "Failed Count",
+          "type": "integer"
+        },
+        "target_endpoint": {
+          "title": "Target Endpoint",
+          "type": "string"
+        },
+        "test_cases": {
+          "items": {
+            "$ref": "#/$defs/CharacterizationTestCase"
+          },
+          "title": "Test Cases",
+          "type": "array"
+        },
+        "all_passed": {
+          "title": "All Passed",
+          "type": "boolean"
+        }
       },
-      "execution_mode": {
-        "enum": [
-          "live",
-          "imported",
-          "example"
-        ],
-        "title": "Execution Mode",
-        "type": "string"
+      "required": [
+        "total_tests",
+        "passed_count",
+        "failed_count",
+        "target_endpoint",
+        "all_passed"
+      ],
+      "title": "CharacterizationTestReport",
+      "type": "object"
+    },
+    "EvidenceLocation": {
+      "description": "Ubicación física comprobable de evidencia en el código fuente.",
+      "properties": {
+        "path": {
+          "description": "Ruta relativa normalizada del archivo en el repositorio",
+          "title": "Path",
+          "type": "string"
+        },
+        "line_start": {
+          "description": "Línea inicial (1-indexed)",
+          "minimum": 1,
+          "title": "Line Start",
+          "type": "integer"
+        },
+        "line_end": {
+          "description": "Línea final (1-indexed)",
+          "minimum": 1,
+          "title": "Line End",
+          "type": "integer"
+        },
+        "fragment": {
+          "description": "Fragmento textual exacto del código en el rango",
+          "title": "Fragment",
+          "type": "string"
+        },
+        "observed_or_inferred": {
+          "default": "observed",
+          "description": "Indica si la evidencia fue observada directamente en código o inferida",
+          "enum": [
+            "observed",
+            "inferred"
+          ],
+          "title": "Observed Or Inferred",
+          "type": "string"
+        }
       },
-      "repo_name": {
-        "title": "Repo Name",
-        "type": "string"
-      },
-      "generated_at": {
-        "title": "Generated At",
-        "type": "string"
-      },
-      "bob_task_id": {
-        "anyOf": [
-          {
+      "required": [
+        "path",
+        "line_start",
+        "line_end",
+        "fragment"
+      ],
+      "title": "EvidenceLocation",
+      "type": "object"
+    },
+    "Finding": {
+      "description": "Hallazgo técnico o de negocio respaldado por evidencia física.",
+      "properties": {
+        "id": {
+          "description": "Identificador único del hallazgo (ej. EF-1, F-01)",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Título descriptivo del hallazgo",
+          "title": "Title",
+          "type": "string"
+        },
+        "category": {
+          "description": "Categoría taxonómica (ej. security/sql-injection, maintainability/large-function, business-rule/duplication)",
+          "title": "Category",
+          "type": "string"
+        },
+        "severity": {
+          "description": "Nivel de severidad técnica",
+          "enum": [
+            "CRITICAL",
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "INFO"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Nivel de certidumbre analítica",
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "priority": {
+          "description": "Prioridad de atención según valor/riesgo",
+          "enum": [
+            "P0",
+            "P1",
+            "P2"
+          ],
+          "title": "Priority",
+          "type": "string"
+        },
+        "expected_detection": {
+          "default": true,
+          "description": "True para hallazgos reales; False para controles negativos de prueba",
+          "title": "Expected Detection",
+          "type": "boolean"
+        },
+        "evidence": {
+          "description": "Lista de citas físicas en código fuente",
+          "items": {
+            "$ref": "#/$defs/EvidenceLocation"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "explanation": {
+          "description": "Explicación técnica del problema detectado",
+          "title": "Explanation",
+          "type": "string"
+        },
+        "verification_method": {
+          "description": "Método determinista para reproducir y comprobar el hallazgo",
+          "title": "Verification Method",
+          "type": "string"
+        },
+        "blast_radius_score": {
+          "default": 0.0,
+          "description": "Puntaje de radio de explosión sistémico calculado por grafo (0 a 100)",
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Blast Radius Score",
+          "type": "number"
+        },
+        "transitive_impacted_symbols": {
+          "description": "Símbolos y funciones en cascada afectados transitivamente",
+          "items": {
             "type": "string"
           },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Bob Task Id"
-      },
-      "findings": {
-        "items": {
-          "$ref": "#/$defs/Finding"
+          "title": "Transitive Impacted Symbols",
+          "type": "array"
         },
-        "title": "Findings",
-        "type": "array"
+        "status": {
+          "default": "accepted",
+          "description": "Estado asignado por el validador determinista de evidencia",
+          "enum": [
+            "accepted",
+            "rejected",
+            "inferred"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
       },
-      "rejected_findings": {
-        "items": {
-          "$ref": "#/$defs/Finding"
-        },
-        "title": "Rejected Findings",
-        "type": "array"
-      },
-      "evidence_checks": {
-        "items": {
-          "$ref": "#/$defs/EvidenceCheck"
-        },
-        "title": "Evidence Checks",
-        "type": "array"
-      },
-      "stats": {
-        "$ref": "#/$defs/DossierStats"
-      }
+      "required": [
+        "id",
+        "title",
+        "category",
+        "severity",
+        "confidence",
+        "priority",
+        "explanation",
+        "verification_method"
+      ],
+      "title": "Finding",
+      "type": "object"
     },
-    "required": [
-      "execution_mode",
-      "repo_name",
-      "generated_at",
-      "findings",
-      "evidence_checks",
-      "stats"
-    ],
-    "title": "Dossier",
-    "type": "object"
+    "MigrationPhase": {
+      "description": "Fase del plan de migración con estimación estadística PERT.",
+      "properties": {
+        "phase_number": {
+          "description": "Número secuencial de fase",
+          "minimum": 1,
+          "title": "Phase Number",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Nombre de la fase",
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "description": "Alcance y entregables de la fase",
+          "title": "Description",
+          "type": "string"
+        },
+        "optimistic_days": {
+          "description": "Escenario optimista (O)",
+          "minimum": 0.0,
+          "title": "Optimistic Days",
+          "type": "number"
+        },
+        "nominal_days": {
+          "description": "Escenario más probable (M)",
+          "minimum": 0.0,
+          "title": "Nominal Days",
+          "type": "number"
+        },
+        "pessimistic_days": {
+          "description": "Escenario pesimista (P)",
+          "minimum": 0.0,
+          "title": "Pessimistic Days",
+          "type": "number"
+        },
+        "pert_expected_days": {
+          "description": "Duración esperada PERT: (O + 4M + P) / 6",
+          "minimum": 0.0,
+          "title": "Pert Expected Days",
+          "type": "number"
+        },
+        "pert_variance": {
+          "description": "Varianza PERT: ((P - O) / 6)^2",
+          "minimum": 0.0,
+          "title": "Pert Variance",
+          "type": "number"
+        },
+        "assumptions": {
+          "description": "Supuestos explícitos no negociables",
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "prerequisites": {
+          "description": "Prerrequisitos técnicos requeridos",
+          "items": {
+            "type": "string"
+          },
+          "title": "Prerequisites",
+          "type": "array"
+        },
+        "rollback_strategy": {
+          "description": "Estrategia de marcha atrás en caso de contingencia",
+          "title": "Rollback Strategy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase_number",
+        "name",
+        "description",
+        "optimistic_days",
+        "nominal_days",
+        "pessimistic_days",
+        "pert_expected_days",
+        "pert_variance",
+        "rollback_strategy"
+      ],
+      "title": "MigrationPhase",
+      "type": "object"
+    },
+    "MigrationSummary": {
+      "description": "Resumen del primer corte de migración ejecutado con Strangler Fig.",
+      "properties": {
+        "endpoint_migrated": {
+          "description": "Endpoint extraído (ej. GET /invoices/{id})",
+          "title": "Endpoint Migrated",
+          "type": "string"
+        },
+        "modern_code_files": {
+          "description": "Archivos de código moderno creados en modern/",
+          "items": {
+            "type": "string"
+          },
+          "title": "Modern Code Files",
+          "type": "array"
+        },
+        "facade_router_file": {
+          "description": "Archivo de enrutador fachada Strangler Fig",
+          "title": "Facade Router File",
+          "type": "string"
+        },
+        "legacy_tests_verdict": {
+          "description": "Veredicto de las pruebas de caracterización contra el código legado",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "SKIPPED"
+          ],
+          "title": "Legacy Tests Verdict",
+          "type": "string"
+        },
+        "modern_tests_verdict": {
+          "description": "Veredicto de las pruebas de caracterización contra el código modernizado",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "SKIPPED"
+          ],
+          "title": "Modern Tests Verdict",
+          "type": "string"
+        },
+        "repaired_count": {
+          "default": 0,
+          "description": "Número de reparaciones automáticas aplicadas (máx. 1)",
+          "minimum": 0,
+          "title": "Repaired Count",
+          "type": "integer"
+        },
+        "diff_patch": {
+          "description": "Parche unificado .diff generado",
+          "title": "Diff Patch",
+          "type": "string"
+        }
+      },
+      "required": [
+        "endpoint_migrated",
+        "modern_code_files",
+        "facade_router_file",
+        "legacy_tests_verdict",
+        "modern_tests_verdict",
+        "diff_patch"
+      ],
+      "title": "MigrationSummary",
+      "type": "object"
+    },
+    "SnapshotMetadata": {
+      "description": "Metadatos del repositorio analizado.",
+      "properties": {
+        "sample_id": {
+          "description": "Identificador de la muestra (ej. facturaya-v1)",
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "repo_name": {
+          "description": "Nombre del repositorio",
+          "title": "Repo Name",
+          "type": "string"
+        },
+        "snapshot_sha256": {
+          "description": "Hash SHA-256 del contenido del repositorio",
+          "title": "Snapshot Sha256",
+          "type": "string"
+        },
+        "total_files": {
+          "minimum": 0,
+          "title": "Total Files",
+          "type": "integer"
+        },
+        "total_loc": {
+          "minimum": 0,
+          "title": "Total Loc",
+          "type": "integer"
+        },
+        "languages_detected": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages Detected",
+          "type": "array"
+        },
+        "entrypoints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entrypoints",
+          "type": "array"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "execution_mode": {
+          "default": "live",
+          "description": "Modo de ejecución del diagnóstico (regla D8)",
+          "enum": [
+            "live",
+            "imported",
+            "example"
+          ],
+          "title": "Execution Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sample_id",
+        "repo_name",
+        "snapshot_sha256",
+        "total_files",
+        "total_loc"
+      ],
+      "title": "SnapshotMetadata",
+      "type": "object"
+    },
+    "ValidationReport": {
+      "description": "Reporte del validador determinista de evidencia.",
+      "properties": {
+        "total_references": {
+          "minimum": 0,
+          "title": "Total References",
+          "type": "integer"
+        },
+        "valid_references": {
+          "minimum": 0,
+          "title": "Valid References",
+          "type": "integer"
+        },
+        "invalid_references": {
+          "minimum": 0,
+          "title": "Invalid References",
+          "type": "integer"
+        },
+        "fidelity_ratio": {
+          "description": "Tasa de referencias verificadas (1.0 = 100%)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Fidelity Ratio",
+          "type": "number"
+        },
+        "details": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Details",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_references",
+        "valid_references",
+        "invalid_references",
+        "fidelity_ratio"
+      ],
+      "title": "ValidationReport",
+      "type": "object"
+    }
   },
-  "auditor_output": {
-    "$defs": {
-      "Evidence": {
-        "additionalProperties": false,
-        "description": "Referencia verificable a un fragmento del repositorio analizado.",
-        "properties": {
-          "path": {
-            "description": "Ruta relativa a la raíz del repo analizado.",
-            "minLength": 1,
-            "title": "Path",
-            "type": "string"
-          },
-          "line_start": {
-            "description": "Primera línea, 1-indexada.",
-            "minimum": 1,
-            "title": "Line Start",
-            "type": "integer"
-          },
-          "line_end": {
-            "description": "Última línea, inclusiva.",
-            "minimum": 1,
-            "title": "Line End",
-            "type": "integer"
-          },
-          "snippet": {
-            "description": "Fragmento literal presente en esas líneas.",
-            "minLength": 1,
-            "title": "Snippet",
-            "type": "string"
-          }
-        },
-        "required": [
-          "path",
-          "line_start",
-          "line_end",
-          "snippet"
-        ],
-        "title": "Evidence",
-        "type": "object"
+  "description": "Expediente técnico completo de diagnóstico y migración (Contrato v1).",
+  "properties": {
+    "schema_version": {
+      "default": "1.0",
+      "description": "Versión del contrato de datos",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "job_id": {
+      "description": "Identificador único del job de análisis",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/SnapshotMetadata"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
       },
-      "Finding": {
-        "additionalProperties": false,
-        "description": "Hallazgo tal como lo emite Bob (evidence-auditor).",
-        "properties": {
-          "id": {
-            "pattern": "^F-\\d+$",
-            "title": "Id",
-            "type": "string"
-          },
-          "title": {
-            "maxLength": 160,
-            "minLength": 3,
-            "title": "Title",
-            "type": "string"
-          },
-          "category": {
-            "enum": [
-              "security",
-              "maintainability",
-              "business-rule",
-              "data-integrity",
-              "performance",
-              "architecture",
-              "testing"
-            ],
-            "title": "Category",
-            "type": "string"
-          },
-          "subcategory": {
-            "maxLength": 60,
-            "minLength": 1,
-            "title": "Subcategory",
-            "type": "string"
-          },
-          "severity": {
-            "enum": [
-              "critical",
-              "high",
-              "medium",
-              "low"
-            ],
-            "title": "Severity",
-            "type": "string"
-          },
-          "observed_or_inferred": {
-            "enum": [
-              "observed",
-              "inferred"
-            ],
-            "title": "Observed Or Inferred",
-            "type": "string"
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/$defs/Evidence"
-            },
-            "minItems": 1,
-            "title": "Evidence",
-            "type": "array"
-          },
-          "explanation": {
-            "minLength": 10,
-            "title": "Explanation",
-            "type": "string"
-          },
-          "recommendation": {
-            "minLength": 5,
-            "title": "Recommendation",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "category",
-          "subcategory",
-          "severity",
-          "observed_or_inferred",
-          "evidence",
-          "explanation",
-          "recommendation"
-        ],
-        "title": "Finding",
-        "type": "object"
-      }
+      "title": "Findings",
+      "type": "array"
     },
-    "additionalProperties": false,
-    "description": "Salida esperada de Bob en modo evidence-auditor.",
-    "properties": {
-      "findings": {
-        "items": {
-          "$ref": "#/$defs/Finding"
-        },
-        "title": "Findings",
-        "type": "array"
-      }
+    "architecture_options": {
+      "items": {
+        "$ref": "#/$defs/ArchitectureOption"
+      },
+      "title": "Architecture Options",
+      "type": "array"
     },
-    "required": [
-      "findings"
-    ],
-    "title": "AuditorOutput",
-    "type": "object"
-  }
+    "selected_first_cut": {
+      "default": "GET /invoices/{id}",
+      "title": "Selected First Cut",
+      "type": "string"
+    },
+    "pert_plan": {
+      "items": {
+        "$ref": "#/$defs/MigrationPhase"
+      },
+      "title": "Pert Plan",
+      "type": "array"
+    },
+    "characterization_tests_legacy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CharacterizationTestReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "characterization_tests_modern": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CharacterizationTestReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "migration_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MigrationSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "validation_report": {
+      "$ref": "#/$defs/ValidationReport"
+    },
+    "executive_summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Executive Summary"
+    },
+    "mermaid_er_diagram": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mermaid Er Diagram"
+    },
+    "mermaid_call_flow": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mermaid Call Flow"
+    },
+    "execution_mode": {
+      "default": "live",
+      "enum": [
+        "live",
+        "imported",
+        "example"
+      ],
+      "title": "Execution Mode",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "snapshot",
+    "validation_report"
+  ],
+  "title": "DossierResult",
+  "type": "object"
 }

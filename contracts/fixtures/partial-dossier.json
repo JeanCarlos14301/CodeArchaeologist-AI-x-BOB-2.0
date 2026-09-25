@@ -1,0 +1,200 @@
+{
+  "schema_version": "1.0",
+  "job_id": "job-partial-facturaya-002",
+  "snapshot": {
+    "sample_id": "facturaya-v1",
+    "repo_name": "FacturaYa v1 (Legacy Monolith)",
+    "snapshot_sha256": "d45791058ac483aba258df1e4a2d5b8d53e66bcf891b63363ee1feb33ace479a",
+    "total_files": 10,
+    "total_loc": 1420,
+    "languages_detected": [
+      "Python",
+      "SQL",
+      "HTML"
+    ],
+    "entrypoints": [
+      "app.py"
+    ],
+    "timestamp": "2026-09-25T10:00:00Z",
+    "execution_mode": "live"
+  },
+  "findings": [
+    {
+      "id": "EF-1",
+      "title": "Inyección SQL por concatenación en búsqueda de facturas",
+      "category": "security/sql-injection",
+      "severity": "CRITICAL",
+      "confidence": "HIGH",
+      "priority": "P0",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "samples/facturaya-v1/app.py",
+          "line_start": 78,
+          "line_end": 78,
+          "fragment": "sql = \"SELECT id, number, issue_date, total FROM invoices WHERE owner_id = \"",
+          "observed_or_inferred": "observed"
+        }
+      ],
+      "explanation": "El parámetro de búsqueda 'q' y el owner_id se concatenan directamente a la consulta SQL sin parametrizar, permitiendo exfiltración de datos no autorizados.",
+      "verification_method": "Inyectar ' OR 1=1 -- en el query parameter de búsqueda; la respuesta devuelve facturas de otros clientes.",
+      "blast_radius_score": 85.0,
+      "transitive_impacted_symbols": [
+        "app.invoices_search",
+        "db.query_db",
+        "billing.get_invoice"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "EF-2",
+      "title": "Función de ruta monolítica con responsabilidades mezcladas",
+      "category": "maintainability/large-function",
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "priority": "P1",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "samples/facturaya-v1/app.py",
+          "line_start": 127,
+          "line_end": 281,
+          "fragment": "def invoice_new():",
+          "observed_or_inferred": "observed"
+        }
+      ],
+      "explanation": "La función 'invoice_new' tiene 155 líneas y mezcla validación de formulario, reglas de negocio de descuentos, transacciones de BD y renderizado HTML directo.",
+      "verification_method": "Inspección AST y medición de complejidad ciclomática con Radon (CC > 18).",
+      "blast_radius_score": 68.5,
+      "transitive_impacted_symbols": [
+        "app.invoice_new",
+        "billing.calculate_totals",
+        "db.get_db"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "EF-3",
+      "title": "Regla de descuento duplicada con redondeo divergente",
+      "category": "business-rule/duplication",
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "priority": "P0",
+      "expected_detection": true,
+      "evidence": [
+        {
+          "path": "samples/facturaya-v1/billing.py",
+          "line_start": 28,
+          "line_end": 28,
+          "fragment": "discount = (subtotal * RATE).quantize",
+          "observed_or_inferred": "observed"
+        },
+        {
+          "path": "samples/facturaya-v1/reports.py",
+          "line_start": 14,
+          "line_end": 14,
+          "fragment": "((Decimal(str(item[\"line_total\"])) * RATE).quantize",
+          "observed_or_inferred": "observed"
+        }
+      ],
+      "explanation": "Facturación redondea el descuento sobre el subtotal global, mientras que el módulo de reportes redondea línea por línea y luego suma, causando discrepancias contables.",
+      "verification_method": "Factura FY-00001 tiene descuento facturado de 7.51 pero en el reporte contable aparece como 7.50.",
+      "blast_radius_score": 54.0,
+      "transitive_impacted_symbols": [
+        "billing.calculate_discount",
+        "reports.generate_summary"
+      ],
+      "status": "accepted"
+    }
+  ],
+  "architecture_options": [
+    {
+      "id": "OPT-1",
+      "name": "Extracción Progresiva con Strangler Fig (Recomendada)",
+      "pattern": "Strangler Fig",
+      "pros": [
+        "Bajo riesgo operativo: el sistema antiguo y el nuevo conviven simultáneamente.",
+        "Primer corte verificable con pruebas de caracterización golden-master.",
+        "Despliegue incremental por endpoint sin interrupción del negocio."
+      ],
+      "cons": [
+        "Requiere mantener una capa de enrutamiento fachada durante la transición.",
+        "Duplicidad temporal de modelos de datos."
+      ],
+      "target_stack": "FastAPI (Python 3.11) + SQLite/Postgres + Pydantic v2",
+      "risk_level": "LOW",
+      "estimated_effort_days": 18.5,
+      "recommended": true
+    },
+    {
+      "id": "OPT-2",
+      "name": "Extracción por Módulos Hoja (Leaf Services)",
+      "pattern": "Leaf Cut",
+      "pros": [
+        "Desacopla componentes sin dependencias entrantes (ej. reports.py).",
+        "Fácil de aislar y testear en contenedores independientes."
+      ],
+      "cons": [
+        "Bajo impacto directo en el valor percibido por el usuario final.",
+        "No resuelve las vulnerabilidades críticas de autenticación y BOLA en el núcleo."
+      ],
+      "target_stack": "Microservicios FastAPI independientes",
+      "risk_level": "MEDIUM",
+      "estimated_effort_days": 24.0,
+      "recommended": false
+    },
+    {
+      "id": "OPT-3",
+      "name": "Reescritura Completa desde Cero (Big Bang)",
+      "pattern": "Big Bang Rewrite",
+      "pros": [
+        "Código 100% nuevo sin arrastrar decisiones heredadas."
+      ],
+      "cons": [
+        "Riesgo extremo de desviación de cronograma y presupuesto.",
+        "Pérdida de reglas de negocio tácitas y casos borde no documentados.",
+        "Cero entregas de valor hasta el final del proyecto."
+      ],
+      "target_stack": "FastAPI o NestJS monolítico",
+      "risk_level": "HIGH",
+      "estimated_effort_days": 65.0,
+      "recommended": false
+    }
+  ],
+  "selected_first_cut": "GET /invoices/{id}",
+  "pert_plan": [
+    {
+      "phase_number": 1,
+      "name": "Fase 1: Fijación de Contratos y Pruebas de Caracterización",
+      "description": "Crear suite de pruebas golden-master con pytest que fijen el comportamiento observable actual de GET /invoices/{id}.",
+      "optimistic_days": 2.0,
+      "nominal_days": 3.0,
+      "pessimistic_days": 5.0,
+      "pert_expected_days": 3.17,
+      "pert_variance": 0.25,
+      "assumptions": [
+        "Acceso a base de datos de prueba con fixtures conocidos de FacturaYa."
+      ],
+      "prerequisites": [
+        "Definición congelada de contratos JSON v1."
+      ],
+      "rollback_strategy": "Descartar suite de pruebas sin impacto en producción."
+    }
+  ],
+  "characterization_tests_legacy": null,
+  "characterization_tests_modern": null,
+  "migration_summary": null,
+  "validation_report": {
+    "total_references": 3,
+    "valid_references": 3,
+    "invalid_references": 0,
+    "fidelity_ratio": 1.0,
+    "details": [
+      "Validación parcial de etapas 1 a 5."
+    ]
+  },
+  "executive_summary": "Análisis preliminar en progreso. Se han identificado los primeros 3 hallazgos críticos.",
+  "mermaid_er_diagram": "erDiagram\n    INVOICES {\n        int id PK\n        int owner_id FK\n        string number\n        date issue_date\n        decimal total\n        string status\n    }\n    CUSTOMERS {\n        int id PK\n        int owner_id FK\n        string name\n        string email\n    }\n    INVOICE_ITEMS {\n        int id PK\n        int invoice_id FK\n        string description\n        int quantity\n        decimal unit_price\n        decimal line_total\n    }\n    CUSTOMERS ||--o{ INVOICES : places\n    INVOICES ||--|{ INVOICE_ITEMS : contains",
+  "mermaid_call_flow": "flowchart TD\n    Client[\"Cliente / Navegador\"] --> Facade[\"Fachada Strangler Fig\"]\n    Facade -->|GET /invoices/id| Modern[\"FastAPI (modern/invoices_api.py)\"]\n    Facade -->|Otras rutas| Legacy[\"Flask Monolito (app.py)\"]\n    Modern --> DB[(\"SQLite Database\")]\n    Legacy --> DB",
+  "execution_mode": "live"
+}
