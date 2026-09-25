@@ -18,7 +18,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LegacyLens — {{ dossier.snapshot.repo_name }}</title>
+  <title>CodeArchaeologist — {{ dossier.snapshot.repo_name }}</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -169,7 +169,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="container">
     <header>
       <div class="logo-group">
-        <h1>LegacyLens × IBM Bob 2.0</h1>
+        <h1>CodeArchaeologist × IBM Bob 2.0</h1>
         <p>Expediente de Diagnóstico y Migración — <strong>{{ dossier.snapshot.repo_name }}</strong></p>
       </div>
       <div>
@@ -322,7 +322,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </section>
 
     <footer>
-      <p>Generado deterministamente por <strong>LegacyLens</strong> × <strong>IBM Bob Shell 2.0</strong> · Hackathon IBM Bob 2.0</p>
+      <p>Generado deterministamente por <strong>CodeArchaeologist</strong> × <strong>IBM Bob Shell 2.0</strong> · Hackathon IBM Bob 2.0</p>
       <p style="margin-top: 0.25rem;">SHA256: <code>{{ dossier.snapshot.snapshot_sha256 }}</code></p>
     </footer>
   </div>

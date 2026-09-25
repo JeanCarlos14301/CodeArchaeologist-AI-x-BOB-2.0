@@ -428,7 +428,7 @@ class BobAdapter:
             f"y exposición de datos por falta de autorización a nivel de objeto (BOLA), junto con lógica de cálculo de descuentos "
             f"divergente entre facturación y reportes contables.\n\n"
             f"#### 2. Trazabilidad y Verificabilidad Absoluta\n"
-            f"A diferencia de diagnósticos convencionales de IA generativa, el 100% de los reclamos técnicos emitidos por LegacyLens "
+            f"A diferencia de diagnósticos convencionales de IA generativa, el 100% de los reclamos técnicos emitidos por CodeArchaeologist "
             f"están verificados directamente en código fuente (Tasa de Fidelidad de Referencias: **{fidelity_ratio * 100:.1f}%**). "
             f"Ninguna cifra o riesgo ha sido inventado.\n\n"
             f"#### 3. Primer Paso Seguro Probado\n"

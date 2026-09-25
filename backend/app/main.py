@@ -1,4 +1,4 @@
-"""Punto de entrada principal de FastAPI para LegacyLens (D-02, D11).
+"""Punto de entrada principal de FastAPI para CodeArchaeologist (D-02, D11).
 
 Integra:
 - Motor determinista de 11 etapas (/api/jobs, /api/jobs/{id}/migrate, /api/jobs/{id}/artifacts).
@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 
 ARTIFACTS_DIR = Path(os.environ.get("ARTIFACTS_DIR", REPO_ROOT / "artifacts"))
 FRONTEND_DIST = Path(os.environ.get("FRONTEND_DIST", REPO_ROOT / "frontend" / "dist"))
-DEV_ORIGINS = ["*", "http://localhost:5173", "http://127.0.0.1:5173"]
+DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 def _load_dotenv(path: Path = REPO_ROOT / ".env") -> None:
@@ -106,25 +106,25 @@ def create_app(
         executor.shutdown(wait=False, cancel_futures=True)
 
     app = FastAPI(
-        title="LegacyLens — Forensic Legacy Migration API",
+        title="CodeArchaeologist — Forensic Legacy Migration API",
         description="Motor determinista de diagnóstico forense de repositorios, evaluación de radio de explosión y migración Strangler Fig con IBM Bob Shell 2.0.",
         version="1.0.0",
         lifespan=lifespan,
     )
 
-    # Middleware CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=DEV_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # CORS solo para el servidor de desarrollo de Vite; en producción el frontend se sirve
+    # desde el mismo origen (Dockerfile fija ENABLE_DEV_CORS=false).
+    if os.environ.get("ENABLE_DEV_CORS", "true").lower() == "true":
+        app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
+                           allow_headers=["Content-Type", "X-Live-Token"])
 
-    # Registro de routers de API de Daniel
-    app.include_router(jobs_router)
-    app.include_router(migrate_router)
-    app.include_router(artifacts_router)
+    # Motor de 11 etapas (Daniel). Acepta ZIP arbitrarios y aún no aplica el token de live
+    # ni el tope de coste, así que el Dockerfile lo apaga en el despliegue público
+    # (ENABLE_JOBS_API=false). El frontend usa /api/audits, que no depende de esto.
+    if os.environ.get("ENABLE_JOBS_API", "true").lower() == "true":
+        app.include_router(jobs_router)
+        app.include_router(migrate_router)
+        app.include_router(artifacts_router)
 
     # Registro de router de auditorías de Felipe / Frontend
     app.include_router(felipe_routes_router)
@@ -138,7 +138,7 @@ def create_app(
 
         return {
             "status": "ok",
-            "service": "LegacyLens Core Backend",
+            "service": "CodeArchaeologist Core Backend",
             "version": "1.0.0",
             "bob_shell_available": cli_found,
             "bob_api_key_configured": api_key_set,

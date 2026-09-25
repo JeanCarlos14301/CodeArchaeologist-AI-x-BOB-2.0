@@ -1,4 +1,4 @@
-"""CLI de Auditoría y Diagnóstico Forense Local (LegacyLens CLI).
+"""CLI de Auditoría y Diagnóstico Forense Local (CodeArchaeologist CLI).
 
 Permite ejecutar el pipeline determinista completo de 11 etapas directamente
 desde la terminal sin necesidad de levantar el servidor web:
@@ -36,7 +36,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description="LegacyLens CLI — Auditoría y modernización forense")
+    parser = argparse.ArgumentParser(description="CodeArchaeologist CLI — Auditoría y modernización forense")
     parser.add_argument(
         "--sample",
         type=str,

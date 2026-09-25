@@ -124,9 +124,12 @@ def test_workspace_excludes_evaluation_material(tmp_path: Path) -> None:
     (source / "expected-findings.json").write_text("{}")
     (source / "app.py").write_text("print('hola')\n")
     (source / "data.sqlite3").write_text("")
+    (source / "tests").mkdir()
+    (source / "tests" / "test_known_legacy_behavior.py").write_text("def test_sql(): ...\n")
 
     workspace = prepare_workspace(source, tmp_path / "job")
 
+    assert not (workspace / "tests").exists(), "los tests de la muestra delatan los hallazgos esperados"
     assert (workspace / "app.py").is_file()
     assert (workspace / ".bob" / "custom_modes.yaml").is_file()
     assert (workspace / ".bob" / "agents" / "legacy-sql-auditor.md").is_file()

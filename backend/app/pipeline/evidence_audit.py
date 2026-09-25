@@ -26,6 +26,9 @@ DOSSIER_FILE = "dossier.json"
 _COPY_IGNORE = shutil.ignore_patterns(
     ".git", ".venv", "venv", "__pycache__", "*.pyc", "*.sqlite3", "*.db",
     ".pytest_cache", "evaluation", "expected-findings*.json", "node_modules", "dist", ".bob",
+    # samples/*/tests son el arnés de evaluación: describen las vulnerabilidades esperadas
+    # (p. ej. "la búsqueda acepta SQL"). Si Bob los leyera, la medición de F-07 no valdría.
+    "tests",
 )
 _FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
 

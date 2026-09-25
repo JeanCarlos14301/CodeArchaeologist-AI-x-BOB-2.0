@@ -194,7 +194,20 @@ def run_pipeline_for_job(
         s7_start = time.time()
         add_job_event(job_id, 7, "Sandbox Pytest vs Legado", "started", message="Ejecutando pruebas de caracterización contra el código monolítico...")
 
-        legacy_report = run_pytest_in_sandbox(manifest.target_dir, timeout_seconds=60)
+        if source_type == "zip":
+            # AGENTS.md: nunca se ejecuta código subido por usuarios. pytest importaría el
+            # conftest.py y los tests del ZIP, es decir, código arbitrario en el servidor.
+            legacy_report = CharacterizationTestReport(
+                total_tests=1, passed_count=0, failed_count=0, target_endpoint=selected_first_cut,
+                all_passed=False,
+                test_cases=[CharacterizationTestCase(
+                    name="legacy_suite_not_executed", target_endpoint=selected_first_cut,
+                    test_type="sandbox_execution", status="SKIPPED",
+                    error_message="Repositorio subido por el usuario: no se ejecuta su código.",
+                )],
+            )
+        else:
+            legacy_report = run_pytest_in_sandbox(manifest.target_dir, timeout_seconds=60)
 
         s7_dur = int((time.time() - s7_start) * 1000)
         add_job_event(

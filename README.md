@@ -1,4 +1,4 @@
-# LegacyLens (CodeArchaeologist) × IBM Bob 2.0
+# CodeArchaeologist × IBM Bob 2.0
 
 **From "nobody dares to touch it" to a board-approved plan and a tested first migration step.**
 
@@ -10,7 +10,7 @@
 Every company has a legacy system nobody dares to touch: the original authors are gone, there are no tests, and every change feels like a gamble. Boards are asked to fund modernization without evidence of what is inside, how risky it is, or where to start.
 
 ## What it does
-Given a legacy repository (Python 3 + Flask + SQLite), LegacyLens delivers:
+Given a legacy repository (Python 3 + Flask + SQLite), CodeArchaeologist delivers:
 
 1. **Technical dossier**: every finding points to a real file and line range, verified by a 100% deterministic physical evidence validator (zero hallucination).
 2. **Board memo (DOCX)**: executive decision memorandum with PERT effort ranges, composite blast radius ($CBRS$) and risk matrix in plain business language.
@@ -87,6 +87,10 @@ cp .env.example .env
 # BOB_API_KEY=your_key_here
 # LEGACYLENS_EXECUTION_MODE=live
 ```
+
+- Docker (same image as production): `docker compose up --build`. Deployment to Render with auto-deploy from `main`: [docs/deploy.md](docs/deploy.md).
+- CLI (stages 2-3): `cd backend && ../.venv/bin/python -m app.pipeline.run_audit ../samples/facturaya-v1`
+- Pruebas: `cd backend && ../.venv/bin/pytest -m "not live"` (añade `-m live` para invocar Bob real)
 
 ### 3. Run the CLI Audit (11 Deterministic Stages)
 Audit the bundled legacy monolith (`FacturaYa v1`) directly from terminal:

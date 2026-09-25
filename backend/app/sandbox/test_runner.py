@@ -36,6 +36,10 @@ def run_pytest_in_sandbox(
 
     # Entorno aislado sin acceso a red
     env = os.environ.copy()
+    # El código bajo prueba nunca debe poder leer credenciales del servidor (BOB_API_KEY, tokens...).
+    for key in list(env):
+        if any(marker in key.upper() for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+            del env[key]
     env["HTTP_PROXY"] = "http://127.0.0.1:9/"
     env["HTTPS_PROXY"] = "http://127.0.0.1:9/"
     env["ALL_PROXY"] = "http://127.0.0.1:9/"

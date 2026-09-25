@@ -52,7 +52,7 @@ def test_html_renderer_produces_interactive_report(sample_dossier: DossierResult
     assert out_html.exists()
     content = out_html.read_text(encoding="utf-8")
     assert "<!DOCTYPE html>" in content
-    assert "LegacyLens" in content
+    assert "CodeArchaeologist" in content
     assert "erDiagram" in content or "mermaid" in content
     assert "Fidelidad de Evidencia" in content
     assert "EF-1" in content

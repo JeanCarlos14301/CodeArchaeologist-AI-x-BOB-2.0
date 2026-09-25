@@ -81,7 +81,7 @@ def test_job_lifecycle_and_synchronous_pipeline():
 
     res_html = client.get(f"/api/jobs/{job_id}/artifacts/html")
     assert res_html.status_code == 200
-    assert "LegacyLens" in res_html.text
+    assert "CodeArchaeologist" in res_html.text
 
     res_pptx = client.get(f"/api/jobs/{job_id}/artifacts/pptx")
     assert res_pptx.status_code == 200

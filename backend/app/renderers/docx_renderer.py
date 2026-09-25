@@ -155,7 +155,7 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     p_ev = doc.add_paragraph()
     p_ev.paragraph_format.space_after = Pt(6)
     p_ev.add_run(
-        f"Regla de auditoría estricta de LegacyLens: 100% de los reclamos técnicos citan archivo, rango de líneas y código real. "
+        f"Regla de auditoría estricta de CodeArchaeologist: 100% de los reclamos técnicos citan archivo, rango de líneas y código real. "
         f"Tasa de fidelidad comprobada: {dossier.validation_report.fidelity_ratio * 100:.1f}% "
         f"({dossier.validation_report.valid_references} de {dossier.validation_report.total_references} referencias válidas en disco)."
     )

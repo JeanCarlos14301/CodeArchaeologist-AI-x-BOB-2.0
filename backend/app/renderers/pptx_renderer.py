@@ -1,7 +1,7 @@
 """Renderizador de Presentación Ejecutiva en PPTX de 6 Diapositivas (D-09).
 
 Genera una presentación profesional en formato Microsoft PowerPoint (python-pptx):
-Diapositiva 1: Portada (LegacyLens, Sistema, Metadatos y Modo de Ejecución)
+Diapositiva 1: Portada (CodeArchaeologist, Sistema, Metadatos y Modo de Ejecución)
 Diapositiva 2: El Problema y Diagnóstico del Sistema
 Diapositiva 3: Hallazgos Críticos con Evidencia Física 100% Verificada (CBRS)
 Diapositiva 4: Opciones Arquitectónicas Comparadas y Selección de Strangler Fig
@@ -75,7 +75,7 @@ def create_executive_pptx(dossier: DossierResult, output_path: Path | str) -> Pa
     
     p1 = tf1.paragraphs[0]
     r1 = p1.add_run()
-    r1.text = "LegacyLens × Bob 2.0"
+    r1.text = "CodeArchaeologist × Bob 2.0"
     r1.font.size = Pt(40)
     r1.font.bold = True
     r1.font.color.rgb = c_primary
@@ -131,7 +131,7 @@ def create_executive_pptx(dossier: DossierResult, output_path: Path | str) -> Pa
         bp.font.size = Pt(12)
         bp.font.color.rgb = c_text_white
 
-    # Columna Derecha: La Respuesta de LegacyLens
+    # Columna Derecha: La Respuesta de CodeArchaeologist
     c2 = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(1.8), card_w, card_h)
     c2.fill.solid()
     c2.fill.fore_color.rgb = c_card_bg
