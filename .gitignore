@@ -64,6 +64,8 @@ npm-debug.log*
 
 # Datos y salidas
 artifacts/
+sandboxes/
+jobs.db*
 *.db
 *.sqlite3
 
