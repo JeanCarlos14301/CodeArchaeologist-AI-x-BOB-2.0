@@ -5,9 +5,12 @@
 
 # --- Etapa 1: build del frontend ---------------------------------------------------------
 FROM node:24-bookworm-slim AS frontend
-WORKDIR /build
+# Mirror the repo layout: src/fixtures/index.ts imports ../../../contracts/fixtures/*.json,
+# so the contract fixtures must sit next to frontend/ exactly as they do in the repo.
+WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
+COPY contracts/fixtures /build/contracts/fixtures
 COPY frontend/ ./
 RUN npm run build
 
@@ -54,7 +57,7 @@ COPY .bob .bob
 COPY backend backend
 COPY contracts contracts
 COPY samples samples
-COPY --from=frontend /build/dist frontend/dist
+COPY --from=frontend /build/frontend/dist frontend/dist
 
 RUN useradd --create-home --uid 10001 app \
     && mkdir -p /app/artifacts \
