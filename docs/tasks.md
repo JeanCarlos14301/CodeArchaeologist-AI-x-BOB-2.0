@@ -27,6 +27,11 @@ Hitos (se asignan por la hora final de la ventana):
 | F-07 | Felipe | H18–H24 | Precisión y recall vs expected-findings | Tabla en evaluation/ |
 | F-08 | Felipe | H24–H30 | board-narrator + prueba en holdout | DOCX sin cifras sin fuente |
 | F-09 | Felipe | continuo | bob-usage.md y reporte exportado | Archivo en bob-report/ |
+| F-10 | Felipe | H4–H10 | Polyglot Migration: agentes y skill FastAPI→NestJS/Express | Catálogo y matrices completos |
+| F-11 | Felipe | H8–H16 | Shift-Left Blast Radius: simulador y puerta pre-PR | Score CBRS y veredicto funcional |
+| F-12 | Felipe | H12–H20 | Tribunal Adversarial: Arquitecto vs Escéptico | Protocolo 4 rondas con veredicto |
+| F-13 | Felipe | H16–H24 | AST Cartographer + PyDriller Git Archaeology | Grafos de llamadas y ER Mermaid |
+| F-14 | Felipe | H20–H28 | Telemetría FastMCP: conectores DuckDB / GitHub | Enriquecimiento operativo activo |
 | D-01 | Daniel | H0–H3 | Modelos Pydantic + schema v1 + 2 fixtures | Aprobado en H3 |
 | D-02 | Daniel | H2–H6 | API de jobs, SQLite, worker, eventos | POST y GET funcionan |
 | D-03 | Daniel | H3–H6 | Ingesta segura ZIP + extractores | ZIP malicioso rechazado |

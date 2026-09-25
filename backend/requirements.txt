@@ -8,4 +8,7 @@ networkx
 radon
 sqlglot
 pytest
+pydriller
+duckdb
+fastmcp
 # TODO: python-multipart (subida de ZIP) y python-pptx (PPTX, P1) cuando se necesiten.

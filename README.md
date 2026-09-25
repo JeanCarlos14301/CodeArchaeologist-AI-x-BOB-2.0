@@ -17,10 +17,16 @@ Given a legacy repository (Python 3 + Flask + SQLite), CodeArchaeologist deliver
 3. **First migration cut (Strangler Fig)**: characterization tests that pass against the legacy code *and* against the new FastAPI implementation.
 
 ## How it uses IBM Bob 2.0
-- **5 custom modes** ([.bob/custom_modes.yaml](.bob/custom_modes.yaml)): `evidence-auditor`, `migration-architect`, `contract-keeper`, `strangler-surgeon`, `board-narrator`.
-- **Subagents**: the evidence auditor delegates modules to subagents.
-- **`bob run`**: the deterministic Python pipeline invokes Bob Shell non-interactively.
-- **`/code-audit`**: custom command for the audit stage ([.bob/commands/code-audit.md](.bob/commands/code-audit.md)).
+- **9 custom modes** ([.bob/custom_modes.yaml](.bob/custom_modes.yaml)):
+  - Core Migration: `evidence-auditor`, `migration-architect`, `contract-keeper`, `strangler-surgeon`, `board-narrator`.
+  - Extended Intelligence: `polyglot-architect`, `blast-radius-guard`, `code-skeptic`, `git-archaeologist`.
+- **Specialized Subagents** ([agents/](agents/)): 16 forensic and engineering agents covering SQL audit, route mapping, dependency tracing, AST extraction, and adversarial review.
+- **Shift-Left Pre-PR Risk Gate**: Non-mutating simulation predicting cascade failures ($CBRS$ 0-100) before human review.
+- **Adversarial Tribunals**: Dialectical stress-testing between Architect and Skeptic agents.
+- **Code Archaeology & Modernization**: PyDriller git commit mining + Tree-sitter/AST cartography with automated Mermaid ER diagrams.
+- **FastMCP Telemetry Integration**: Connecting live DuckDB access analytics and SQLite read-only schemas to AI modes.
+- **`bob run`**: Deterministic Python pipeline invokes Bob Shell non-interactively via `subprocess` (without `shell=True`).
+- **Custom Slash Commands** ([commands/](commands/)): `/legacy-audit`, `/legacy-migrate`, `/migrate-framework`, `/risk-simulate`, `/code-tribunal`, `/code-archaeology`, `/legacy-report`, `/legacy-risk`, `/legacy-test`, `/legacy-onboard`.
 
 ## Architecture
 A single Docker container runs FastAPI (API + worker), invokes Bob Shell via subprocess,
