@@ -10,7 +10,7 @@ Regla central de AGENTS.md: 'Los números los calcula código, no la IA'.
 
 import math
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 import networkx as nx
 
 from backend.app.models import Finding, MigrationPhase

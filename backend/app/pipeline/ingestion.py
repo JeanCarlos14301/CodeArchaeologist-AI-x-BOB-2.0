@@ -217,7 +217,12 @@ def prepare_repository(
         source_dir = workspace_base / "samples" / "facturaya-v1"
         if not source_dir.exists():
             raise FileNotFoundError(f"Muestra demo no encontrada en: {source_dir}")
-        shutil.copytree(source_dir, target_repo_dir, dirs_exist_ok=True)
+        shutil.copytree(
+            source_dir,
+            target_repo_dir,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "*.pyo"),
+        )
 
     elif source_type == "holdout":
         sample_id = "variant-holdout"
@@ -225,7 +230,12 @@ def prepare_repository(
         source_dir = workspace_base / "samples" / "variant-holdout"
         if not source_dir.exists():
             source_dir = workspace_base / "samples" / "facturaya-v1"
-        shutil.copytree(source_dir, target_repo_dir, dirs_exist_ok=True)
+        shutil.copytree(
+            source_dir,
+            target_repo_dir,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "*.pyo"),
+        )
 
     elif source_type == "zip":
         if not zip_bytes_or_path:

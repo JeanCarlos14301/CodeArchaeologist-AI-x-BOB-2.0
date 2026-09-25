@@ -44,16 +44,22 @@ def test_job_lifecycle_and_synchronous_pipeline():
     assert res_status.status_code == 200
     assert res_status.json()["job_id"] == job_id
 
-    # 3. Ejecutar pipeline de 11 etapas de forma determinista para el test
-    run_pipeline_for_job(job_id=job_id, source_type="demo", requested_mode="example")
+    # 3. Esperar que el pipeline asíncrono termine en background
+    max_wait = 25
+    start_time = time.time()
+    comp_data = {}
+    while time.time() - start_time < max_wait:
+        res_completed = client.get(f"/api/jobs/{job_id}")
+        assert res_completed.status_code == 200
+        comp_data = res_completed.json()
+        if comp_data["status"] in ["completed", "completed_with_warnings", "failed"]:
+            break
+        time.sleep(0.4)
 
     # 4. Verificar estado final completado
-    res_completed = client.get(f"/api/jobs/{job_id}")
-    assert res_completed.status_code == 200
-    comp_data = res_completed.json()
-    assert comp_data["status"] == "completed"
-    assert comp_data["progress_percent"] == 100
-    assert len(comp_data["events"]) >= 10
+    assert comp_data.get("status") == "completed", f"Job failed or incomplete: {comp_data}"
+    assert comp_data.get("progress_percent") == 100
+    assert len(comp_data.get("events", [])) >= 10
 
     # 5. Obtener DossierResult
     res_dossier = client.get(f"/api/jobs/{job_id}/result")
