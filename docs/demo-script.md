@@ -1,13 +1,16 @@
-# Guion del video (máximo 4:00)
+# Guion del video (MÁXIMO 3:00, formato MP4)
 
-Dueño: Jean (J-06, J-09). El modo de ejecución (`live` / `imported` / `example`) debe verse en pantalla.
+Dueño: Jean (J-06, J-09). Regla obligatoria del jurado: no se ve nada pasado el minuto 3:00.
+Al menos **90 segundos** deben ser demo en vivo de la solución funcionando en pantalla.
+El modo de ejecución (`live` / `imported` / `example`) debe verse en pantalla durante la demo.
 
-| Tiempo | Escena | Qué se ve | Narración |
-|--------|--------|-----------|-----------|
-| 0:00–0:30 | Problema | TODO | TODO |
-| 0:30–1:00 | Entrada del repo | TODO | TODO |
-| 1:00–1:45 | Expediente y evidencia | TODO | TODO |
-| 1:45–2:30 | Primer corte y pruebas | TODO | TODO |
-| 2:30–3:15 | Memo para la junta | TODO | TODO |
-| 3:15–3:45 | Cómo usamos Bob | TODO | TODO |
-| 3:45–4:00 | Cierre | TODO | TODO |
+| Tiempo | Duración | Escena | Qué se ve | Narración |
+|--------|----------|--------|-----------|-----------|
+| 0:00–0:45 | 45 s | Problema y valor de negocio | TODO | El monolito heredado que nadie se atreve a tocar; qué cuesta eso hoy |
+| 0:45–2:30 | 105 s (≥ 90 s de demo) | **Demo en vivo** | Bob IDE en acción (modo real, no grabación editada) + dashboard web con métricas y reportes | TODO |
+| 2:30–3:00 | 30 s | Viabilidad, modelo de negocio y equipo | Slides de negocio (J-04) | TODO |
+
+## Notas de edición
+- Exportar en MP4, duración total ≤ 3:00 verificada antes de subir.
+- El tramo 0:45–2:30 no puede ser solo capturas estáticas: debe mostrarse la interacción real con Bob IDE/Bob Shell y con el dashboard.
+- Referencia de estructura anterior (4:00, ya no aplica): ver historial de git de este archivo.

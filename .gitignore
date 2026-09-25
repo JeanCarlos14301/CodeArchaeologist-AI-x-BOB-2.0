@@ -1,3 +1,44 @@
+# ============================================
+# WATSONX HACKATHON - CREDENTIAL SAFETY (CRITICAL)
+# Source: IBM Hackathon GitHub project template
+# DO NOT REMOVE OR MODIFY THESE PATTERNS — see SECURITY.md
+# ============================================
+ibmcloud-credentials.json
+ibm-credentials.env
+*-credentials.json
+*apikey*
+*api-key*
+*api_key*
+config.json
+config.yaml
+config.yml
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+credentials.yaml
+*credentials*
+*secret*
+*password*
+*token*
+database.yml
+database.json
+db-config.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+id_rsa
+id_dsa
+*.ppk
+
+# Other AI assistant session files (Bob's own bob-sessions/ folder IS tracked; see SECURITY.md)
+.copilot/
+.cursor/
+.codeium/
+
 # Python
 __pycache__/
 *.py[cod]

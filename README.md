@@ -57,9 +57,15 @@ Every result carries an `execution_mode`: `live`, `imported` or `example`.
 ## Quick start
 TODO
 
+## Security
+Built on the official [IBM Hackathon GitHub project template](https://github.com/watsonxhackathon/ibm-hackathon-template).
+See [SECURITY.md](SECURITY.md) for credential-handling rules; `.gitignore` and `.bobignore`
+carry that template's security patterns unmodified.
+
 ## Demo and video
 - Live demo: TODO
-- Video (≤ 4 min): TODO
+- Video (≤ 3 min, ≥ 90 s live demo — see [docs/demo-script.md](docs/demo-script.md)): TODO
+- Per-teammate IBM Bob session screenshots: [bob-sessions/](bob-sessions/)
 
 ## Team
 - **Jean**: Product Owner, DevOps, pitch

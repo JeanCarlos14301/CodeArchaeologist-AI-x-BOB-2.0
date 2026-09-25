@@ -19,6 +19,10 @@
 | D15 | Tribunal adversarial multi-agente: dialéctica formal Arquitecto vs. Escéptico (`code-skeptic`) para desafiar suposiciones, condiciones de carrera y deuda oculta. |
 | D16 | Minería forense de git y AST: integración de PyDriller (hotspots de churn vs. bugs) y Tree-sitter/AST para cartografía estructural y diagramas ER en Mermaid. |
 | D17 | Inyección de telemetría externa FastMCP: conector a DuckDB, SQLite en modo lectura y GitHub para enriquecer hallazgos estáticos con métricas de tráfico y fallos en producción. |
+| D18 | Adoptado el [template oficial IBM Hackathon](https://github.com/watsonxhackathon/ibm-hackathon-template): `.bobignore`, patrones de seguridad de `.gitignore` y `SECURITY.md` no se modifican ni se eliminan. |
+| D19 | Ajuste de reglas (2026-09-25): video de envío ≤ 3:00 (antes ≤ 4:00), con ≥ 90 s de demo en vivo obligatoria; ver `docs/demo-script.md`. |
+| D20 | Ajuste de reglas (2026-09-25): el repo debe incluir capturas del resumen de sesión de Bob de cada integrante, en `bob-sessions/<persona>/`; ver `SECURITY.md` sobre cómo tomarlas sin exponer credenciales. |
+| D21 | Ajuste de reglas (2026-09-25): el formulario de envío añade "Long Description" e "IBM Bob Usage Statement", ambos con tope de 500 palabras; ver `docs/submission-checklist.md`. |
 
 ## Respuestas del kickoff (J-01)
 1. **Alcance técnico**: El núcleo arranca con Flask + SQLite a FastAPI, extensible inmediatamente a NestJS y microservicios mediante el catálogo de agentes especializados.

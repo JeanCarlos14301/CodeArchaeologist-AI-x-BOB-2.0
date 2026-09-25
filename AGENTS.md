@@ -33,3 +33,13 @@ directiva con riesgos y esfuerzo PERT, y un primer corte de migración Strangler
 - No ejecutar código subido por usuarios (solo el repo demo corre en el sandbox controlado).
 - No pasar `evaluation/expected-findings.json` a Bob.
 - No escribir fuera de las rutas permitidas por cada modo.
+- No exponer credenciales, API keys ni tokens en el repo, en commits o en prompts a Bob u
+  otro asistente de IA — ver [SECURITY.md](SECURITY.md). No quitar ni modificar los patrones
+  de `.gitignore` ni `.bobignore` (heredados del template oficial del hackathon).
+
+## Seguridad de credenciales
+Este repo usa la [plantilla oficial de GitHub del IBM Hackathon](https://github.com/watsonxhackathon/ibm-hackathon-template).
+Reglas completas en [SECURITY.md](SECURITY.md); en resumen: variables de entorno para toda
+credencial, `.env` nunca se commitea, y ninguna captura en `bob-sessions/` puede mostrar una
+credencial visible. Si IBM detecta credenciales expuestas en el repo público, la cuenta del
+equipo puede quedar suspendida durante la competencia.

@@ -16,8 +16,9 @@ Hitos (se asignan por la hora final de la ventana):
 | J-06 | Jean | H12–H20 | Guion del video | demo-script.md con tiempos |
 | J-07 | Jean | H20–H24 | Medición manual vs herramienta | Número con método |
 | J-08 | Jean | H24–H30 | Aceptación y tag v1.0 | Recorrido pasa 3 veces |
-| J-09 | Jean | H32–H38 | Grabar y editar video | ≤ 4 minutos |
+| J-09 | Jean | H32–H38 | Grabar y editar video | ≤ 3 minutos, ≥ 90 s de demo en vivo |
 | J-10 | Jean | H36–H44 | README final y envío | Verificado desde otra cuenta |
+| J-11 | Jean | continuo | Captura de resumen de sesión de Bob (cuenta propia) | Imagen en bob-sessions/jean/ |
 | F-01 | Felipe | H0–H2 | Bob Shell + JSON real sanitizado | Archivo en contracts/ |
 | F-02 | Felipe | H1–H3 | AGENTS.md y 5 modos operativos | bob run --mode responde |
 | F-03 | Felipe | H3–H8 | evidence-auditor devuelve esquema v1 | Pasa Pydantic |
@@ -32,6 +33,7 @@ Hitos (se asignan por la hora final de la ventana):
 | F-12 | Felipe | H12–H20 | Tribunal Adversarial: Arquitecto vs Escéptico | Protocolo 4 rondas con veredicto |
 | F-13 | Felipe | H16–H24 | AST Cartographer + PyDriller Git Archaeology | Grafos de llamadas y ER Mermaid |
 | F-14 | Felipe | H20–H28 | Telemetría FastMCP: conectores DuckDB / GitHub | Enriquecimiento operativo activo |
+| F-15 | Felipe | continuo | Captura de resumen de sesión de Bob (cuenta propia) | Imagen en bob-sessions/felipe/ |
 | D-01 | Daniel | H0–H3 | Modelos Pydantic + schema v1 + 2 fixtures | Aprobado en H3 |
 | D-02 | Daniel | H2–H6 | API de jobs, SQLite, worker, eventos | POST y GET funcionan |
 | D-03 | Daniel | H3–H6 | Ingesta segura ZIP + extractores | ZIP malicioso rechazado |
@@ -41,6 +43,7 @@ Hitos (se asignan por la hora final de la ventana):
 | D-07 | Daniel | H12–H22 | Sandbox pytest + endpoint /migrate | Resultado real en JSON |
 | D-08 | Daniel | H16–H24 | DOCX completo + HTML autónomo | Abre en Word y navegador |
 | D-09 | Daniel | H24–H30 | PPTX, descarga .diff, manejo de fallos | Estados claros |
+| D-10 | Daniel | continuo | Captura de resumen de sesión de Bob (cuenta propia) | Imagen en bob-sessions/daniel/ |
 | E-01 | Edgar | H0–H3 | Vite + React + Tailwind | Build servido por FastAPI |
 | E-02 | Edgar | H3–H8 | Entrada y línea de tiempo con fixture | Recorrido completo |
 | E-03 | Edgar | H6–H8 | Conectar API real | Bala trazadora visible |
@@ -49,3 +52,4 @@ Hitos (se asignan por la hora final de la ventana):
 | E-06 | Edgar | H16–H24 | Split-view + panel de pruebas | Datos reales |
 | E-07 | Edgar | H20–H28 | Descargas, modo visible, estados de error | Sin pantallas vacías |
 | E-08 | Edgar | H26–H32 | Pulido y capturas | Valor claro en 30 segundos |
+| E-09 | Edgar | continuo | Captura de resumen de sesión de Bob (cuenta propia) | Imagen en bob-sessions/edgar/ |
