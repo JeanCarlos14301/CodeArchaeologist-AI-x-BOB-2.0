@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-SAMPLE = Path(__file__).resolve().parents[1] / "samples" / "facturaya-v1"
+_parent = Path(__file__).resolve().parent.parent
+SAMPLE = _parent if (_parent / "app.py").exists() else _parent / "samples" / "variant-holdout"
 sys.path.insert(0, str(SAMPLE))
 
 from app import create_app
