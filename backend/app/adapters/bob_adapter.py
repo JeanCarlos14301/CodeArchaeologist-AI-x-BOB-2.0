@@ -177,17 +177,20 @@ class BobAdapter:
 
     def __init__(
         self,
-        workspace: Path | str,
+        workspace: Optional[Path | str] = None,
         settings: BobRunSettings | None = None,
         allowed_modes: frozenset[str] | None = None,
         mode: Optional[str] = None,
+        workspace_dir: Optional[Path | str] = None,
+        requested_mode: Optional[str] = None,
     ) -> None:
-        self.workspace = Path(workspace).resolve()
+        raw_ws = workspace or workspace_dir or REPO_ROOT
+        self.workspace = Path(raw_ws).resolve()
         self.workspace_dir = self.workspace
         self.settings = settings or BobRunSettings.from_env()
         custom = load_custom_mode_slugs() if allowed_modes is None else allowed_modes
         self.allowed_modes = BUILTIN_MODES | custom
-        self.mode = mode or determine_operational_mode()
+        self.mode = mode or requested_mode or determine_operational_mode()
         self.api_key = get_bob_api_key()
 
     def build_command(self, mode: str, binary_path: str) -> list[str]:

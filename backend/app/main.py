@@ -21,19 +21,46 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.app.adapters.bob_adapter import (
-    REPO_ROOT,
-    determine_operational_mode,
-    get_bob_api_key,
-    is_bob_cli_available,
-)
-from backend.app.api.artifacts import router as artifacts_router
-from backend.app.api.jobs import router as jobs_router
-from backend.app.api.migrate import router as migrate_router
-from backend.app.api.routes import router as felipe_routes_router
-from backend.app.database import init_db
-from backend.app.jobs.service import AuditService
-from backend.app.jobs.store import JobStore
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+_backend_path = str(REPO_ROOT / "backend")
+if _backend_path not in sys.path:
+    sys.path.insert(0, _backend_path)
+
+try:
+    from app.adapters.bob_adapter import (
+        REPO_ROOT,
+        determine_operational_mode,
+        get_bob_api_key,
+        is_bob_cli_available,
+    )
+    from app.api.artifacts import router as artifacts_router
+    from app.api.jobs import router as jobs_router
+    from app.api.migrate import router as migrate_router
+    from app.api.routes import router as felipe_routes_router
+    from app.database import init_db
+    from app.jobs.service import AuditService
+    from app.jobs.store import JobStore
+except ImportError:
+    from backend.app.adapters.bob_adapter import (
+        REPO_ROOT,
+        determine_operational_mode,
+        get_bob_api_key,
+        is_bob_cli_available,
+    )
+    from backend.app.api.artifacts import router as artifacts_router
+    from backend.app.api.jobs import router as jobs_router
+    from backend.app.api.migrate import router as migrate_router
+    from backend.app.api.routes import router as felipe_routes_router
+    from backend.app.database import init_db
+    from backend.app.jobs.service import AuditService
+    from backend.app.jobs.store import JobStore
+
+if "app" in sys.modules and "backend.app" not in sys.modules:
+    sys.modules["backend.app"] = sys.modules["app"]
+elif "backend.app" in sys.modules and "app" not in sys.modules:
+    sys.modules["app"] = sys.modules["backend.app"]
 
 logger = logging.getLogger(__name__)
 

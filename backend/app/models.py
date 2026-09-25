@@ -188,7 +188,7 @@ class JobCreateRequest(BaseModel):
 
 class JobProgressEvent(BaseModel):
     """Evento de avance en la línea de tiempo del pipeline."""
-    stage: int = Field(..., ge=1, le=11, description="Número de etapa (1 a 11)")
+    stage: int = Field(..., ge=0, le=11, description="Número de etapa (0 a 11)")
     stage_name: str = Field(..., description="Nombre de la etapa")
     status: Literal["started", "running", "completed", "failed", "skipped"]
     duration_ms: int = Field(default=0, ge=0)
