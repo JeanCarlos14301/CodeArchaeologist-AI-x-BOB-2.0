@@ -32,6 +32,7 @@ from app.pipeline.activity import BobActivity, EventLog, inventory_events
 from app.contracts.schema_v1 import AuditorOutput, Dossier, DossierStats
 from app.pipeline.decision_metrics import calculate_decision_metrics, source_sha256
 from app.pipeline.migration_architect import run_migration_architect
+from app.pipeline.migration_ranking import analyze_route_candidates
 from app.renderers.board_memo import BOARD_MEMO_FILE, render_board_memo
 from app.sandbox.reference_cut import not_run_result, run_reference_cut
 from app.validators.evidence import validate_findings
@@ -444,7 +445,12 @@ def run_evidence_audit(
     )
     if events:
         _emit_migration(events, migration)
-    dossier = dossier.model_copy(update={"migration": migration})
+    recommendation = analyze_route_candidates(workspace, dossier)
+    dossier = dossier.model_copy(update={
+        "migration": migration,
+        "recommendation": recommendation,
+        "first_cut_pert": recommendation.first_cut_pert or dossier.first_cut_pert,
+    })
     (job_dir / DOSSIER_FILE).write_text(dossier.model_dump_json(indent=2), encoding="utf-8")
     render_board_memo(dossier, job_dir / BOARD_MEMO_FILE, job_id or job_dir.name)
     if events:

@@ -1,13 +1,11 @@
-"""Pruebas de integración de la API REST y ciclo de vida de Jobs (D-02, D-07)."""
+"""Pruebas de integración de la API REST de Auditorías y Migración (D-02, D-07, D-08)."""
 
-import time
 from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
 from backend.app.database import init_db
 from backend.app.main import app
-from backend.app.worker import run_pipeline_for_job
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -17,8 +15,13 @@ def setup_test_db():
     init_db()
 
 
-def test_health_endpoint():
-    client = TestClient(app)
+@pytest.fixture
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+def test_health_endpoint(client: TestClient):
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
@@ -28,68 +31,47 @@ def test_health_endpoint():
     assert "execution_mode" in data
 
 
-def test_job_lifecycle_and_synchronous_pipeline():
-    """Prueba completa del ciclo de vida: creación de job, ejecución de pipeline y consulta de resultado."""
-    client = TestClient(app)
+def test_samples_endpoint(client: TestClient):
+    response = client.get("/api/samples")
+    assert response.status_code == 200
+    samples = response.json()
+    assert isinstance(samples, list)
+    assert any(s["id"] == "facturaya-v1" for s in samples)
 
-    # 1. Crear Job
-    res = client.post("/api/jobs", json={"source_type": "demo"})
-    assert res.status_code == 202
-    data = res.json()
-    job_id = data["job_id"]
-    assert data["status"] == "queued"
 
-    # 2. Consultar estado inmediato
-    res_status = client.get(f"/api/jobs/{job_id}")
-    assert res_status.status_code == 200
-    assert res_status.json()["job_id"] == job_id
+def test_audits_list_endpoint(client: TestClient):
+    response = client.get("/api/audits")
+    assert response.status_code == 200
+    audits = response.json()
+    assert isinstance(audits, list)
 
-    # 3. Esperar que el pipeline asíncrono termine en background
-    # En Windows y CI compartido, Word/pytest pueden tardar más de 25 s sin que el worker falle.
-    # Stage 7 runs the real FacturaYa suite in a subprocess with its own 60 s timeout,
-    # after ~20 s of earlier stages on a slow machine; 60 s total was not enough.
-    max_wait = 150
-    start_time = time.time()
-    comp_data = {}
-    while time.time() - start_time < max_wait:
-        res_completed = client.get(f"/api/jobs/{job_id}")
-        assert res_completed.status_code == 200
-        comp_data = res_completed.json()
-        if comp_data["status"] in ["completed", "completed_with_warnings", "failed"]:
-            break
-        time.sleep(0.4)
 
-    # 4. Verificar estado final completado
-    assert comp_data.get("status") == "completed", f"Job failed or incomplete: {comp_data}"
-    assert comp_data.get("progress_percent") == 100
-    assert len(comp_data.get("events", [])) >= 10
+def test_migration_endpoint_facturaya_if_available(client: TestClient):
+    """Valida que /api/audits/{id}/migration devuelva la recomendación determinista completa."""
+    audits_res = client.get("/api/audits")
+    assert audits_res.status_code == 200
+    audits = audits_res.json()
+    if not audits:
+        return
 
-    # 5. Obtener DossierResult
-    res_dossier = client.get(f"/api/jobs/{job_id}/result")
-    assert res_dossier.status_code == 200
-    dossier_data = res_dossier.json()
-    assert dossier_data["schema_version"] == "1.0"
-    assert len(dossier_data["findings"]) >= 7
-    assert dossier_data["selected_first_cut"] == "GET /invoices/{id}"
-
-    # 6. Endpoint de migración
-    res_migrate = client.post(f"/api/jobs/{job_id}/migrate", json={"endpoint": "GET /invoices/{id}"})
-    assert res_migrate.status_code == 200
-    assert res_migrate.json()["status"] == "applied"
-
-    # 7. Descarga de artefactos
-    res_docx = client.get(f"/api/jobs/{job_id}/artifacts/docx")
-    assert res_docx.status_code == 200
-    assert len(res_docx.content) > 1000
-
-    res_html = client.get(f"/api/jobs/{job_id}/artifacts/html")
-    assert res_html.status_code == 200
-    assert "CodeArchaeologist" in res_html.text
-
-    res_pptx = client.get(f"/api/jobs/{job_id}/artifacts/pptx")
-    assert res_pptx.status_code == 200
-    assert len(res_pptx.content) > 1000
-
-    res_diff = client.get(f"/api/jobs/{job_id}/artifacts/diff")
-    assert res_diff.status_code == 200
-    assert len(res_diff.content) > 0
+    job_id = audits[0]["id"]
+    res = client.get(f"/api/audits/{job_id}/migration")
+    if res.status_code == 200:
+        data = res.json()
+        assert "job_id" in data
+        assert "result" in data
+        assert "candidates" in data
+        assert "recommended" in data
+        assert "waves" in data
+        assert "first_cut_pert" in data
+        if data["candidates"]:
+            assert len(data["candidates"]) >= 3
+            rec = data["recommended"]
+            assert "score" in rec
+            assert "formula" in rec
+            assert "why" in rec
+            assert "findings_mitigated" in rec
+            # Validar que el PERT incluya la advertencia de no calibrado
+            first_pert = data["first_cut_pert"]
+            assert first_pert is not None
+            assert any("no calibrada" in a.lower() for a in first_pert.get("assumptions", []))

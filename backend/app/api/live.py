@@ -23,6 +23,7 @@ from app.jobs.service import AuditService, BusyError, NotFoundError
 from app.jobs.store import Job
 from app.pipeline.callgraph import collect_functions, enclosing, module_node, resolve_edges, to_nodes
 from app.pipeline.evidence_audit import BOB_RESULT_FILE, DOSSIER_FILE
+from app.pipeline.migration_ranking import analyze_route_candidates
 from app.renderers.board_memo import BOARD_MEMO_FILE
 from app.sandbox.reference_cut import MIGRATION_DIFF_FILE, SANDBOX_DIR
 from app.validators.evidence import resolve_inside
@@ -237,11 +238,25 @@ def read_migration(
     service: Service,
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> dict[str, Any]:
-    job = service.get_job(job_id)
-    require_job_access(job, x_live_token)
-    dossier = service.get_dossier(job_id)
-    if dossier is None or dossier.migration is None:
+    try:
+        job = service.get_job(job_id)
+        require_job_access(job, x_live_token)
+    except NotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+    try:
+        dossier = service.get_dossier(job_id)
+    except NotFoundError:
+        dossier = None
+
+    if dossier is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "El resultado de migración aún no está disponible.")
+
+    workspace = service.job_dir(job_id) / "workspace"
+    recommendation = dossier.recommendation
+    if recommendation is None and workspace.is_dir():
+        recommendation = analyze_route_candidates(workspace, dossier)
+
     sandbox = service.job_dir(job_id) / SANDBOX_DIR
 
     def content(relative: str | None) -> str | None:
@@ -250,12 +265,43 @@ def read_migration(
         target = resolve_inside(sandbox.resolve(), relative)
         return target.read_text(encoding="utf-8", errors="replace") if target and target.is_file() else None
 
+    migration_result = (
+        dossier.migration.model_dump()
+        if dossier.migration
+        else {
+            "status": "not_run",
+            "reason": "Primer corte de caracterización no ejecutado para este repositorio.",
+            "implementation_origin": "strangler-fig",
+            "endpoint": recommendation.recommended.endpoint if recommendation and recommendation.recommended else "None",
+            "tests": [],
+            "legacy_file": None,
+            "modern_file": None,
+            "facade_file": None,
+            "diff_file": None,
+        }
+    )
+
+    rec_dump = recommendation.model_dump() if recommendation else None
+    first_pert = (
+        recommendation.first_cut_pert.model_dump()
+        if recommendation and recommendation.first_cut_pert
+        else (dossier.first_cut_pert.model_dump() if dossier.first_cut_pert else None)
+    )
+
     return {
         "job_id": job_id,
-        "result": dossier.migration.model_dump(),
-        "legacy_code": content(dossier.migration.legacy_file),
-        "modern_code": content(dossier.migration.modern_file),
-        "facade_code": content(dossier.migration.facade_file),
+        "result": migration_result,
+        "recommendation": rec_dump,
+        "candidates": rec_dump["candidates"] if rec_dump else [],
+        "recommended": rec_dump["recommended"] if rec_dump else None,
+        "alternatives": rec_dump["alternatives"] if rec_dump else [],
+        "do_not_start_here": rec_dump["do_not_start_here"] if rec_dump else None,
+        "waves": rec_dump["waves"] if rec_dump else [],
+        "first_cut_pert": first_pert,
+        "reference_comparison": rec_dump.get("reference_comparison") if rec_dump else None,
+        "legacy_code": content(dossier.migration.legacy_file) if dossier.migration else None,
+        "modern_code": content(dossier.migration.modern_file) if dossier.migration else None,
+        "facade_code": content(dossier.migration.facade_file) if dossier.migration else None,
     }
 
 

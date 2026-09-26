@@ -85,22 +85,17 @@ class FlaskRouteVisitor(ast.NodeVisitor):
         for dec in node.decorator_list:
             if isinstance(dec, ast.Call):
                 func = dec.func
-                is_route_decorator = False
-                if isinstance(func, ast.Attribute) and func.attr == "route":
-                    is_route_decorator = True
-                elif isinstance(func, ast.Name) and func.id == "route":
-                    is_route_decorator = True
-
-                if is_route_decorator:
+                attr_name = getattr(func, "attr", None) or getattr(func, "id", None)
+                if attr_name in {"get", "post", "put", "delete", "patch", "route"}:
                     rule = "/"
                     if dec.args and isinstance(dec.args[0], ast.Constant):
                         rule = str(dec.args[0].value)
 
-                    methods = ["GET"]
+                    methods = [attr_name.upper()] if attr_name != "route" else ["GET"]
                     for kw in dec.keywords:
                         if kw.arg == "methods" and isinstance(kw.value, (ast.List, ast.Tuple)):
                             methods = [
-                                elt.value
+                                str(elt.value).upper()
                                 for elt in kw.value.elts
                                 if isinstance(elt, ast.Constant)
                             ]

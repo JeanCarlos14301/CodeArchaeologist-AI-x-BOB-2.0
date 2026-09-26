@@ -26,12 +26,13 @@ class FunctionCollector(ast.NodeVisitor):
     def _enter(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         qualname = ".".join(self.stack + [node.name])
         route = route_of(node)
+        dec_start = min((getattr(d, "lineno", node.lineno) for d in node.decorator_list), default=node.lineno)
         self.functions[qualname] = {
             "id": f"{self.rel_path}::{qualname}",
             "name": node.name,
             "qualname": qualname,
             "file": self.rel_path,
-            "line_start": node.lineno,
+            "line_start": dec_start,
             "line_end": getattr(node, "end_lineno", node.lineno) or node.lineno,
             "route": route,
             "calls": set(),
