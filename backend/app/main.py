@@ -122,10 +122,12 @@ def create_app(
         app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
                            allow_headers=["Content-Type", "X-Live-Token"])
 
+    # Motor de 11 etapas (Daniel), APAGADO por defecto: sus etapas 4-10 usan plantillas fijas (no Bob)
+    # y no exige token. Solo para desarrollo: ENABLE_JOBS_API=true.
     # Motor de 11 etapas (Daniel). Acepta ZIP arbitrarios y aún no aplica el token de live
     # ni el tope de coste, así que el Dockerfile lo apaga en el despliegue público
     # (ENABLE_JOBS_API=false). El frontend usa /api/audits, que no depende de esto.
-    if os.environ.get("ENABLE_JOBS_API", "true").lower() == "true":
+    if os.environ.get("ENABLE_JOBS_API", "false").lower() == "true":
         app.include_router(jobs_router)
         app.include_router(migrate_router)
         app.include_router(artifacts_router)

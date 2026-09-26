@@ -125,3 +125,15 @@ def test_downloads_are_limited_to_dossier_and_bob_result(client: TestClient) -> 
     assert client.get(f"/api/audits/{job_id}/files/dossier.json").status_code == 200
     assert client.get(f"/api/audits/{job_id}/files/..%2Fjobs.db").status_code == 404
     assert client.get(f"/api/audits/{job_id}/files/workspace").status_code == 404
+
+
+def test_defaults_are_real_only(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Sin las banderas de desarrollo: sin /api/jobs, sin example/imported y con token siempre."""
+    monkeypatch.delenv("ALLOW_NON_LIVE_MODES")
+    monkeypatch.delenv("ENABLE_JOBS_API")
+    app = create_app(artifacts_dir=tmp_path / "strict", frontend_dist=tmp_path / "no-dist")
+    with TestClient(app) as strict:
+        assert strict.post("/api/jobs", json={"source_type": "demo"}).status_code in {404, 405}
+        for mode in ("example", "imported"):
+            assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": mode}).status_code == 403
+        assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"}).status_code == 403

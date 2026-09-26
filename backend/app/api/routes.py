@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
+from app.api.live import require_token
 from app.contracts.schema_v1 import Dossier
 from app.jobs.service import (
     SAMPLES,
@@ -72,7 +73,13 @@ def start_audit(
     service: Service,
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> Job:
-    require_live_token(body.execution_mode, x_live_token)
+    if os.environ.get("ALLOW_NON_LIVE_MODES", "").lower() == "true":
+        require_live_token(body.execution_mode, x_live_token)
+    else:
+        # Por defecto solo hay auditorías reales: modo live y token siempre obligatorio.
+        if body.execution_mode != "live":
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo se permiten auditorías live (datos reales).")
+        require_token(x_live_token)
     try:
         return service.start(body.sample, body.execution_mode)
     except NotFoundError as exc:
