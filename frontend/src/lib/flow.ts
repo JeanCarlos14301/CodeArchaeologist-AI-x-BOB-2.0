@@ -16,7 +16,8 @@ export function jobToFlow(job: Job): FlowJob {
   const current = done ? STAGES.length : Math.max(index, 0);
   return {
     id: job.id,
-    label: job.sample.replace(/^upload:/, ""),
+    purpose: job.sample.startsWith("modernize:") ? "modernization" : "audit",
+    label: job.sample.replace(/^(upload|modernize):/, ""),
     execution_mode: job.execution_mode,
     status: job.status,
     progress: Math.round((current / STAGES.length) * 100),

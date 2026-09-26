@@ -10,10 +10,49 @@ import { EmptyState, ErrorState, Loading } from "../components/ui/States";
 import { importedFramework } from "../lib/stack";
 import { useResource, useWorkspace } from "../lib/workspace";
 import type { Dossier, MigrationViewData } from "../types";
-import { JobGate } from "./JobGate";
+import { StudioGate } from "./JobGate";
+import { StudioView } from "./StudioView";
+
+type Tab = "studio" | "cut";
 
 export function ModernizationView() {
-  return <JobGate>{(dossier) => <Modernization dossier={dossier} />}</JobGate>;
+  return <StudioGate>{() => <ModernizationTabs />}</StudioGate>;
+}
+
+/** Estudio (cualquier proyecto) y, si hubo auditoría, el primer corte y las opciones que salieron de ella. */
+function ModernizationTabs() {
+  const { dossier } = useWorkspace();
+  const [tab, setTab] = useState<Tab>("studio");
+  if (dossier && tab === "cut") {
+    return (
+      <>
+        <div className="px-6 pt-5 @3xl:px-10"><TabSwitch tab={tab} onChange={setTab} /></div>
+        <Modernization dossier={dossier} />
+      </>
+    );
+  }
+  return (
+    <div className="px-6 py-6 @3xl:px-10">
+      <ScreenHeader
+        eyebrow="Modernización · ¿Cómo migrar con seguridad?"
+        title="Estudio de modernización"
+        description="Mide qué tecnologías usa tu proyecto, elige a dónde migrar (o deja que Bob lo recomiende), entiende qué se gana y qué se sacrifica, y pide a Bob un plan y su implementación."
+        actions={dossier ? <TabSwitch tab={tab} onChange={setTab} /> : undefined}
+      />
+      <StudioView />
+    </div>
+  );
+}
+
+function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }) {
+  return (
+    <Segmented<Tab>
+      label="Vista de modernización"
+      value={tab}
+      onChange={onChange}
+      options={[{ value: "studio", label: "Estudio" }, { value: "cut", label: "Primer corte de la auditoría" }]}
+    />
+  );
 }
 
 function Modernization({ dossier }: { dossier: Dossier }) {

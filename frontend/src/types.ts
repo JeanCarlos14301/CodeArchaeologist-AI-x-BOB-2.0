@@ -173,6 +173,8 @@ export interface FlowJob {
   error: string | null;
   created_at: string;
   updated_at: string;
+  /** "modernization": subido solo para el Estudio (sin auditoría, arquitectura ni expediente). */
+  purpose: "audit" | "modernization";
 }
 
 // Grafo de llamadas real (GET /api/audits/{id}/graph).
@@ -256,4 +258,53 @@ export interface ActivityPage {
   events: PipelineEvent[];
   next_after: number;
   has_more: boolean;
+}
+
+
+// --- Estudio de modernización (GET /api/audits/{id}/modernization) ---------------------------
+
+export interface StackEvidence { path: string; line: number | null; text: string }
+export interface DetectedTech {
+  id: string; name: string; kind: string; language: string | null; icon: string | null; version: string | null;
+  service: string | null; evidence: StackEvidence[];
+}
+export interface StackTarget { id: string; name: string; kind: string; language: string | null; icon: string | null }
+export interface StackReport {
+  languages: { id: string; name: string; files: number; lines: number; share: number }[];
+  technologies: DetectedTech[];
+  services: { name: string; path: string; technologies: string[]; dockerfile: boolean }[];
+  architecture: { kind: "monolith" | "multi-app" | "microservices" | "unknown"; basis: string[] };
+  targets: Record<string, StackTarget[]>;
+  totals: { files: number; lines: number; technologies: number };
+}
+
+export type StudioPhase = "idle" | "assessing" | "assessed" | "planning" | "planned" | "implementing" | "implemented" | "failed";
+export type Priority = "security" | "performance" | "cost" | "time" | "team" | "compatibility";
+export interface StudioMapping { from_id: string; to_id: string; service?: string | null }
+export interface AssessRequest { mode: "chosen" | "recommend"; mappings: StudioMapping[]; business_context: string; priorities: Priority[] }
+export type Axis = "security" | "performance" | "cost" | "maintainability" | "compatibility" | "team" | "operations";
+export interface Assessment {
+  verdict: "recommended" | "conditional" | "not_recommended";
+  summary: string; business_reading: string;
+  tradeoffs: { axis: Axis; effect: "improves" | "worsens" | "neutral" | "depends"; detail: string; refs: { path: string; line_start: number; line_end: number; verified: boolean }[] }[];
+  blockers: string[]; questions: string[];
+  recommended: { from_id: string; to_id: string; why: string }[];
+  bob_cost: number | null; bob_duration_ms: number | null;
+}
+export interface PlanStep {
+  id: string; title: string; kind: string; why: string; depends_on: string[];
+  files: { path: string; action: "modify" | "create" | "delete" }[];
+  risk: "low" | "medium" | "high"; complexity: "low" | "medium" | "high"; validation: string; changes: string;
+}
+export interface MigrationPlan { summary: string; steps: PlanStep[]; rollback: string; bob_cost: number | null; bob_duration_ms: number | null }
+export interface Implementation {
+  steps: { step_id: string; status: "done" | "failed" | "skipped"; changed: { path: string; action: string }[]; outside_plan: string[]; note: string; bob_cost: number | null }[];
+  checks: { path: string; kind: string; ok: boolean; detail: string }[];
+  files_changed: number; lines_added: number; lines_removed: number; outside_plan: string[]; not_executed: string; bob_cost: number | null;
+}
+export interface StudioState {
+  phase: StudioPhase; error: string | null; request: AssessRequest | null;
+  assessment: Assessment | null; plan: MigrationPlan | null; implementation: Implementation | null;
+  events: { t: number; phase: string; message: string; step_id: string | null }[];
+  updated_at: string | null;
 }

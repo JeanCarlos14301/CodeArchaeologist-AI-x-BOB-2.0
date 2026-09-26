@@ -18,4 +18,7 @@ export const plural = (count: number, one: string, many: string) => `${count} ${
 export const lineRange = (start: number, end: number) => (end !== start ? `${start}–${end}` : `${start}`);
 
 /** Etiqueta legible de un job: las subidas llevan el prefijo `upload:`. */
-export const jobLabel = (sample: string) => sample.replace(/^upload:/, "");
+export const jobLabel = (sample: string) => sample.replace(/^(upload|modernize):/, "");
+
+/** Versión tal como la declara el proyecto, sin el operador de igualdad de pip (`==3.1.0` -> `3.1.0`). */
+export const cleanVersion = (version: string | null) => (version ? version.replace(/^==\s*/, "") : null);

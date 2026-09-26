@@ -142,7 +142,7 @@ def run_steps(
         note = _note(result)
         done_notes.append(f"{step.id}: {note}")
         runs.append(StepRun(step_id=step_id, status="done", changed=changed, outside_plan=outside, note=note, bob_cost=cost))
-        on_event(f"Paso {step.id} listo: {len(changed)} archivos", step.id)
+        on_event(f"Paso {step.id} listo: {len(changed)} {'archivo' if len(changed) == 1 else 'archivos'}", step.id)
     return runs, round(total_cost, 4) if total_cost else None
 
 

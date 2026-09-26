@@ -179,6 +179,20 @@ Dominio en `components/domain/`:
 | `MigrationSequence` · `PertRange` | pasos del corte con dependencias · rango PERT como regla |
 | `AskBob` (`AskComposer`, `AskAnswerView`) | composer carbon + orbe; respuesta en hechos / inferencias / recomendaciones / desconocido |
 
+Estudio de modernización en `components/domain/studio/` (sección **Modernización**, pestaña Estudio):
+
+| Componente | Rol |
+|---|---|
+| `TechIcon` | icono monocromo (simple-icons, `currentColor`) de una tecnología; sin icono, iniciales en mono. Nunca lleva color de marca |
+| `StackBoard` | arquitectura detectada (monolito / varias apps / microservicios y en qué se basa) y matriz por tipo de tecnología; la evidencia `archivo:línea` va en el tooltip |
+| `TransformBoard` | tablero ACTUAL → OBJETIVO: una fila por tecnología migrable, flecha hairline (discontinua sin destino, continua con destino) y selector de destinos con iconos; contexto de negocio, prioridades y modo «yo elijo / Bob recomienda» |
+| `AssessmentPanel` | veredicto (✓ ▲ ✗ + texto), lectura del negocio y tabla de sacrificios por eje con `↑ ↓ = ?`; sin plan hasta que la persona confirma que lo entiende |
+| `PlanGraph` | plan como dependencias: pasos en filas por nivel (los paralelos comparten fila) e inspector del paso (por qué, archivos `~ + −`, validación, riesgo) |
+| `ImplementationPanel` | confirmación explícita, progreso por paso con la actividad real, y resultado medido: archivos, líneas, sintaxis ✓/✗, cambios fuera del plan, descarga del ZIP y diff |
+
+Reglas del Estudio: el código generado se rotula siempre como **borrador sin probar** (solo se comprueba su sintaxis); ninguna cifra sale de Bob
+(porcentaje de lenguaje, archivos y líneas los mide el backend); el naranja es solo la acción principal de cada momento.
+
 Consola de la sesión en `components/domain/console/` (sección **Sesión de Bob** y cualquier sección mientras
 un análisis corre):
 

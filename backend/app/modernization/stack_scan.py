@@ -52,6 +52,7 @@ class Detected(BaseModel):
     id: str
     name: str
     kind: str
+    language: str | None = None  # lenguaje del ecosistema de la tecnología
     icon: str | None
     version: str | None = None  # tal como lo declara el proyecto, sin resolver
     service: str | None = None  # carpeta del servicio/aplicación donde se detectó
@@ -97,7 +98,7 @@ class _Acc:
         key = (tech.id, service)
         detected = self.found.get(key)
         if detected is None:
-            detected = Detected(id=tech.id, name=tech.name, kind=tech.kind, icon=tech.icon, version=version,
+            detected = Detected(id=tech.id, name=tech.name, kind=tech.kind, language=tech.language, icon=tech.icon, version=version,
                                 service=service, evidence=[])
             self.found[key] = detected
         if version and not detected.version:
@@ -452,7 +453,7 @@ def scan_stack(root: Path) -> StackReport:
 
     # Los lenguajes van primero, con las cifras medidas como evidencia (sin archivo concreto).
     language_techs = [
-        Detected(id=lang.id, name=lang.name, kind="language", icon=BY_ID[lang.id].icon, service=None,
+        Detected(id=lang.id, name=lang.name, kind="language", language=lang.id, icon=BY_ID[lang.id].icon, service=None,
                  evidence=[Evidence(path="", line=None, text=f"{lang.files} archivos · {lang.lines} líneas")])
         for lang in languages
     ]
@@ -502,6 +503,10 @@ def _services(roots: list[str], technologies: list[Detected], files: list[Path],
     return result
 
 
+def _where(root: str) -> str:
+    return "la raíz del proyecto" if root == "." else root
+
+
 def _architecture(services: list[Service], compose_services: list[tuple[str, str, str, dict[str, Any]]],
                   technologies: list[Detected]) -> Architecture:
     backend_roots = sorted({t.service for t in technologies if t.kind == "backend" and t.service})
@@ -512,13 +517,13 @@ def _architecture(services: list[Service], compose_services: list[tuple[str, str
         if len(own_code) >= 2:
             basis.append(f"docker-compose define {len(own_code)} servicios con código propio: {', '.join(own_code)}")
         if len(backend_roots) >= 2:
-            basis.append(f"hay {len(backend_roots)} carpetas con su propio backend: {', '.join(backend_roots)}")
+            basis.append(f"hay {len(backend_roots)} carpetas con su propio backend: {', '.join(map(_where, backend_roots))}")
         return Architecture(kind="microservices", basis=basis)
     apps = sorted(set(backend_roots) | set(frontend_roots))
     if len(apps) >= 2 and backend_roots and frontend_roots:
-        basis.append(f"backend en {', '.join(backend_roots)} y frontend en {', '.join(frontend_roots)}, como aplicaciones separadas")
+        basis.append(f"backend en {', '.join(map(_where, backend_roots))} y frontend en {', '.join(map(_where, frontend_roots))}, como aplicaciones separadas")
         return Architecture(kind="multi-app", basis=basis)
     if backend_roots or frontend_roots:
-        basis.append(f"un solo servicio con {'backend' if backend_roots else 'frontend'} en {(backend_roots or frontend_roots)[0]}")
+        basis.append(f"un solo servicio con {'backend' if backend_roots else 'frontend'} en {_where((backend_roots or frontend_roots)[0])}")
         return Architecture(kind="monolith", basis=basis)
     return Architecture(kind="unknown", basis=["no se detectó ningún framework de backend ni de frontend"])
