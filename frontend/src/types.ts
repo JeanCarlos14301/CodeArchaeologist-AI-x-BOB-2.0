@@ -192,3 +192,63 @@ export interface GraphData {
   blast_radius: GraphBlast[];
   notes: string;
 }
+
+// --- Asistente contextual (POST /api/audits/{id}/ask) -------------------------------------
+
+export type ContextKind = "project" | "finding" | "file" | "function" | "module";
+
+export interface AskContext {
+  kind: ContextKind;
+  label?: string;
+  finding_id?: string;
+  path?: string;
+  line_start?: number;
+  line_end?: number;
+}
+
+export interface CodeRef {
+  path: string;
+  line_start: number;
+  line_end: number;
+  verified: boolean;
+}
+
+export interface Claim {
+  text: string;
+  refs: CodeRef[];
+}
+
+export interface AskAnswer {
+  summary: string;
+  facts: Claim[];
+  inferences: Claim[];
+  recommendations: Claim[];
+  unknowns: string[];
+  structured: boolean;
+  bob_cost: number | null;
+  bob_duration_ms: number | null;
+}
+
+// --- Actividad del análisis (GET /api/audits/{id}/events) ----------------------------------
+
+export type StageId = "preparing" | "auditing" | "validating" | "migration" | "done";
+
+export interface PipelineEvent {
+  seq: number;
+  t: number;
+  stage: StageId;
+  kind: string;
+  actor: string;
+  title: string;
+  detail: string | null;
+  data: Record<string, unknown>;
+  recorded: boolean;
+}
+
+export interface ActivityPage {
+  job_id: string;
+  job_status: string;
+  events: PipelineEvent[];
+  next_after: number;
+  has_more: boolean;
+}

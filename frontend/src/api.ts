@@ -1,4 +1,4 @@
-import type { ArchitectureData, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
+import type { ActivityPage, ArchitectureData, AskAnswer, AskContext, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -43,6 +43,8 @@ export const api = {
   graph: (id: string, token?: string) => request<GraphData>(`/api/audits/${enc(id)}/graph`, { headers: auth(token) }),
   architecture: (id: string, token?: string) => request<ArchitectureData>(`/api/audits/${enc(id)}/architecture`, { headers: auth(token) }),
   migration: (id: string, token?: string) => request<MigrationViewData>(`/api/audits/${enc(id)}/migration`, { headers: auth(token) }),
+  events: (id: string, after: number, token?: string) =>
+    request<ActivityPage>(`/api/audits/${enc(id)}/events?after=${after}`, { headers: auth(token) }),
   source: (id: string, path: string, start: number, end: number, token?: string) => {
     const query = new URLSearchParams({ path, start: String(start), end: String(end) });
     return request<SourceExcerpt>(`/api/audits/${enc(id)}/source?${query}`, { headers: auth(token) });
@@ -59,6 +61,13 @@ export const api = {
     form.set("zip_file", file);
     return request<Job>("/api/audits/upload", { method: "POST", body: form, headers: { "X-Live-Token": token } });
   },
+  /** Pregunta contextual a IBM Bob (modo ask, solo lectura). Siempre exige token: gasta bobcoins. */
+  ask: (id: string, question: string, context: AskContext, token: string) =>
+    request<AskAnswer>(`/api/audits/${enc(id)}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Live-Token": token },
+      body: JSON.stringify({ question, context }),
+    }),
   download: async (id: string, name: "dossier.json" | "bob-result.json" | "board_memo.docx" | "migration.diff", token?: string) => {
     const response = await fetch(`/api/audits/${enc(id)}/files/${name}`, { headers: auth(token) });
     if (!response.ok) throw await readError(response);

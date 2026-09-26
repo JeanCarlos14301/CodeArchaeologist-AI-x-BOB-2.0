@@ -21,7 +21,7 @@ function hash(text: string): number {
  * Disposición por fuerzas (determinista): repulsión entre nodos, muelles en las llamadas y una
  * atracción hacia el centro de su archivo, con los archivos repartidos en un anillo.
  */
-export function layoutGraph(graph: Pick<GraphData, "nodes" | "edges">): Record<string, Positioned> {
+export function layoutCallGraph(graph: Pick<GraphData, "nodes" | "edges">): Record<string, Positioned> {
   const files = [...new Set(graph.nodes.map((node) => node.file))].sort();
   const cx = GRAPH_W / 2;
   const cy = GRAPH_H / 2;
@@ -82,4 +82,65 @@ export function layoutGraph(graph: Pick<GraphData, "nodes" | "edges">): Record<s
   return Object.fromEntries(
     pos.map((p) => [p.id, { x: Math.max(40, Math.min(GRAPH_W - 40, p.x)), y: Math.max(40, Math.min(GRAPH_H - 40, p.y)) }]),
   );
+}
+
+export interface LayeredNode {
+  id: string;
+  layer: number;
+  row: number;
+}
+
+/** Aristas que cierran un ciclo (DFS): se ignoran al asignar capas para que un ciclo no alargue el diagrama. */
+function backEdges(ids: string[], edges: { source: string; target: string }[]): Set<string> {
+  const out = new Map(ids.map((id) => [id, [] as string[]]));
+  for (const edge of edges) out.get(edge.source)?.push(edge.target);
+  const state = new Map<string, 0 | 1 | 2>();
+  const back = new Set<string>();
+  const visit = (id: string) => {
+    state.set(id, 1);
+    for (const next of [...(out.get(id) ?? [])].sort()) {
+      if (state.get(next) === 1) back.add(`${id}>${next}`);
+      else if (!state.get(next)) visit(next);
+    }
+    state.set(id, 2);
+  };
+  const indegree = new Map(ids.map((id) => [id, 0]));
+  for (const edge of edges) indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1);
+  // Se empieza por las raíces (sin llamadores) para que las aristas "hacia atrás" sean las del ciclo.
+  for (const id of [...ids].sort((a, b) => indegree.get(a)! - indegree.get(b)! || a.localeCompare(b))) {
+    if (!state.get(id)) visit(id);
+  }
+  return back;
+}
+
+/**
+ * Disposición por capas (izquierda → derecha) para el mapa de módulos: la capa de un nodo es la
+ * longitud del camino más largo desde un nodo sin llamadores, sin contar las aristas de un ciclo.
+ */
+export function layoutLayers(ids: string[], edges: { source: string; target: string }[]): LayeredNode[] {
+  const known = new Set(ids);
+  const valid = edges.filter((edge) => known.has(edge.source) && known.has(edge.target) && edge.source !== edge.target);
+  const back = backEdges(ids, valid);
+  const forward = valid.filter((edge) => !back.has(`${edge.source}>${edge.target}`));
+  const layer = new Map(ids.map((id) => [id, 0]));
+  for (let round = 0; round < ids.length; round++) {
+    let changed = false;
+    for (const edge of forward) {
+      const next = layer.get(edge.source)! + 1;
+      if (next > layer.get(edge.target)!) {
+        layer.set(edge.target, next);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  const rows = new Map<number, number>();
+  return [...ids]
+    .sort((a, b) => layer.get(a)! - layer.get(b)! || a.localeCompare(b))
+    .map((id) => {
+      const l = layer.get(id)!;
+      const row = rows.get(l) ?? 0;
+      rows.set(l, row + 1);
+      return { id, layer: l, row };
+    });
 }
