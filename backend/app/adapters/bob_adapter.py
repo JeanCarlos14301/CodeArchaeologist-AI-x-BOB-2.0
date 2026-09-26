@@ -20,7 +20,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sqlite3
 import subprocess
+import threading
+import time
+from collections.abc import Callable
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field
@@ -39,6 +43,107 @@ _SLUG_PATTERN = re.compile(r"^\s*-\s*slug:\s*([a-z0-9-]+)\s*$", re.MULTILINE)
 _STDERR_TAIL_CHARS = 2000
 
 ExecutionMode = Literal["live", "imported", "example"]
+
+# Procesos de Bob en curso: el servidor los termina al apagarse para no dejar sesiones huérfanas
+# que sigan gastando bobcoins sin que nadie lea su salida.
+_ACTIVE_PROCESSES: set[subprocess.Popen] = set()
+_ACTIVE_LOCK = threading.Lock()
+
+
+# Eventos que Bob solo escribe en su log (no en stdout con stream-json) y que ocurren en tiempo real.
+LOG_ONLY_EVENTS = frozenset({"cost", "subagent_start", "subagent_end"})
+LOG_DISCOVERY_S = 20.0
+LOG_POLL_S = 0.5
+
+
+class BobLogTail(threading.Thread):
+    """Sigue el log de ESTA sesión de Bob para recibir en tiempo real el ciclo de vida de los
+    subagentes y el coste por turno (con stream-json esos eventos solo van al log).
+
+    Best-effort: si no encuentra el log (otra versión de Bob, otro HOME), no emite nada.
+    """
+
+    def __init__(self, workspace: Path, since: float, on_event: Callable[[dict[str, Any]], None],
+                 log_dir: Path | None = None) -> None:
+        super().__init__(daemon=True)
+        self.workspace = str(workspace)
+        self.since = since
+        self.on_event = on_event
+        self.log_dir = log_dir or Path(os.environ.get("BOB_LOG_DIR", Path.home() / ".bob" / "logs" / "shell"))
+        self._stop_event = threading.Event()
+        self.found: Path | None = None
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        self.join(timeout=3)
+
+    def _discover(self) -> Path | None:
+        if not self.log_dir.is_dir():
+            return None
+        candidates = sorted(self.log_dir.glob("bob-shell-*.log"), key=lambda path: path.stat().st_mtime, reverse=True)
+        for path in candidates[:8]:
+            try:
+                if path.stat().st_mtime < self.since - 1:
+                    continue
+                with path.open(encoding="utf-8", errors="replace") as handle:
+                    head = handle.read(200_000)
+            except OSError:
+                continue
+            if self.workspace in head:
+                return path
+        return None
+
+    def run(self) -> None:
+        deadline = time.monotonic() + LOG_DISCOVERY_S
+        while not self._stop_event.is_set() and self.found is None and time.monotonic() < deadline:
+            self.found = self._discover()
+            if self.found is None:
+                self._stop_event.wait(LOG_POLL_S)
+        if self.found is None:
+            self.found = self._discover()  # sesiones muy cortas: último intento antes de rendirse
+        if self.found is None:
+            return
+        with self.found.open(encoding="utf-8", errors="replace") as handle:
+            while True:
+                line = handle.readline()
+                if line:
+                    self._handle(line)
+                    continue
+                if self._stop_event.is_set():
+                    break
+                self._stop_event.wait(LOG_POLL_S)
+
+    def _handle(self, line: str) -> None:
+        try:
+            record = json.loads(line)
+            if not str(record.get("module", "")).endswith("json-renderer"):
+                return
+            event = json.loads(record.get("msg", ""))
+        except (json.JSONDecodeError, TypeError):
+            return
+        if not isinstance(event, dict) or event.get("type") not in LOG_ONLY_EVENTS:
+            return
+        stamp = str(record.get("ts", ""))
+        try:
+            if datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp() < self.since - 1:
+                return  # historial de una sesión reanudada
+        except ValueError:
+            return
+        event["timestamp"] = stamp
+        try:
+            self.on_event(event)
+        except Exception:  # noqa: BLE001 - la UI nunca tumba la auditoría
+            logger.exception("Error procesando un evento del log de Bob")
+
+
+def terminate_active_sessions() -> int:
+    """Termina todas las sesiones de Bob en curso. Devuelve cuántas había."""
+    with _ACTIVE_LOCK:
+        processes = list(_ACTIVE_PROCESSES)
+    for process in processes:
+        if process.poll() is None:
+            process.kill()
+    return len(processes)
 
 
 class BobError(RuntimeError):
@@ -193,23 +298,33 @@ class BobAdapter:
         self.mode = mode or requested_mode or determine_operational_mode()
         self.api_key = get_bob_api_key()
 
-    def build_command(self, mode: str, binary_path: str) -> list[str]:
+    def build_command(
+        self,
+        mode: str,
+        binary_path: str,
+        settings: "BobRunSettings | None" = None,
+        output_format: str = "json",
+        resume_task_id: str | None = None,
+    ) -> list[str]:
         """Construye la lista de argumentos; el prompt nunca forma parte de ella."""
+        settings = settings or self.settings
         command = [
             binary_path,
             "run",
-            "--format", "json",
+            "--format", output_format,
             "--mode", mode,
             "--workspace", str(self.workspace),
-            "--max-turns", str(self.settings.max_turns),
-            "--max-cost", str(self.settings.max_cost),
+            "--max-turns", str(settings.max_turns),
+            "--max-cost", str(settings.max_cost),
             "--trust",
         ]
-        if self.settings.disable_mcp:
+        if resume_task_id:
+            command += ["--resume", resume_task_id]
+        if settings.disable_mcp:
             command.append("--disable-mcp")
-        if self.settings.disable_subagents:
+        if settings.disable_subagents:
             command.append("--disable-subagents")
-        if self.settings.accept_license:
+        if settings.accept_license:
             command.append("--accept-license")
         return command
 
@@ -259,6 +374,147 @@ class BobAdapter:
         if result.status != "success":
             raise BobExecutionError(f"Bob ({mode}) devolvió status {result.status!r}.")
         return result
+
+    def run_stream(
+        self,
+        mode: str,
+        prompt: str,
+        on_event: Callable[[dict[str, Any]], None],
+        settings: "BobRunSettings | None" = None,
+        resume_task_id: str | None = None,
+        raw_log: Path | None = None,
+    ) -> BobResult:
+        """Ejecuta `bob run --format stream-json` y entrega cada evento a `on_event` mientras ocurre.
+
+        Con `resume_task_id`, Bob repite primero el historial de la sesión: esos eventos se descartan
+        hasta ver el mensaje de usuario con este prompt. El mensaje final se reconstruye con el texto
+        del asistente posterior a la última herramienta (stream-json no trae `last_message`).
+        """
+        settings = settings or self.settings
+        binary_path = self._validate(mode, prompt)
+        command = self.build_command(mode, binary_path, settings, "stream-json", resume_task_id)
+        started_at = time.time()
+        process = subprocess.Popen(  # noqa: S603 - lista de argumentos, sin shell
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=self.workspace,
+            env=os.environ.copy(),
+        )
+        with _ACTIVE_LOCK:
+            _ACTIVE_PROCESSES.add(process)
+        raw_lock = threading.Lock()
+        raw_handle = raw_log.open("a", encoding="utf-8") if raw_log else None
+
+        def record(event: dict[str, Any]) -> None:
+            if raw_handle:
+                with raw_lock:
+                    raw_handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+        def from_log(event: dict[str, Any]) -> None:
+            record(event)
+            on_event(event)
+
+        tail = BobLogTail(self.workspace, started_at, from_log)
+        tail.start()
+        timed_out = threading.Event()
+
+        def kill() -> None:
+            timed_out.set()
+            process.kill()
+
+        timer = threading.Timer(settings.timeout_s, kill)
+        timer.start()
+        stderr_parts: list[str] = []
+        drain = threading.Thread(target=lambda: stderr_parts.append(process.stderr.read()), daemon=True)
+        drain.start()
+        replaying = bool(resume_task_id)
+        marker = " ".join(prompt.split())[:60]
+        text: list[str] = []
+        final: dict[str, Any] | None = None
+        try:
+            assert process.stdin is not None and process.stdout is not None
+            process.stdin.write(prompt)
+            process.stdin.close()
+            for line in process.stdout:
+                line = line.strip()
+                if not line.startswith("{"):
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if replaying:
+                    if event.get("type") == "message" and event.get("role") == "user" \
+                            and " ".join(str(event.get("content", "")).split()).startswith(marker):
+                        replaying = False
+                    continue
+                record(event)
+                if event.get("type") == "message" and event.get("role") == "assistant":
+                    text.append(str(event.get("content", "")))
+                elif event.get("type") == "tool_use":
+                    text = []
+                elif event.get("type") == "result":
+                    final = event
+                try:
+                    on_event(event)
+                except Exception:  # noqa: BLE001 - la UI nunca debe tumbar una auditoría
+                    logger.exception("Error procesando un evento de Bob")
+            process.wait()
+        finally:
+            timer.cancel()
+            tail.stop()
+            with _ACTIVE_LOCK:
+                _ACTIVE_PROCESSES.discard(process)
+            if process.poll() is None:
+                process.kill()  # p. ej. excepción del lector: nunca dejar a Bob corriendo solo
+            drain.join(timeout=2)
+            if raw_handle:
+                with raw_lock:
+                    raw_handle.close()
+        if timed_out.is_set():
+            raise BobTimeoutError(f"Bob ({mode}) superó el timeout de {settings.timeout_s}s.")
+        if process.returncode != 0:
+            detail = ("".join(stderr_parts))[-_STDERR_TAIL_CHARS:].strip()
+            raise BobExecutionError(f"Bob ({mode}) terminó con código {process.returncode}: {detail}")
+        if final is None:
+            raise BobExecutionError("La salida de Bob no contiene un evento 'result'.")
+        result = BobResult(
+            mode=mode,
+            status=final.get("status", "unknown"),
+            last_message="".join(text).strip(),
+            stats=BobStats.model_validate(final["stats"]) if "stats" in final else None,
+            execution_mode="live",
+        )
+        if result.status != "success":
+            raise BobExecutionError(f"Bob ({mode}) devolvió status {result.status!r}.")
+        return result
+
+    def find_session_id(self) -> str | None:
+        """Última sesión raíz de Bob en este workspace, leída en solo lectura de su base local.
+
+        Sirve para reanudar una sesión cuyo stream se cortó antes del evento `result` (p. ej.
+        `read ETIMEDOUT` del servicio de inferencia). Es un rescate best-effort: si la base no
+        existe o cambia de esquema, devuelve None y se informa el error original.
+        """
+        database = Path(os.environ.get("BOB_DB_PATH", Path.home() / ".bob" / "db" / "bob.db"))
+        if not database.is_file():
+            return None
+        try:
+            with sqlite3.connect(f"file:{database}?mode=ro", uri=True, timeout=2) as connection:
+                row = connection.execute(
+                    "SELECT id FROM tasks WHERE parent_id IS NULL AND json_extract(env, '$.workspace') = ? "
+                    "ORDER BY created_at DESC LIMIT 1",
+                    (str(self.workspace),),
+                ).fetchone()
+        except sqlite3.Error:
+            logger.warning("No se pudo leer la base de sesiones de Bob", exc_info=True)
+            return None
+        return str(row[0]) if row else None
 
     @staticmethod
     def import_result(json_path: Path, mode: str) -> BobResult:

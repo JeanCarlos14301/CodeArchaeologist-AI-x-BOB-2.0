@@ -17,6 +17,11 @@ Este documento registra las sesiones de invocación de IBM Bob Shell (`bob run`)
 | 2026-09-25 13:50 | Felipe | `evidence-auditor` | F-03: etapas 2-3 sobre FacturaYa (`python -m app.pipeline.run_audit`) | 13 hallazgos, 16/16 evidencias válidas tras el validador; 6/6 hallazgos esperados detectados y 0 sobre el control EF-7; 0,57 bobcoins, 87 s |
 | 2026-09-25 13:45 | Felipe | `evidence-auditor` + subagentes | Integración de `.bob/agents` y `.bob/skills`: auditoría live con delegación | Delegó en `legacy-sql-auditor`, `legacy-security-scanner` y `legacy-dependency-tracer` (log de Bob); 12/12 hallazgos y 18/18 evidencias válidas; 1,13 bobcoins, 189 s |
 | 2026-09-25 15:22 | Jean | `evidence-auditor` (live, primera corrida desde un checkout limpio, tras instalar Bob Shell 2.0.5 + Node 24) | Auditoría real de `facturaya-v1` desde la interfaz | job `02833a24a7a7`: 13 hallazgos reportados, 12 validados, 16/17 evidencias válidas (94%), 1,14 bobcoins, 120 s. Contra `expected-findings.json`: 5/6 hallazgos esperados detectados y validados, 1 (`EF-3`, descuento duplicado) detectado por Bob pero rechazado por el validador (evidencia de `reports.py` no calzó), 0 falsos positivos sobre el control `EF-7`. Detalle en `evaluation/README.md`. Artefactos completos (workspace copiado, `bob-result.json`, `dossier.json`) en `artifacts/jobs/02833a24a7a7/` (no versionado; queda en la máquina de Jean) |
+| 2026-09-26 00:09 | Felipe | `ask` (`--format stream-json`) | Prueba del formato de eventos en tiempo real sobre dos archivos | Emite `message`, `tool_use`, `tool_result` y `result`; 0,14 bobcoins |
+| 2026-09-26 00:09 | Felipe | `evidence-auditor` (`--resume`) | Diagnóstico del fallo de `upload:proyecto_ciber-main.zip` (job `2f944b585cdb`) | Bob agotó el tope de 5 bobcoins (sus 4 subagentes gastaron 3,89) sin entregar el JSON; «No files found» era su última búsqueda. Reanudar la sesión entregó el JSON por 0,17 bobcoins (15 hallazgos, 13 validados). No se publicó: el sandbox excluía `tests/` y Bob reportó «sin pruebas» en falso (corregido) |
+| 2026-09-26 00:18 | Felipe | `evidence-auditor` (live, stream) | Primera auditoría con actividad en vivo (job `6a3ed667018e`) | El servicio de inferencia cortó el stream (`read ETIMEDOUT`) a los 154 s. La sesión, localizada por su workspace, se reanudó y entregó un JSON válido (0,68 bobcoins en total). Motivó el rescate automático |
+| 2026-09-26 00:25 | Felipe | `evidence-auditor` + 4 subagentes (live, stream) | Grabación de la vitrina (job `0234884643c5`) | Delegó en paralelo en `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-security-scanner` y `legacy-dependency-tracer` (0,04–0,11 bobcoins cada uno); 12/12 hallazgos, 14/14 evidencias válidas, primer corte 3/3; 1,15 bobcoins, 165 s. Contra `expected-findings.json`: 5/6 (EF-3 detectado como F-7 pero citando las constantes, no el cálculo). Es la sesión que reproduce la vitrina |
+| 2026-09-26 00:30 | Felipe | `evidence-auditor` (live, stream) | Corrida con la regla «citar la línea donde ocurre el problema» (job `b7424d9733a6`) | Bob no delegó (leyó los 12 archivos); 10/10 hallazgos, 13/13 evidencias; 1,44 bobcoins, 126 s. 5/6: detectó EF-3 y no reportó EF-2 (variabilidad entre corridas) |
 
 ## Modos Personalizados Registrados (`.bob/custom_modes.yaml`)
 
@@ -129,3 +134,25 @@ de modo que Bob nunca ve el material de evaluación. La salida queda en `artifac
 - Grupos válidos en modos y subagentes: `read, edit, execute, browser, mcp, skill, todo, subagent, mode`.
   Un modo necesita `subagent` para delegar y `skill` para activar skills.
 - Bob también carga skills globales de `~/.bob/skills`, `~/.agents/skills` y `~/.claude/skills`.
+
+### Actividad en vivo y rescate de sesiones (verificado en Bob Shell 2.0.5)
+
+- `bob run --format stream-json` emite por stdout `message` (texto del asistente en fragmentos), `tool_use`,
+  `tool_result` y `result`. El `result` no trae `last_message`: el mensaje final se reconstruye con el texto
+  posterior a la última herramienta (`BobAdapter.run_stream`).
+- `tool_use` y `tool_result` llegan **al terminar** la herramienta: las llamadas paralelas a `spawn_subagent`
+  aparecen juntas cuando todos los subagentes acabaron.
+- `cost`, `subagent_start` y `subagent_end` (con herramientas, turnos, duración y coste de cada subagente)
+  **solo van al log** `~/.bob/logs/shell/bob-shell-*.log`. `BobLogTail` sigue el log de la sesión (el que
+  menciona su workspace) para mostrarlos en tiempo real.
+- `bob run --resume <task_id>` repite primero el historial (desde el prompt original) y después procesa el
+  prompt nuevo; `--max-cost` es acumulado para toda la sesión.
+- Las sesiones se guardan en `~/.bob/db/bob.db` (tabla `tasks`, `env.workspace`): si el stream se corta
+  antes del `result`, `BobAdapter.find_session_id` localiza la sesión para reanudarla.
+- El pipeline reserva el 20 % (máx. 1 bobcoin) de `BOB_MAX_COST` para cerrar la sesión: si Bob agota la
+  exploración o se corta la conexión sin JSON, la reanuda con un turno que solo pide el resultado. El coste
+  total nunca supera `BOB_MAX_COST`.
+- La actividad de cada etapa queda en `artifacts/jobs/<id>/events.jsonl` y se sirve con
+  `GET /api/audits/{id}/events?after=N`. La vitrina reproduce `contracts/fixtures/bob-events-facturaya.jsonl`.
+- Al apagarse, el servidor termina las sesiones de Bob en curso (`terminate_active_sessions`): un reinicio
+  no deja procesos gastando bobcoins.

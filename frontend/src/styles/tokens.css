@@ -1,0 +1,147 @@
+/*
+ * Tokens de diseño de CodeArchaeologist. Documentación: /DESIGN.md (fuente única de verdad).
+ * Capa 1 — primitivos (--ca-*): valores de la referencia Linearity. No generan utilidades.
+ * Capa 2 — semánticos (@theme): los únicos que usan los componentes (bg-canvas, text-fg, ...).
+ */
+
+:root {
+  --ca-void: #000000;
+  --ca-near-black: #050505;
+  --ca-onyx: #0f0f0f;
+  --ca-carbon: #292929;
+  --ca-graphite: #4d4d4d;
+  --ca-ash: #666666;
+  --ca-steel: #808080;
+  --ca-fog: #999999;
+  --ca-silver: #bfbfbf;
+  --ca-white: #ffffff;
+  --ca-signal-orange: #ff4800;
+  --ca-ember: #ff5e23;
+  --ca-burnt-orange: #ca4e17;
+  --ca-electric-yellow: #ffd900;
+  --ca-spectrum-green: #08c380;
+  --ca-spectrum-orange: #fd7c0f;
+  --ca-spectrum-red: #ff2b2b;
+  --ca-spectrum-violet: #9500ff;
+  --ca-spectrum: linear-gradient(to right, #08c380 0%, #fd7c0f 31.73%, #ff2b2b 62.5%, #9500ff 100%);
+  color-scheme: dark;
+}
+
+@theme {
+  /* Sin paletas, fuentes, tamaños, radios ni sombras por defecto: solo tokens del sistema. */
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+
+  --font-display: "Space Grotesk Variable", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-micro: 10px;
+  --text-micro--line-height: 1.4;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.5;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-title: 17px;
+  --text-title--line-height: 1.3;
+  --text-heading: 21px;
+  --text-heading--line-height: 1.25;
+  --text-display: 34px;
+  --text-display--line-height: 1.2;
+  --text-display--letter-spacing: -0.01em;
+  --text-code: 12px;
+  --text-code--line-height: 1.7;
+
+  --tracking-eyebrow: 0.14em;
+
+  --radius-tick: 2.57143px;
+  --radius-inner: 8.57143px;
+  --radius-panel: 12px;
+  --radius-composer: 17.1429px;
+  --radius-pill: 9999px;
+
+  --shadow-glow: 0 0 0 1px rgb(255 217 0 / 0.18), 0 0 22px -6px rgb(255 217 0 / 0.55);
+  --shadow-inset-accent: inset 0 0 0 1px rgb(255 94 35 / 0.4);
+  --shadow-pop: 0 24px 64px -12px rgb(0 0 0 / 0.8);
+
+  --animate-rail: ca-rail 2.4s linear infinite;
+  --animate-enter: ca-enter 200ms ease-out both;
+}
+
+@theme inline {
+  --color-canvas: var(--ca-void);
+  --color-surface: var(--ca-near-black);
+  --color-raised: rgb(255 255 255 / 0.04);
+  --color-overlay: var(--ca-onyx);
+  --color-control: rgb(255 255 255 / 0.05);
+  --color-composer: var(--ca-carbon);
+  --color-disabled: var(--ca-graphite);
+  --color-code: var(--ca-near-black);
+  --color-code-hl: rgb(255 217 0 / 0.08);
+
+  --color-fg: var(--ca-white);
+  --color-fg-2: var(--ca-silver);
+  --color-muted: var(--ca-fog);
+  --color-subtle: var(--ca-steel);
+  --color-decor: var(--ca-ash);
+
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-line-strong: rgb(255 255 255 / 0.18);
+  --color-line-subtle: rgb(255 255 255 / 0.06);
+
+  --color-accent: var(--ca-signal-orange);
+  --color-accent-hover: var(--ca-ember);
+  /* Negro sobre naranja: 6.2:1 (AA). Blanco sobre #ff4800 da 3.4:1 y no cumple para texto de 12px. */
+  --color-on-accent: var(--ca-void);
+  --color-focus: var(--ca-ember);
+  /* Trabajo en curso (análisis, Bob leyendo): neutro. El naranja se reserva para acciones. */
+  --color-activity: var(--ca-white);
+
+  --color-risk-critical: var(--ca-spectrum-red);
+  --color-risk-high: var(--ca-spectrum-orange);
+  --color-risk-medium: var(--ca-electric-yellow);
+  --color-risk-low: var(--ca-silver);
+  --color-risk-info: var(--ca-steel);
+
+  --color-verified: var(--ca-spectrum-green);
+  --color-danger: var(--ca-spectrum-red);
+  --color-warning: var(--ca-electric-yellow);
+
+  --background-image-spectrum: var(--ca-spectrum);
+}
+
+@utility bg-spectrum {
+  background-image: var(--ca-spectrum);
+}
+
+/* Spectrum Rail animado: solo mientras Bob analiza (DESIGN.md §2.5). */
+@utility spectrum-rail {
+  background-image: var(--ca-spectrum);
+  background-size: 200% 100%;
+  animation: var(--animate-rail);
+}
+
+@keyframes ca-rail {
+  from { background-position: 0% 0; }
+  to { background-position: 200% 0; }
+}
+
+@keyframes ca-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rail,
+  .spectrum-rail,
+  .animate-enter,
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
+}
