@@ -26,10 +26,10 @@ Hitos (se asignan por la hora final de la ventana):
 | F-05 | Felipe | H12–H18 | contract-keeper: pruebas de caracterización | Pasan en legado |
 | F-06 | Felipe | H16–H24 | strangler-surgeon: FastAPI + fachada | Pruebas en verde |
 | F-07 | Felipe | H18–H24 | Precisión y recall vs expected-findings | Tabla en evaluation/ |
-| F-08 | Felipe | H24–H30 | board-narrator + prueba en holdout | DOCX sin cifras sin fuente |
+| F-08 | Felipe | H24–H30 | board-narrator + prueba en holdout | [CANCELADO] La variante era una copia; se retiró. El DOCX activo usa narrativa basada solo en datos. |
 | F-09 | Felipe | continuo | bob-usage.md y reporte exportado | Archivo en bob-report/ |
 | F-10 | Felipe | H4–H10 | Polyglot Migration: agentes y skill FastAPI→NestJS/Express | Catálogo y matrices completos |
-| F-11 | Felipe | H8–H16 | Shift-Left Blast Radius: simulador y puerta pre-PR | Score CBRS y veredicto funcional |
+| F-11 | Felipe | H8–H16 | Shift-Left Blast Radius: simulador y puerta pre-PR | [DISEÑO, NO EJECUTADO] No forma parte del producto público. |
 | F-12 | Felipe | H12–H20 | Tribunal Adversarial: Arquitecto vs Escéptico | Protocolo 4 rondas con veredicto |
 | F-13 | Felipe | H16–H24 | AST Cartographer + PyDriller Git Archaeology | Grafos de llamadas y ER Mermaid |
 | F-14 | Felipe | H20–H28 | Telemetría FastMCP: conectores DuckDB / GitHub | Enriquecimiento operativo activo |
@@ -39,7 +39,7 @@ Hitos (se asignan por la hora final de la ventana):
 | D-03 | Daniel | H3–H6 | Ingesta segura ZIP + extractores | [COMPLETADO] Anti-ZipSlip, límites 5MB/20MB/300 files y AST/Radon/SQL extractor |
 | D-04 | Daniel | H5–H8 | BobAdapter con timeout y modos | [COMPLETADO] Subprocess seguro shell=False y modos live/imported/example |
 | D-05 | Daniel | H6–H8 | DOCX mínimo | [COMPLETADO] Renderizado ejecutivo corporativo descargable |
-| D-06 | Daniel | H8–H16 | Validador, radio de impacto, riesgo, PERT | [COMPLETADO] 100% referencias válidas, grafo NetworkX CBRS y PERT 4 fases |
+| D-06 | Daniel | H8–H16 | Validador, radio de impacto, riesgo, PERT | [ACTUALIZADO] Riesgo por severidad y llamadores; PERT del primer corte con insumos y supuestos visibles. |
 | D-07 | Daniel | H12–H22 | Sandbox pytest + endpoint /migrate | [COMPLETADO] 13 tests legacy PASS, corte FastAPI modern/ y BOLA fixed 404 |
 | D-08 | Daniel | H16–H24 | DOCX completo + HTML autónomo | [COMPLETADO] DOCX 7 secciones en Word + HTML con Mermaid interactivo |
 | D-09 | Daniel | H24–H30 | PPTX, descarga .diff, manejo de fallos | [COMPLETADO] PPTX 6 diapositivas 16:9 + migration.diff en /api/jobs/{id}/artifacts |

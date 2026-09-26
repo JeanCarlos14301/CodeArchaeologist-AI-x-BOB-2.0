@@ -18,6 +18,9 @@ from pydantic import ValidationError
 
 from app.adapters.bob_adapter import CUSTOM_MODES_FILE, BobAdapter, BobError, BobResult
 from app.contracts.schema_v1 import AuditorOutput, Dossier, DossierStats
+from app.pipeline.decision_metrics import calculate_decision_metrics, source_sha256
+from app.renderers.board_memo import BOARD_MEMO_FILE, render_board_memo
+from app.sandbox.reference_cut import not_run_result, run_reference_cut
 from app.validators.evidence import validate_findings
 
 AUDITOR_MODE = "evidence-auditor"
@@ -104,7 +107,13 @@ def save_bob_result(result: BobResult, job_dir: Path) -> Path:
     return target
 
 
-def build_dossier(repo_name: str, workspace: Path, result: BobResult) -> Dossier:
+def build_dossier(
+    repo_name: str,
+    workspace: Path,
+    result: BobResult,
+    generated_at: str | None = None,
+    job_id: str | None = None,
+) -> Dossier:
     output = parse_auditor_output(result)
     accepted, rejected, checks = validate_findings(workspace, output.findings)
     evidence_valid = sum(1 for check in checks if check.status == "valid")
@@ -117,16 +126,20 @@ def build_dossier(repo_name: str, workspace: Path, result: BobResult) -> Dossier
         bob_cost=result.stats.session_costs if result.stats else None,
         bob_duration_ms=result.stats.duration_ms if result.stats else None,
     )
-    return Dossier(
+    dossier = Dossier(
         execution_mode=result.execution_mode,
         repo_name=repo_name,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=generated_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
         bob_task_id=result.stats.task_id if result.stats else None,
+        job_id=job_id,
+        source_sha256=source_sha256(workspace),
         findings=accepted,
         rejected_findings=rejected,
         evidence_checks=checks,
         stats=stats,
     )
+    risk_matrix, first_cut_pert = calculate_decision_metrics(workspace, dossier)
+    return dossier.model_copy(update={"risk_matrix": risk_matrix, "first_cut_pert": first_cut_pert})
 
 
 def _no_stage(_stage: str) -> None:
@@ -138,6 +151,9 @@ def run_evidence_audit(
     job_dir: Path,
     adapter: BobAdapter | None = None,
     imported_result: Path | None = None,
+    recorded_at: str | None = None,
+    job_id: str | None = None,
+    execute_reference_cut: bool = False,
     on_stage: Callable[[str], None] = _no_stage,
 ) -> Dossier:
     """Ejecuta las etapas 2 y 3 y escribe `dossier.json` en job_dir.
@@ -150,6 +166,8 @@ def run_evidence_audit(
     on_stage("auditing")
     if imported_result is not None:
         result = BobAdapter.import_result(imported_result, AUDITOR_MODE)
+        # La descarga conserva la respuesta que alimentó exactamente esta importación.
+        save_bob_result(result, job_dir)
     else:
         bob = adapter or BobAdapter(workspace)
         try:
@@ -158,6 +176,20 @@ def run_evidence_audit(
             raise AuditError(f"Falló la invocación de Bob: {exc}") from exc
         save_bob_result(result, job_dir)
     on_stage("validating")
-    dossier = build_dossier(source_repo.name, workspace, result)
+    dossier = build_dossier(
+        source_repo.name,
+        workspace,
+        result,
+        generated_at=recorded_at,
+        job_id=job_id,
+    )
+    on_stage("migration")
+    migration = (
+        run_reference_cut(source_repo, job_dir)
+        if execute_reference_cut
+        else not_run_result("No se ejecuta código de repositorios subidos por usuarios.")
+    )
+    dossier = dossier.model_copy(update={"migration": migration})
     (job_dir / DOSSIER_FILE).write_text(dossier.model_dump_json(indent=2), encoding="utf-8")
+    render_board_memo(dossier, job_dir / BOARD_MEMO_FILE, job_id or job_dir.name)
     return dossier

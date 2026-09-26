@@ -1,10 +1,9 @@
+import { useCallback } from "react";
 import { api } from "../api";
 import { Mermaid } from "../components/Mermaid";
 import { Button, Card, EmptyState, ErrorState, Loading, PageHeader } from "../components/ui";
 import type { Theme } from "../lib/theme";
 import { useLoaded } from "../lib/useLoaded";
-
-const load = api.architecture;
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -16,7 +15,8 @@ function Stat({ label, value, hint }: { label: string; value: string | number; h
   );
 }
 
-export function ArchitectureView({ jobId, theme, onGoHome }: { jobId: string | null; theme: Theme; onGoHome: () => void }) {
+export function ArchitectureView({ jobId, token, theme, onGoHome }: { jobId: string | null; token: string; theme: Theme; onGoHome: () => void }) {
+  const load = useCallback((id: string) => api.architecture(id, token), [token]);
   const { data, error, retry, loading } = useLoaded(load, jobId);
 
   if (!jobId) {

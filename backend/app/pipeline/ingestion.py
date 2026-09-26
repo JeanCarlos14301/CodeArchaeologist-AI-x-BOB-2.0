@@ -224,19 +224,6 @@ def prepare_repository(
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "*.pyo"),
         )
 
-    elif source_type == "holdout":
-        sample_id = "variant-holdout"
-        repo_name = "FacturaYa Variant (Holdout)"
-        source_dir = workspace_base / "samples" / "variant-holdout"
-        if not source_dir.exists():
-            source_dir = workspace_base / "samples" / "facturaya-v1"
-        shutil.copytree(
-            source_dir,
-            target_repo_dir,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "*.pyo"),
-        )
-
     elif source_type == "zip":
         if not zip_bytes_or_path:
             raise IngestionSecurityError("No se proporcionaron datos de archivo ZIP para la fuente 'zip'")

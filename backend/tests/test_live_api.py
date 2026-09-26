@@ -58,7 +58,7 @@ def _upload(client: TestClient, data: bytes, token: str | None = TOKEN, name: st
 def _wait_done(client: TestClient, job_id: str) -> dict:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        detail = client.get(f"/api/audits/{job_id}").json()
+        detail = client.get(f"/api/audits/{job_id}", headers={"X-Live-Token": TOKEN}).json()
         if detail["job"]["status"] in {"done", "failed"}:
             return detail
         time.sleep(0.05)
@@ -102,13 +102,14 @@ def test_graph_and_architecture_are_measured_on_uploaded_code(client: TestClient
     job_id = _upload(client, _zip_of_sample()).json()["id"]
     _wait_done(client, job_id)
 
-    graph = client.get(f"/api/audits/{job_id}/graph").json()
+    headers = {"X-Live-Token": TOKEN}
+    graph = client.get(f"/api/audits/{job_id}/graph", headers=headers).json()
     assert graph["has_result"] and graph["nodes"] and graph["edges"]
     assert graph["migration_cut"] is None
     assert all(mark["node"] for mark in graph["findings"])
     assert all(item["score"] is None for item in graph["blast_radius"])
 
-    architecture = client.get(f"/api/audits/{job_id}/architecture").json()
+    architecture = client.get(f"/api/audits/{job_id}/architecture", headers=headers).json()
     assert architecture["totals"]["functions"] == len(collect_names(graph))
     assert architecture["mermaid"].startswith("flowchart LR")
     assert architecture["sql"]["total"] >= architecture["sql"]["concatenated"]
@@ -122,9 +123,44 @@ def collect_names(graph: dict) -> list[str]:
 def test_downloads_are_limited_to_dossier_and_bob_result(client: TestClient) -> None:
     job_id = _upload(client, _zip_of_sample()).json()["id"]
     _wait_done(client, job_id)
-    assert client.get(f"/api/audits/{job_id}/files/dossier.json").status_code == 200
-    assert client.get(f"/api/audits/{job_id}/files/..%2Fjobs.db").status_code == 404
-    assert client.get(f"/api/audits/{job_id}/files/workspace").status_code == 404
+    headers = {"X-Live-Token": TOKEN}
+    assert client.get(f"/api/audits/{job_id}/files/dossier.json", headers=headers).status_code == 200
+    assert client.get(f"/api/audits/{job_id}/files/..%2Fjobs.db", headers=headers).status_code == 404
+    assert client.get(f"/api/audits/{job_id}/files/workspace", headers=headers).status_code == 404
+
+
+def test_uploaded_job_is_private_on_every_read_route(client: TestClient) -> None:
+    job_id = _upload(client, _zip_of_sample()).json()["id"]
+    _wait_done(client, job_id)
+    public_jobs = client.get("/api/audits").json()
+    assert all(job["id"] != job_id for job in public_jobs)
+
+    protected = [
+        (f"/api/audits/{job_id}", None),
+        (f"/api/audits/{job_id}/source", {"path": "app.py"}),
+        (f"/api/audits/{job_id}/graph", None),
+        (f"/api/audits/{job_id}/architecture", None),
+        (f"/api/audits/{job_id}/files/dossier.json", None),
+    ]
+    for url, params in protected:
+        assert client.get(url, params=params).status_code == 403
+        assert client.get(url, params=params, headers={"X-Live-Token": TOKEN}).status_code == 200
+
+    private_jobs = client.get("/api/audits", headers={"X-Live-Token": TOKEN}).json()
+    assert any(job["id"] == job_id for job in private_jobs)
+
+
+def test_private_jobs_cannot_displace_public_showcase_from_limited_list(client: TestClient) -> None:
+    store = client.app.state.audit_service.store
+    public = store.create("facturaya-v1", "imported")
+    for index in range(3):
+        store.create(f"upload:private-{index}.zip", "live")
+
+    assert client.get("/api/audits", params={"limit": 1}).json()[0]["id"] == public.id
+    private = client.get(
+        "/api/audits", params={"limit": 1}, headers={"X-Live-Token": TOKEN},
+    ).json()
+    assert private[0]["sample"].startswith("upload:")
 
 
 def test_defaults_are_real_only(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -134,6 +170,7 @@ def test_defaults_are_real_only(client: TestClient, monkeypatch: pytest.MonkeyPa
     app = create_app(artifacts_dir=tmp_path / "strict", frontend_dist=tmp_path / "no-dist")
     with TestClient(app) as strict:
         assert strict.post("/api/jobs", json={"source_type": "demo"}).status_code in {404, 405}
-        for mode in ("example", "imported"):
-            assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": mode}).status_code == 403
+        assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "example"}).status_code == 403
+        # La vitrina imported usa una respuesta real grabada y no consume bobcoins.
+        assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "imported"}).status_code == 202
         assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"}).status_code == 403

@@ -9,11 +9,12 @@ import { DownloadsView } from "./views/DownloadsView";
 import { FindingsView } from "./views/FindingsView";
 import { HomeView, type StartRequest } from "./views/HomeView";
 import { NeuralView } from "./views/NeuralView";
+import { MigrationView } from "./views/MigrationView";
 import { SummaryView } from "./views/SummaryView";
 
 const POLL_INTERVAL_MS = 1500;
 
-type ViewId = "home" | "neural" | "summary" | "findings" | "architecture" | "downloads";
+type ViewId = "home" | "neural" | "summary" | "findings" | "architecture" | "migration" | "downloads";
 
 const NAV: { id: ViewId; label: string; icon: string }[] = [
   { id: "home", label: "Inicio", icon: "⌂" },
@@ -21,6 +22,7 @@ const NAV: { id: ViewId; label: string; icon: string }[] = [
   { id: "summary", label: "Resumen", icon: "▤" },
   { id: "findings", label: "Hallazgos", icon: "⚑" },
   { id: "architecture", label: "Arquitectura", icon: "◇" },
+  { id: "migration", label: "Migración", icon: "⇄" },
   { id: "downloads", label: "Descargas", icon: "⇩" },
 ];
 
@@ -38,6 +40,7 @@ export default function App() {
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState("");
 
   const fail = useCallback((err: Error) => {
     if (err instanceof ApiError && err.status === 0) setOffline(true);
@@ -45,8 +48,8 @@ export default function App() {
   }, []);
 
   const refreshJobs = useCallback(() => {
-    api.audits().then((list) => setJobs(list.map(jobToFlow))).catch(fail);
-  }, [fail]);
+    api.audits(accessToken).then((list) => setJobs(list.map(jobToFlow))).catch(fail);
+  }, [accessToken, fail]);
 
   useEffect(() => {
     api.bobStatus().then(setBob).catch((err: Error) => {
@@ -63,7 +66,7 @@ export default function App() {
     let timer: number | undefined;
     const load = () => {
       api
-        .audit(selectedId)
+        .audit(selectedId, accessToken)
         .then((data) => {
           if (cancelled) return;
           setOffline(false);
@@ -79,7 +82,7 @@ export default function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [selectedId, refreshJobs, fail]);
+  }, [selectedId, accessToken, refreshJobs, fail]);
 
   const reset = () => {
     setError(null);
@@ -90,6 +93,7 @@ export default function App() {
 
   const start = ({ file, token }: StartRequest) => {
     reset();
+    setAccessToken(token);
     api
       .upload(file, token)
       .then((job) => {
@@ -98,6 +102,15 @@ export default function App() {
         refreshJobs();
       })
       .catch(fail);
+  };
+
+  const openImported = () => {
+    reset();
+    api.imported().then((job) => {
+      setSelectedId(job.id);
+      setFlow(jobToFlow(job));
+      refreshJobs();
+    }).catch(fail);
   };
 
   const selectJob = (id: string) => {
@@ -163,13 +176,14 @@ export default function App() {
 
         <main className="min-w-0 flex-1">
           {view === "home" && (
-            <HomeView offline={offline} bob={bob} bobError={bobError} busy={busy} job={flow} jobs={jobs} error={error} onStart={start} onSelectJob={selectJob} onOpenResults={() => go("summary")} />
+            <HomeView offline={offline} bob={bob} bobError={bobError} busy={busy} job={flow} jobs={jobs} error={error} onStart={start} onOpenImported={openImported} onSelectJob={selectJob} onOpenResults={() => go("summary")} />
           )}
-          {view === "neural" && <NeuralView flow={flow} onGoHome={() => go("home")} onOpenFinding={openFinding} />}
+          {view === "neural" && <NeuralView flow={flow} token={accessToken} onGoHome={() => go("home")} onOpenFinding={openFinding} />}
           {view === "summary" && <SummaryView dossier={dossier} onGoHome={() => go("home")} onOpenFindings={() => go("findings")} onOpenFinding={openFinding} />}
-          {view === "findings" && <FindingsView jobId={selectedId ?? ""} dossier={dossier} focusId={focusId} onGoHome={() => go("home")} />}
-          {view === "architecture" && <ArchitectureView jobId={resultsJobId} theme={theme} onGoHome={() => go("home")} />}
-          {view === "downloads" && <DownloadsView jobId={resultsJobId} onGoHome={() => go("home")} />}
+          {view === "findings" && <FindingsView jobId={selectedId ?? ""} token={accessToken} dossier={dossier} focusId={focusId} onGoHome={() => go("home")} />}
+          {view === "architecture" && <ArchitectureView jobId={resultsJobId} token={accessToken} theme={theme} onGoHome={() => go("home")} />}
+          {view === "migration" && <MigrationView jobId={resultsJobId} token={accessToken} onGoHome={() => go("home")} />}
+          {view === "downloads" && <DownloadsView jobId={resultsJobId} token={accessToken} hasMigrationDiff={!!dossier?.migration?.diff_file} onGoHome={() => go("home")} />}
         </main>
       </div>
     </div>

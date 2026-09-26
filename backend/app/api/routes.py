@@ -1,13 +1,12 @@
 """Rutas HTTP de auditorías y diagnóstico de Bob. Los routers solo traducen HTTP ↔ servicio."""
 
-import hmac
 import os
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
-from app.api.live import require_token
+from app.api.access import require_job_access, require_upload_token, token_is_valid
 from app.contracts.schema_v1 import Dossier
 from app.jobs.service import (
     SAMPLES,
@@ -50,7 +49,7 @@ def require_live_token(execution_mode: ExecutionMode, token: str | None) -> None
     expected = os.environ.get("LIVE_AUDIT_TOKEN", "")
     if execution_mode != "live" or not expected:
         return
-    if not token or not hmac.compare_digest(token.encode(), expected.encode()):
+    if not token_is_valid(token):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El modo live requiere un token válido.")
 
 
@@ -73,13 +72,16 @@ def start_audit(
     service: Service,
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> Job:
-    if os.environ.get("ALLOW_NON_LIVE_MODES", "").lower() == "true":
+    if body.execution_mode == "imported" and body.sample in SAMPLES:
+        # Vitrina pública: reproduce una respuesta real ya grabada y no invoca Bob.
+        pass
+    elif os.environ.get("ALLOW_NON_LIVE_MODES", "").lower() == "true":
         require_live_token(body.execution_mode, x_live_token)
     else:
         # Por defecto solo hay auditorías reales: modo live y token siempre obligatorio.
         if body.execution_mode != "live":
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo se permiten auditorías live (datos reales).")
-        require_token(x_live_token)
+        require_upload_token(x_live_token)
     try:
         return service.start(body.sample, body.execution_mode)
     except NotFoundError as exc:
@@ -89,14 +91,27 @@ def start_audit(
 
 
 @router.get("/audits", response_model=list[Job])
-def list_audits(service: Service, limit: Annotated[int, Query(ge=1, le=100)] = 20) -> list[Job]:
-    return service.store.list(limit)
+def list_audits(
+    service: Service,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> list[Job]:
+    jobs = service.store.list(limit)
+    if token_is_valid(x_live_token):
+        return jobs
+    return service.store.list_public(limit)
 
 
 @router.get("/audits/{job_id}", response_model=AuditDetail)
-def read_audit(job_id: str, service: Service) -> AuditDetail:
+def read_audit(
+    job_id: str,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> AuditDetail:
     try:
-        return AuditDetail(job=service.get_job(job_id), dossier=service.get_dossier(job_id))
+        job = service.get_job(job_id)
+        require_job_access(job, x_live_token)
+        return AuditDetail(job=job, dossier=service.get_dossier(job_id))
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
@@ -108,8 +123,10 @@ def read_source(
     path: Annotated[str, Query(min_length=1, max_length=300)],
     start: Annotated[int, Query(ge=1)] = 1,
     end: Annotated[int, Query(ge=1)] = 400,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> SourceExcerpt:
     try:
+        require_job_access(service.get_job(job_id), x_live_token)
         return service.read_source(job_id, path, start, end)
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc

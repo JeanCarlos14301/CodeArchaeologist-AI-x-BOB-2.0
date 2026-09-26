@@ -11,7 +11,7 @@ interface Selection {
   index: number;
 }
 
-function EvidenceViewer({ jobId, selection, dossier }: { jobId: string; selection: Selection | null; dossier: Dossier }) {
+function EvidenceViewer({ jobId, token, selection, dossier }: { jobId: string; token: string; selection: Selection | null; dossier: Dossier }) {
   const [excerpt, setExcerpt] = useState<SourceExcerpt | null>(null);
   const [failed, setFailed] = useState(false);
   const evidence: Evidence | undefined = selection?.finding.evidence[selection.index];
@@ -22,13 +22,13 @@ function EvidenceViewer({ jobId, selection, dossier }: { jobId: string; selectio
     if (!evidence) return;
     let cancelled = false;
     api
-      .source(jobId, evidence.path, Math.max(1, evidence.line_start - CONTEXT_LINES), evidence.line_end + CONTEXT_LINES)
+      .source(jobId, evidence.path, Math.max(1, evidence.line_start - CONTEXT_LINES), evidence.line_end + CONTEXT_LINES, token)
       .then((data) => !cancelled && setExcerpt(data))
       .catch(() => !cancelled && setFailed(true));
     return () => {
       cancelled = true;
     };
-  }, [jobId, evidence]);
+  }, [jobId, token, evidence]);
 
   if (!selection || !evidence) {
     return <EmptyState icon="‹/›" title="Elige una evidencia">Cada hallazgo tiene chips con archivo y línea: al pulsarlos verás aquí el código citado.</EmptyState>;
@@ -59,12 +59,13 @@ function EvidenceViewer({ jobId, selection, dossier }: { jobId: string; selectio
 
 interface Props {
   jobId: string;
+  token: string;
   dossier: Dossier | null;
   focusId: string | null;
   onGoHome: () => void;
 }
 
-export function FindingsView({ jobId, dossier, focusId, onGoHome }: Props) {
+export function FindingsView({ jobId, token, dossier, focusId, onGoHome }: Props) {
   const [severity, setSeverity] = useState<Severity | "all">("all");
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -172,7 +173,7 @@ export function FindingsView({ jobId, dossier, focusId, onGoHome }: Props) {
         <div className="xl:sticky xl:top-20 xl:self-start">
           <Card className="p-4">
             <h2 className="mb-3 text-sm font-semibold">Visor de evidencia</h2>
-            <EvidenceViewer jobId={jobId} selection={selection} dossier={dossier} />
+            <EvidenceViewer jobId={jobId} token={token} selection={selection} dossier={dossier} />
           </Card>
         </div>
       </div>

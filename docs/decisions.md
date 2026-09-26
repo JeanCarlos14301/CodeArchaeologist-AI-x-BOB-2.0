@@ -23,6 +23,12 @@
 | D19 | Ajuste de reglas (2026-09-25): video de envío ≤ 3:00 (antes ≤ 4:00), con ≥ 90 s de demo en vivo obligatoria; ver `docs/demo-script.md`. |
 | D20 | Ajuste de reglas (2026-09-25): el repo debe incluir capturas del resumen de sesión de Bob de cada integrante, en `bob-sessions/<persona>/`; ver `SECURITY.md` sobre cómo tomarlas sin exponer credenciales. |
 | D21 | Ajuste de reglas (2026-09-25): el formulario de envío añade "Long Description" e "IBM Bob Usage Statement", ambos con tope de 500 palabras; ver `docs/submission-checklist.md`. |
+| D22 | Las auditorías originadas en ZIP son privadas: listado y toda lectura derivada exigen `X-Live-Token`; las muestras registradas permanecen públicas. |
+| D23 | La vitrina pública usa la grabación versionada de FacturaYa de las 13:50. La corrida de las 15:22 no se anuncia como reproducible porque sus artefactos no están en el repositorio. |
+| D24 | El memorando se genera primero con narrativa basada solo en datos. Una narrativa de `board-narrator` solo podrá entrar cuando un validador rechace cualquier cifra ausente del JSON. |
+| D25 | Riesgo = peso de severidad × (1 + llamadores transitivos). PERT depende de rutas, funciones, líneas citadas y complejidad afectada, con fórmula y supuestos visibles. |
+| D26 | El primer corte es implementación de referencia del equipo y se ejecuta solo sobre muestras registradas. Para ZIP de usuarios se informa `not_run`; nunca se ejecuta su código. |
+| D27 | La API pública es `/api/audits`; el motor histórico `/api/jobs` permanece apagado y no se documenta como capacidad entregada. |
 
 ## Respuestas del kickoff (J-01)
 1. **Alcance técnico**: El núcleo arranca con Flask + SQLite a FastAPI, extensible inmediatamente a NestJS y microservicios mediante el catálogo de agentes especializados.

@@ -1,164 +1,129 @@
 # CodeArchaeologist × IBM Bob 2.0
 
-**From "nobody dares to touch it" to a board-approved plan and a tested first migration step.**
+CodeArchaeologist audita repositorios heredados Python 3, Flask y SQLite. Entrega evidencia verificable por archivo y línea, un memorando DOCX con riesgo y esfuerzo calculados y, para la muestra controlada FacturaYa, un primer corte Strangler Fig probado con pytest.
 
-> Built during the IBM Bob 2.0 Hackathon; see [docs/pre-event.md](docs/pre-event.md) for material prepared beforehand.
+Construido durante el IBM Bob 2.0 Hackathon. El material preparado antes del evento está declarado en [docs/pre-event.md](docs/pre-event.md).
 
----
+## Entregas disponibles
 
-## Problem
-Every company has a legacy system nobody dares to touch: the original authors are gone, there are no tests, and every change feels like a gamble. Boards are asked to fund modernization without evidence of what is inside, how risky it is, or where to start.
+1. **Expediente técnico.** Bob propone hallazgos y Python comprueba que cada archivo, rango de líneas y fragmento exista. La interfaz muestra el expediente, el código citado, el grafo de llamadas y la arquitectura medida.
+2. **Memorando para la junta.** Cada auditoría genera `board_memo.docx`. El documento conserva el ID, hash SHA-256 y modo de la auditoría; su matriz de riesgo y rango PERT provienen de cálculos deterministas. Actualmente usa narrativa basada solo en datos, sin una narración numérica generada por Bob.
+3. **Primer corte probado.** Solo las muestras registradas ejecutan la implementación de referencia del equipo para `GET /invoices/{id}`. Pytest corre contra el legado y contra FastAPI, reporta cada caso y publica `migration.diff`. El código subido por visitantes nunca se ejecuta.
 
-## What it does
-Given a legacy repository (Python 3 + Flask + SQLite), CodeArchaeologist delivers:
+Cada resultado muestra `execution_mode`: `live`, `imported` o `example`.
 
-1. **Technical dossier**: every finding points to a real file and line range, verified by a 100% deterministic physical evidence validator (zero hallucination).
-2. **Board memo (DOCX)**: executive decision memorandum with PERT effort ranges, composite blast radius ($CBRS$) and risk matrix in plain business language.
-3. **First migration cut (Strangler Fig)**: characterization tests that pass against the legacy code *and* against the modern FastAPI service (`modern/invoices_api.py` + `facade.py`).
-4. **Interactive Dashboard & Presentation**: Standalone HTML report with embedded Mermaid diagrams and executive 16:9 slides (`presentation.pptx`).
+## Uso de IBM Bob
 
----
+El pipeline activo invoca Bob Shell con el modo `evidence-auditor` mediante `subprocess` con una lista de argumentos y sin `shell=True`. El contenido del repositorio se trata como datos y el workspace excluye `evaluation/`, pruebas de evaluación y credenciales. Los modos, agentes y skills disponibles viven en `.bob/`; [docs/bob-usage.md](docs/bob-usage.md) distingue las sesiones ejecutadas de los diseños no ejecutados.
 
-## How it uses IBM Bob 2.0
-- **9 custom modes** ([.bob/custom_modes.yaml](.bob/custom_modes.yaml)):
-  - Core Migration: `evidence-auditor`, `migration-architect`, `contract-keeper`, `strangler-surgeon`, `board-narrator`.
-  - Extended Intelligence: `polyglot-architect`, `blast-radius-guard`, `code-skeptic`, `git-archaeologist`.
-- **Specialized Subagents** ([.bob/agents/](.bob/agents/)): 16 forensic and engineering agents covering SQL audit, route mapping, dependency tracing, AST extraction, and adversarial review.
-- **Shift-Left Pre-PR Risk Gate**: Non-mutating simulation predicting cascade failures ($CBRS$ 0-100) before human review.
-- **Adversarial Tribunals**: Dialectical stress-testing between Architect and Skeptic agents.
-- **Code Archaeology & Modernization**: PyDriller git commit mining + Tree-sitter/AST cartography with automated Mermaid ER diagrams.
-- **FastMCP Telemetry Integration**: Connecting live DuckDB access analytics and SQLite read-only schemas to AI modes.
-- **`bob run`**: Deterministic Python pipeline invokes Bob Shell non-interactively via `subprocess` (without `shell=True`).
-- **Custom Slash Commands** ([.bob/skills/](.bob/skills/), invocables como `/nombre`): `/legacy-audit`, `/legacy-migrate`, `/migrate-framework`, `/risk-simulate`, `/code-tribunal`, `/code-archaeology`, `/legacy-report`, `/legacy-risk`, `/legacy-test`, `/legacy-onboard`, `/code-audit`.
+La vitrina pública usa la respuesta real versionada en `contracts/fixtures/bob-evidence-auditor-facturaya.json`. Abrirla no invoca Bob ni consume bobcoins. Una auditoría `live` sí requiere `BOB_API_KEY` en el servidor y `X-Live-Token` en la petición.
 
----
-
-## Architecture
-
-A single Docker container runs FastAPI (API + deterministic worker), invokes Bob Shell via safe subprocess, stores jobs in SQLite with WAL mode, and serves the React + Vite build as static files.
+## Arquitectura activa
 
 ```mermaid
 flowchart TD
-    A["1. Ingest & inventory (Python)"] --> B["2. evidence-auditor (Bob Ask, read-only, subagents)"]
-    B --> C["3. Evidence validator (Python)"]
-    C --> D["4. migration-architect (Bob Plan)"]
-    D --> E["5. Risk & PERT effort (Python)"]
-    E --> F["6. contract-keeper (Bob Agent, writes tests in sandbox)"]
-    F --> G["7. Tests vs legacy (pytest)"]
-    G --> H["8. strangler-surgeon (Bob Agent, writes only in modern/)"]
-    H --> I["9. Tests vs modern (max 1 repair)"]
-    I --> J["10. board-narrator (Bob Ask)"]
-    J --> K["11. Renderers: DOCX, HTML, PPTX, DIFF"]
+    A[ZIP privado o muestra registrada] --> B[Workspace aislado]
+    B --> C[evidence-auditor con Bob]
+    C --> D[Validador de evidencia en Python]
+    D --> E[Grafo y métricas deterministas]
+    E --> F[Expediente JSON]
+    F --> G[Memorando DOCX]
+    F --> H[Interfaz React]
+    D --> I{Muestra registrada}
+    I -->|Sí| J[Primer corte de referencia y pytest]
+    I -->|No, ZIP de usuario| K[No ejecutada]
 ```
 
-Every result carries an `execution_mode`: `live`, `imported` or `example` (Rule D8).
+FastAPI sirve la API y el build de React desde un solo contenedor. Los metadatos de trabajos se guardan en SQLite; los artefactos viven bajo `ARTIFACTS_DIR`.
 
----
+## Seguridad y privacidad
 
-## Scope and limitations
-- Supported input: Python 3 + Flask + SQLite only.
-- The full migration flow is guaranteed on the demo repository (`samples/facturaya-v1`); arbitrary ZIP uploads are validated with ZipSlip defense.
-- Uploaded code is analyzed statically and in isolated sandboxes.
-- Risk and effort figures are computed deterministically by code ($CBRS$ & PERT), not generated by the AI.
+- `POST /api/audits/upload` siempre exige `LIVE_AUDIT_TOKEN`.
+- Los trabajos con origen `upload:` no aparecen en `GET /api/audits` sin un token válido.
+- Expediente, fuente, grafo, arquitectura, migración y descargas de una subida responden 403 sin token.
+- Las muestras registradas son públicas y no contienen código de visitantes.
+- Los ZIP se validan contra ZipSlip y límites de tamaño. Su código se analiza estáticamente y nunca se ejecuta.
+- Las credenciales viven en variables de entorno; consulte [SECURITY.md](SECURITY.md).
 
----
+## Inicio rápido
 
-## Quick Start
-
-### 1. Requirements & Installation
-Requirements: Python 3.11+, Node 24+, and optional [Bob Shell](https://bob.ibm.com/docs/shell/getting-started/install-and-setup) with API Key.
+Requisitos: Python 3.11+, Node 24+ y, solo para auditorías live, Bob Shell 2.0 con una API key.
 
 ```bash
-# Clone and enter the repository
-cd CodeArchaeologist-AI-x-BOB-2.0
-
-# Install backend dependencies
-pip install -r backend/requirements.txt
-
-# Build the React frontend
-cd frontend && npm install && npm run build && cd ..
+python -m venv .venv
+# Windows
+.venv\Scripts\python -m pip install -r backend\requirements.txt
+cd frontend
+npm ci
+npm run build
+cd ..
 ```
 
-### 2. Configuration (IBM Bob 2.0 API Key)
-Copy the template and configure your key (optional for `live` mode; runs in high-fidelity `example` mode if unset):
+Configure el servidor:
+
 ```bash
-cp .env.example .env
-# Edit .env:
-# BOB_API_KEY=your_key_here
-# LEGACYLENS_EXECUTION_MODE=live
+copy .env.example .env
+# BOB_API_KEY=...
+# LIVE_AUDIT_TOKEN=...
 ```
 
-- Docker (same image as production): `docker compose up --build`. Deployment to Render with auto-deploy from `main`: [docs/deploy.md](docs/deploy.md).
-- CLI (stages 2-3): `cd backend && ../.venv/bin/python -m app.pipeline.run_audit ../samples/facturaya-v1`
-- Pruebas: `cd backend && ../.venv/bin/pytest -m "not live"` (añade `-m live` para invocar Bob real)
+No incluya `.env` en commits. Para arrancar la aplicación:
 
-### 3. Run the CLI Audit (11 Deterministic Stages)
-Audit the bundled legacy monolith (`FacturaYa v1`) directly from terminal:
 ```bash
-python -m backend.app.cli_audit --sample samples/facturaya-v1/
+.venv\Scripts\python -m uvicorn backend.app.main:app --port 8000
 ```
-Artifacts are saved in `artifacts/`:
-- `board_memo.docx` — Executive Word memorandum for the Board.
-- `report.html` — Interactive standalone report with embedded Mermaid diagrams.
-- `presentation.pptx` — 6-slide executive presentation in 16:9 widescreen.
-- `migration.diff` — Unified Strangler Fig patch.
 
-### 4. Start the FastAPI Web Server & UI
+Abra `http://127.0.0.1:8000`. Desde Inicio puede:
+
+- pulsar **Ver auditoría real de FacturaYa** sin token; o
+- subir un ZIP y pulsar **Auditar en vivo** con token.
+
+## Pruebas
+
 ```bash
-python -m uvicorn backend.app.main:app --port 8000 --reload
-```
-- Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the React SPA.
-- Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for Swagger UI.
-- Open [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) for Health and Bob telemetry.
-
-### 5. Run the Automated Tests
-```bash
-# Backend test suite (Daniel + Felipe)
-python -m pytest backend/tests/ -v
-
-# Characterization tests on legacy sample
-python -m pytest samples/facturaya-v1/tests -v
+$env:PYTHONPATH="backend"
+.venv\Scripts\python -m pytest backend\tests -q
+.venv\Scripts\python -m pytest samples\facturaya-v1\tests -q
+cd frontend
+npm run build
 ```
 
----
+Las pruebas normales no invocan Bob: sustituyen la llamada live por la respuesta real grabada. Las pruebas del primer corte sí ejecutan el código de la muestra controlada en un subproceso sin variables de credenciales.
 
-## API Endpoints
+## API pública
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | Service health, Bob Shell CLI status, execution mode |
-| `POST` | `/api/jobs` | Enqueue a new audit job (`demo`, `holdout`, or `zip` upload) |
-| `GET` | `/api/jobs` | List recent jobs with stage progress and durations |
-| `GET` | `/api/jobs/{id}` | Poll job status, current stage (1–11), and timeline events |
-| `GET` | `/api/jobs/{id}/result` | Full validated `DossierResult` JSON (Schema v1.0) |
-| `POST` | `/api/jobs/{id}/migrate` | Trigger Strangler Fig cut and characterization test execution |
-| `GET` | `/api/jobs/{id}/artifacts/{kind}` | Download generated artifact (`docx`, `html`, `pptx`, `diff`) |
-| `GET` | `/api/bob/status` | Telemetry on discovered Bob custom modes, agents and skills |
-| `GET` | `/api/samples` | List available legacy samples (`facturaya-v1`, `variant-holdout`) |
-| `POST` | `/api/audits` | Start an audit job for the React frontend |
-| `GET` | `/api/audits/{id}` | Read audit job state and dossier for the UI |
-| `GET` | `/api/audits/{id}/source` | Read sliced source code for the interactive Evidence Viewer |
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/health` | Estado del servicio |
+| `GET` | `/api/bob/status` | Disponibilidad local de Bob y activos descubiertos |
+| `GET` | `/api/samples` | Muestras registradas |
+| `POST` | `/api/audits` | Abre una muestra `imported` o inicia una muestra `live` con token |
+| `POST` | `/api/audits/upload` | Sube un ZIP privado e inicia una auditoría live con token |
+| `GET` | `/api/audits` | Lista muestras públicas; con token incluye las subidas privadas |
+| `GET` | `/api/audits/{id}` | Estado y expediente; las subidas exigen token |
+| `GET` | `/api/audits/{id}/source` | Fuente citada; las subidas exigen token |
+| `GET` | `/api/audits/{id}/graph` | Grafo y radio de impacto medidos |
+| `GET` | `/api/audits/{id}/architecture` | Arquitectura, rutas, SQL y complejidad medidos |
+| `GET` | `/api/audits/{id}/migration` | Código legado/moderno y resultados pytest |
+| `GET` | `/api/audits/{id}/files/{name}` | `dossier.json`, `bob-result.json`, `board_memo.docx` o `migration.diff` |
 
----
+El motor histórico `/api/jobs` está apagado por defecto y no forma parte del producto público.
 
-## Bob Assets (`.bob/`)
+## Alcance y limitaciones
 
-| Folder | Content |
-|---|---|
-| `.bob/custom_modes.yaml` | 9 custom modes with route-restricted edit permissions |
-| `.bob/agents/*.md` | 16 forensic and engineering subagents (group `subagent`) |
-| `.bob/skills/*/SKILL.md` | Knowledge skills and `/command` workflows |
-| `.bob/rules/`, `.bob/rules-<mode>/` | Global and mode-specific operational constraints |
+- Entrada soportada en el MVP: Python 3, Flask y SQLite.
+- Bob audita el código; no genera ni ejecuta el primer corte que se muestra en el producto.
+- La implementación moderna y sus pruebas son una referencia preparada por el equipo para FacturaYa.
+- En una subida arbitraria, la etapa de migración se informa como `not_run` para mantener la prohibición de ejecutar código del usuario.
+- La grabación versionada disponible corresponde a la sesión documentada del 25 de septiembre a las 13:50. El artefacto de la corrida de las 15:22 no está en el repositorio y no se presenta como reproducible.
 
----
+## Equipo
 
-## Team
-- **Jean**: Product Owner, DevOps, pitch
-- **Felipe**: AI and IBM Bob integration
-- **Daniel**: Backend, deterministic pipeline, risk engine, and exporters
-- **Edgar**: Frontend UI & UX
+- Jean: Product Owner, DevOps y pitch
+- Felipe: integración de IBM Bob
+- Daniel: backend, métricas deterministas y exportadores
+- Edgar: frontend y UX
 
----
+## Licencia
 
-## License
 [MIT](LICENSE)

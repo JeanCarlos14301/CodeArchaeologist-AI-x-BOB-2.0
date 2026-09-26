@@ -29,6 +29,11 @@ FIXTURES_DIR = REPO_ROOT / "contracts" / "fixtures"
 IMPORTED_FIXTURES: dict[str, Path] = {
     "facturaya-v1": FIXTURES_DIR / "bob-evidence-auditor-facturaya.json",
 }
+# Proveniencia de la grabación versionada. Corresponde a la sesión documentada
+# en docs/bob-usage.md; no se sustituye por la hora en que un visitante la abre.
+IMPORTED_RECORDED_AT: dict[str, str] = {
+    "facturaya-v1": "2026-09-25T13:50:00-05:00",
+}
 EXAMPLE_DOSSIER = FIXTURES_DIR / "dossier-example.json"
 MAX_SOURCE_LINES = 400
 BOB_VERSION_TIMEOUT_S = 15
@@ -94,6 +99,9 @@ class AuditService:
                 imported = IMPORTED_FIXTURES[job.sample] if job.execution_mode == "imported" else None
                 run_evidence_audit(
                     SAMPLES[job.sample], self.job_dir(job.id), imported_result=imported,
+                    recorded_at=IMPORTED_RECORDED_AT[job.sample] if imported else None,
+                    job_id=job.id,
+                    execute_reference_cut=True,
                     on_stage=lambda stage: self.store.update(job.id, stage=stage),
                 )
         except AuditError as exc:
@@ -123,7 +131,13 @@ class AuditService:
             entries = list(source.iterdir())
             # Muchos ZIP traen una única carpeta raíz: el repositorio es esa carpeta.
             repo = entries[0] if len(entries) == 1 and entries[0].is_dir() else source
-            run_evidence_audit(repo, self.job_dir(job.id), on_stage=lambda stage: self.store.update(job.id, stage=stage))
+            run_evidence_audit(
+                repo,
+                self.job_dir(job.id),
+                job_id=job.id,
+                execute_reference_cut=False,
+                on_stage=lambda stage: self.store.update(job.id, stage=stage),
+            )
         except (AuditError, IngestionSecurityError) as exc:
             logger.warning("Auditoría %s falló: %s", job.id, exc)
             self.store.update(job.id, status="failed", stage="failed", error=str(exc))

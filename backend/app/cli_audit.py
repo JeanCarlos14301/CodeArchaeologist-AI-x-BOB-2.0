@@ -47,8 +47,8 @@ def main():
         "--source-type",
         type=str,
         default="demo",
-        choices=["demo", "holdout", "zip"],
-        help="Tipo de fuente (demo, holdout, zip)",
+        choices=["demo", "zip"],
+        help="Tipo de fuente (demo o zip)",
     )
     parser.add_argument(
         "--mode",

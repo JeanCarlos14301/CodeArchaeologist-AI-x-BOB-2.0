@@ -57,6 +57,19 @@ export function SummaryView({ dossier, onOpenFinding, onGoHome, onOpenFindings }
             <Stat label="Duración Bob" value={stats.bob_duration_ms == null ? "—" : `${Math.round(stats.bob_duration_ms / 1000)} s`} />
           </div>
 
+          <Card className="p-5">
+            <h2 className="text-sm font-semibold">Trazabilidad de la auditoría</h2>
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-muted">Identificador</dt><dd className="font-mono">{dossier.job_id ?? "No disponible"}</dd></div>
+              <div><dt className="text-xs text-muted">Hash SHA 256 del código</dt><dd className="truncate font-mono" title={dossier.source_sha256 ?? ""}>{dossier.source_sha256 ?? "No disponible"}</dd></div>
+            </dl>
+            {dossier.first_cut_pert && (
+              <p className="mt-3 text-sm text-muted">
+                Primer corte: {dossier.first_cut_pert.optimistic_days.toFixed(1)} a {dossier.first_cut_pert.pessimistic_days.toFixed(1)} días; esperado PERT {dossier.first_cut_pert.expected_days.toFixed(2)} días. Los supuestos y la fórmula están en el DOCX.
+              </p>
+            )}
+          </Card>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5">
               <h2 className="mb-4 text-sm font-semibold">Por severidad</h2>

@@ -5,6 +5,7 @@ const STAGES = [
   { id: "preparing", label: "Preparar sandbox", detail: "Extrae el ZIP con controles de seguridad y copia el código sin tests ni credenciales." },
   { id: "auditing", label: "Auditoría con IBM Bob", detail: "El modo evidence-auditor recorre el código y emite hallazgos con archivo y líneas." },
   { id: "validating", label: "Validar evidencia", detail: "Python comprueba que cada archivo, rango de líneas y fragmento existen de verdad." },
+  { id: "migration", label: "Probar primer corte", detail: "En muestras registradas ejecuta pytest contra el legado y la implementación de referencia; las subidas no se ejecutan." },
   { id: "done", label: "Expediente", detail: "Solo quedan los hallazgos cuya evidencia coincide con el código." },
 ] as const;
 

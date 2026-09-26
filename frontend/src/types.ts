@@ -46,10 +46,50 @@ export interface Dossier {
   repo_name: string;
   generated_at: string;
   bob_task_id: string | null;
+  job_id: string | null;
+  source_sha256: string | null;
   findings: Finding[];
   rejected_findings: Finding[];
   evidence_checks: EvidenceCheck[];
   stats: DossierStats;
+  risk_matrix: {
+    finding_id: string; severity_weight: number; origin_functions: number;
+    impacted_callers: number; score: number; formula: string;
+  }[];
+  first_cut_pert: {
+    affected_routes: number; affected_functions: number; affected_lines: number; affected_complexity: number;
+    optimistic_days: number; most_likely_days: number; pessimistic_days: number;
+    expected_days: number; variance: number; formula: string; assumptions: string[];
+  } | null;
+  migration: MigrationResult | null;
+}
+
+export interface MigrationTestResult {
+  name: string;
+  target: "legacy" | "modern";
+  status: "passed" | "failed" | "not_run";
+  duration_ms: number;
+  reason: string | null;
+}
+
+export interface MigrationResult {
+  status: "passed" | "failed" | "not_run";
+  reason: string | null;
+  implementation_origin: string;
+  endpoint: string;
+  tests: MigrationTestResult[];
+  legacy_file: string | null;
+  modern_file: string | null;
+  facade_file: string | null;
+  diff_file: string | null;
+}
+
+export interface MigrationViewData {
+  job_id: string;
+  result: MigrationResult;
+  legacy_code: string | null;
+  modern_code: string | null;
+  facade_code: string | null;
 }
 
 export interface Job {

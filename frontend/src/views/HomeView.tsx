@@ -19,11 +19,12 @@ interface Props {
   jobs: FlowJob[];
   error: string | null;
   onStart: (request: StartRequest) => void;
+  onOpenImported: () => void;
   onSelectJob: (id: string) => void;
   onOpenResults: () => void;
 }
 
-export function HomeView({ offline, bob, bobError, busy, job, jobs, error, onStart, onSelectJob, onOpenResults }: Props) {
+export function HomeView({ offline, bob, bobError, busy, job, jobs, error, onStart, onOpenImported, onSelectJob, onOpenResults }: Props) {
   const [token, setToken] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -64,8 +65,16 @@ export function HomeView({ offline, bob, bobError, busy, job, jobs, error, onSta
         <ErrorState message={!bob.installed ? "IBM Bob Shell no está instalado en el servidor: no se puede auditar." : "El servidor no tiene BOB_API_KEY configurada: no se puede auditar."} />
       )}
 
+      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <h2 className="text-sm font-semibold">Vitrina pública · FacturaYa</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">Recorre una auditoría real grabada, marcada como importada. No requiere token ni consume bobcoins.</p>
+        </div>
+        <Button onClick={onOpenImported} disabled={busy || offline} className="shrink-0 px-5 py-2.5">Ver auditoría real de FacturaYa →</Button>
+      </Card>
+
       <Card className="p-5 sm:p-6">
-        <h2 className="mb-4 text-sm font-semibold">Nueva auditoría</h2>
+        <h2 className="mb-4 text-sm font-semibold">Auditar en vivo</h2>
         <div
           onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}

@@ -14,11 +14,12 @@ const toSeverity = (value: string): Severity => value.toLowerCase() as Severity;
 
 interface Props {
   flow: FlowJob | null;
+  token: string;
   onGoHome: () => void;
   onOpenFinding: (id: string) => void;
 }
 
-export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
+export function NeuralView({ flow, token, onGoHome, onOpenFinding }: Props) {
   const jobId = flow?.id ?? null;
   const running = flow?.status === "queued" || flow?.status === "running";
 
@@ -39,7 +40,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
     let timer: number | undefined;
     const load = () => {
       api
-        .graph(jobId)
+        .graph(jobId, token)
         .then((data) => {
           if (cancelled) return;
           setGraph(data);
@@ -63,7 +64,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [jobId, running, tick]);
+  }, [jobId, token, running, tick]);
 
   useEffect(() => () => window.clearInterval(replayTimer.current), []);
   useEffect(() => {

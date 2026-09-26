@@ -5,11 +5,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from docx import Document
 from fastapi.testclient import TestClient
 
 from app.main import create_app
 
-POLL_TIMEOUT_S = 10
+POLL_TIMEOUT_S = 60
 POLL_INTERVAL_S = 0.05
 
 
@@ -55,6 +56,29 @@ def test_audit_completes_and_serves_dossier(client: TestClient, mode: str) -> No
     assert dossier["execution_mode"] == mode
     assert dossier["stats"]["findings_validated"] >= 6
     assert client.get("/api/audits").json()[0]["id"] == body["job"]["id"]
+    if mode == "imported":
+        assert dossier["generated_at"] == "2026-09-25T13:50:00-05:00"
+        assert dossier["job_id"] == body["job"]["id"]
+        assert len(dossier["source_sha256"]) == 64
+        assert dossier["risk_matrix"] and dossier["first_cut_pert"]
+        assert dossier["migration"]["status"] == "passed"
+        migration = client.get(f"/api/audits/{body['job']['id']}/migration")
+        assert migration.status_code == 200
+        migration_body = migration.json()
+        assert migration_body["legacy_code"] and migration_body["modern_code"]
+        assert len(migration_body["result"]["tests"]) == 6
+        assert client.get(f"/api/audits/{body['job']['id']}/files/migration.diff").status_code == 200
+        memo_response = client.get(f"/api/audits/{body['job']['id']}/files/board_memo.docx")
+        assert memo_response.status_code == 200
+        memo_path = Path(client.app.state.audit_service.job_dir(body["job"]["id"])) / "board_memo.docx"
+        memo = Document(memo_path)
+        text = "\n".join(paragraph.text for paragraph in memo.paragraphs)
+        tables = "\n".join(cell.text for table in memo.tables for row in table.rows for cell in row.cells)
+        assert body["job"]["id"] in tables
+        assert dossier["source_sha256"] in tables
+        assert "LEGACYLENS" not in (text + tables).upper()
+        assert "CBRS" not in (text + tables).upper()
+        assert "6 pruebas pasaron y 0 fallaron" in (text + tables)
 
 
 def test_source_viewer_returns_cited_lines(client: TestClient) -> None:

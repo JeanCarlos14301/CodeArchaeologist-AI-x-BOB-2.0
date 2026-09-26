@@ -1,5 +1,7 @@
 """Almacén de jobs en SQLite (D-02). Una fila por auditoría; el expediente vive en disco."""
 
+from __future__ import annotations
+
 import sqlite3
 import threading
 import uuid
@@ -89,6 +91,16 @@ class JobStore:
         with self._lock:
             rows = self._connection.execute(
                 "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [Job.model_validate(dict(row)) for row in rows]
+
+    def list_public(self, limit: int = 50) -> list[Job]:
+        """Lista solo muestras registradas; nunca deja que subidas desplacen la vitrina."""
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT * FROM jobs WHERE substr(sample, 1, 7) != 'upload:' "
+                "ORDER BY created_at DESC, rowid DESC LIMIT ?",
+                (limit,),
             ).fetchall()
         return [Job.model_validate(dict(row)) for row in rows]
 

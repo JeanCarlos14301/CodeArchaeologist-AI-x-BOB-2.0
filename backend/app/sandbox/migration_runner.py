@@ -75,12 +75,12 @@ def get_invoice_by_id(
     """Consulta segura de factura individual."""
     # En entorno con sesión Flask o header de API
     current_user_id = x_user_id
-    if current_user_id is None and hasattr(request, "session"):
-        current_user_id = request.session.get("user_id")
+    if current_user_id is None:
+        current_user_id = request.scope.get("session", {}).get("user_id")
 
-    # Si no se detecta autenticación, rechazar con 401
-    # Para compatibilidad con tests de sesión, asumir usuario 1 si no se restringe explícitamente
-    effective_user_id = current_user_id if current_user_id is not None else 1
+    if current_user_id is None:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
+    effective_user_id = current_user_id
 
     conn = get_db_connection()
     try:
@@ -200,6 +200,7 @@ class StranglerFigFacade:
 def apply_strangler_cut(
     sandbox_dir: Path,
     endpoint: str = "GET /invoices/{id}",
+    modern_code: str | None = None,
 ) -> MigrationSummary:
     """Aplica la modernización en el sandbox y genera los artefactos y el diff unificado."""
     sandbox_dir.mkdir(parents=True, exist_ok=True)
@@ -208,7 +209,8 @@ def apply_strangler_cut(
 
     # 1. Escribir modern/invoices_api.py
     modern_file = modern_dir / "invoices_api.py"
-    modern_file.write_text(MODERN_INVOICES_API_CODE, encoding="utf-8")
+    implementation = modern_code or MODERN_INVOICES_API_CODE
+    modern_file.write_text(implementation, encoding="utf-8")
 
     # 2. Escribir facade.py
     facade_file = sandbox_dir / "facade.py"
@@ -223,7 +225,7 @@ def apply_strangler_cut(
     diff_lines = list(
         difflib.unified_diff(
             legacy_code.splitlines(keepends=True)[:30],
-            MODERN_INVOICES_API_CODE.splitlines(keepends=True)[:30],
+            implementation.splitlines(keepends=True)[:30],
             fromfile="a/app.py (legacy monolith)",
             tofile="b/modern/invoices_api.py (Strangler Fig modern service)",
             n=3,

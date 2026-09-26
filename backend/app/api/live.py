@@ -8,8 +8,6 @@ Nada de esto usa datos de ejemplo:
 - GET  /api/audits/{id}/files/{name} : descarga del expediente y de la respuesta cruda de Bob.
 """
 
-import hmac
-import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -18,17 +16,26 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 
+from app.api.access import require_job_access, require_upload_token
 from app.contracts.schema_v1 import Dossier
 from app.extractors.code_inventory import analyze_repository_inventory
 from app.jobs.service import AuditService, BusyError, NotFoundError
 from app.jobs.store import Job
 from app.pipeline.callgraph import collect_functions, enclosing, module_node, resolve_edges, to_nodes
 from app.pipeline.evidence_audit import BOB_RESULT_FILE, DOSSIER_FILE
+from app.renderers.board_memo import BOARD_MEMO_FILE
+from app.sandbox.reference_cut import MIGRATION_DIFF_FILE, SANDBOX_DIR
+from app.validators.evidence import resolve_inside
 from app.pipeline.ingestion import MAX_ZIP_COMPRESSED_BYTES
 
 router = APIRouter(prefix="/api/audits", tags=["live"])
 
-DOWNLOADABLE = {DOSSIER_FILE: "application/json", BOB_RESULT_FILE: "application/json"}
+DOWNLOADABLE = {
+    DOSSIER_FILE: "application/json",
+    BOB_RESULT_FILE: "application/json",
+    BOARD_MEMO_FILE: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    MIGRATION_DIFF_FILE: "text/x-diff",
+}
 SEVERITY_RANK = ["critical", "high", "medium", "low"]
 _SAFE_LABEL = re.compile(r"[^A-Za-z0-9_./ -]")
 
@@ -38,15 +45,6 @@ def get_service(request: Request) -> AuditService:
 
 
 Service = Annotated[AuditService, Depends(get_service)]
-
-
-def require_token(token: str | None) -> None:
-    """El token es obligatorio siempre: sin LIVE_AUDIT_TOKEN configurado no se acepta ninguna carga."""
-    expected = os.environ.get("LIVE_AUDIT_TOKEN", "")
-    if not expected:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "El servidor no tiene LIVE_AUDIT_TOKEN configurado; no acepta auditorías.")
-    if not token or not hmac.compare_digest(token.encode(), expected.encode()):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Token inválido.")
 
 
 def _safe_name(filename: str | None) -> str:
@@ -60,7 +58,7 @@ async def upload_audit(
     zip_file: Annotated[UploadFile, File()],
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> Job:
-    require_token(x_live_token)
+    require_upload_token(x_live_token)
     data = await zip_file.read(MAX_ZIP_COMPRESSED_BYTES + 1)
     if len(data) > MAX_ZIP_COMPRESSED_BYTES:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f"El ZIP supera {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB.")
@@ -72,9 +70,10 @@ async def upload_audit(
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
 
-def _workspace(service: AuditService, job_id: str) -> Path:
+def _workspace(service: AuditService, job_id: str, token: str | None) -> Path:
     try:
-        service.get_job(job_id)
+        job = service.get_job(job_id)
+        require_job_access(job, token)
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     workspace = service.job_dir(job_id) / "workspace"
@@ -91,8 +90,12 @@ def _dossier(service: AuditService, job_id: str) -> Dossier | None:
 
 
 @router.get("/{job_id}/graph")
-def read_graph(job_id: str, service: Service) -> dict[str, Any]:
-    workspace = _workspace(service, job_id)
+def read_graph(
+    job_id: str,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> dict[str, Any]:
+    workspace = _workspace(service, job_id, x_live_token)
     dossier = _dossier(service, job_id)
     functions = collect_functions(workspace)
     nodes = to_nodes(functions)
@@ -166,8 +169,12 @@ def _mermaid(modules: list[dict[str, Any]], deps: list[dict[str, Any]]) -> str:
 
 
 @router.get("/{job_id}/architecture")
-def read_architecture(job_id: str, service: Service) -> dict[str, Any]:
-    workspace = _workspace(service, job_id)
+def read_architecture(
+    job_id: str,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> dict[str, Any]:
+    workspace = _workspace(service, job_id, x_live_token)
     dossier = _dossier(service, job_id)
     functions = collect_functions(workspace)
     edges = resolve_edges(functions)
@@ -224,12 +231,46 @@ def read_architecture(job_id: str, service: Service) -> dict[str, Any]:
     }
 
 
+@router.get("/{job_id}/migration")
+def read_migration(
+    job_id: str,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> dict[str, Any]:
+    job = service.get_job(job_id)
+    require_job_access(job, x_live_token)
+    dossier = service.get_dossier(job_id)
+    if dossier is None or dossier.migration is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "El resultado de migración aún no está disponible.")
+    sandbox = service.job_dir(job_id) / SANDBOX_DIR
+
+    def content(relative: str | None) -> str | None:
+        if relative is None:
+            return None
+        target = resolve_inside(sandbox.resolve(), relative)
+        return target.read_text(encoding="utf-8", errors="replace") if target and target.is_file() else None
+
+    return {
+        "job_id": job_id,
+        "result": dossier.migration.model_dump(),
+        "legacy_code": content(dossier.migration.legacy_file),
+        "modern_code": content(dossier.migration.modern_file),
+        "facade_code": content(dossier.migration.facade_file),
+    }
+
+
 @router.get("/{job_id}/files/{name}")
-def download_file(job_id: str, name: str, service: Service) -> FileResponse:
+def download_file(
+    job_id: str,
+    name: str,
+    service: Service,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> FileResponse:
     if name not in DOWNLOADABLE:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Archivo no disponible.")
     try:
-        service.get_job(job_id)
+        job = service.get_job(job_id)
+        require_job_access(job, x_live_token)
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     path = service.job_dir(job_id) / name

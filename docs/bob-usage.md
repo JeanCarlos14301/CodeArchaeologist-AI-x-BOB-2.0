@@ -10,9 +10,9 @@ Este documento registra las sesiones de invocación de IBM Bob Shell (`bob run`)
 | 2026-09-24 20:15 | Felipe | `migration-architect` | F-04: Formulación de 3 cortes Strangler Fig en Flask demo | Opciones calculadas con estimación PERT y blast radius |
 | 2026-09-24 20:50 | Felipe | `contract-keeper` | F-05: Generación de suite pytest de caracterización para `/invoices/{id}` | 100% verde en legacy endpoint |
 | 2026-09-24 21:20 | Felipe | `polyglot-architect` | F-10: Mapeo de conceptos FastAPI → NestJS y contratos OpenAPI | Matriz de traducción Zod/class-validator completada |
-| 2026-09-24 21:40 | Felipe | `blast-radius-guard` | F-11: Simulación de fallo en cascada de `db_pool.py` antes de PR | CBRS: 78/100 (Veredicto RED_BLOCK por mutación compartida) |
+| 2026-09-24 21:40 | Felipe | `blast-radius-guard` | F-11: diseño de simulación sobre un archivo hipotético `db_pool.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no se presenta como resultado medido. |
 | 2026-09-24 21:55 | Felipe | `code-skeptic` | F-12: Debate adversarial contra propuesta de migración FastAPI | 3 vulnerabilidades de concurrencia y rollback detectadas |
-| 2026-09-24 22:15 | Felipe | `git-archaeologist` | F-13: Minería PyDriller de commits y matriz de hotspots | Archivo `legacy_db.py` identificado como mayor churn (82%) |
+| 2026-09-24 22:15 | Felipe | `git-archaeologist` | F-13: diseño de minería sobre un archivo hipotético `legacy_db.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no hay artefacto que respalde una cifra de churn. |
 | 2026-09-25 13:20 | Felipe | `ask`, `evidence-auditor` | F-01 / F-02: instalación de Bob Shell 2.0.5 y prueba de humo con API key vía `BobAdapter` | `status: success`, ~0.046 bobcoins por llamada; modo personalizado cargado desde `.bob/custom_modes.yaml` |
 | 2026-09-25 13:50 | Felipe | `evidence-auditor` | F-03: etapas 2-3 sobre FacturaYa (`python -m app.pipeline.run_audit`) | 13 hallazgos, 16/16 evidencias válidas tras el validador; 6/6 hallazgos esperados detectados y 0 sobre el control EF-7; 0,57 bobcoins, 87 s |
 | 2026-09-25 13:45 | Felipe | `evidence-auditor` + subagentes | Integración de `.bob/agents` y `.bob/skills`: auditoría live con delegación | Delegó en `legacy-sql-auditor`, `legacy-security-scanner` y `legacy-dependency-tracer` (log de Bob); 12/12 hallazgos y 18/18 evidencias válidas; 1,13 bobcoins, 189 s |
@@ -72,7 +72,9 @@ Proponente: Rebuttal con pruebas formales y modificaciones
 Tribunal: Veredicto vinculante (UNANIMOUS_PASS / CONDITIONAL / BLOCK)
 ```
 
-### 2. Puerta Shift-Left Pre-PR (Blast Radius Simulator)
+### 2. Puerta Shift-Left Pre-PR (diseño no ejecutado)
+
+Este diagrama conserva una propuesta de diseño. No corresponde a una capacidad activa ni a una medición de FacturaYa.
 ```
 Desarrollador / Agente genera cambio
         │

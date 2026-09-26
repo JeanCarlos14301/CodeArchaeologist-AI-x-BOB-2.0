@@ -180,8 +180,8 @@ class DossierResult(BaseModel):
 
 class JobCreateRequest(BaseModel):
     """Solicitud para iniciar un análisis de repositorio."""
-    source_type: Literal["demo", "holdout", "zip"] = Field(
-        ..., description="Origen: demo (FacturaYa v1), holdout (variante de control), o zip (subida)"
+    source_type: Literal["demo", "zip"] = Field(
+        ..., description="Origen: demo (FacturaYa v1) o zip (subida)"
     )
     repo_name: Optional[str] = Field(default=None, description="Nombre descriptivo opcional")
 

@@ -45,7 +45,8 @@ def test_job_lifecycle_and_synchronous_pipeline():
     assert res_status.json()["job_id"] == job_id
 
     # 3. Esperar que el pipeline asíncrono termine en background
-    max_wait = 25
+    # En Windows y CI compartido, Word/pytest pueden tardar más de 25 s sin que el worker falle.
+    max_wait = 60
     start_time = time.time()
     comp_data = {}
     while time.time() - start_time < max_wait:

@@ -1,7 +1,7 @@
 """Router de la API REST para Jobs de Auditoría Forense (D-02).
 
 Endpoints:
-- POST /api/jobs : Inicia un nuevo análisis a partir de demo, holdout o archivo ZIP subido.
+- POST /api/jobs : Motor histórico de desarrollo para demo o archivo ZIP.
 - GET  /api/jobs : Lista los jobs recientes y su estado.
 - GET  /api/jobs/{id} : Retorna el estado, etapa actual (1 a 11), progreso porcentual y eventos.
 - GET  /api/jobs/{id}/result : Retorna el expediente DossierResult conforme a schema-v1.json (409 si está procesando).
@@ -55,10 +55,10 @@ async def create_analysis_job(
         effective_source_type = request.source_type
         effective_mode = "example"
 
-    if effective_source_type not in ["demo", "holdout", "zip"]:
+    if effective_source_type not in ["demo", "zip"]:
         raise HTTPException(
             status_code=400,
-            detail=f"source_type no soportado: '{effective_source_type}'. Use 'demo', 'holdout' o 'zip'.",
+            detail=f"source_type no soportado: '{effective_source_type}'. Use 'demo' o 'zip'.",
         )
 
     # Registrar en base de datos SQLite

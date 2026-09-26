@@ -88,6 +88,53 @@ class DossierStats(BaseModel):
     bob_duration_ms: int | None = None
 
 
+class RiskMetric(BaseModel):
+    """Riesgo calculado con severidad y llamadores medidos en el grafo."""
+
+    finding_id: str
+    severity_weight: int = Field(ge=1, le=4)
+    origin_functions: int = Field(ge=0)
+    impacted_callers: int = Field(ge=0)
+    score: int = Field(ge=1)
+    formula: str
+
+
+class PertEstimate(BaseModel):
+    """Estimación del primer corte derivada solo de hechos medidos."""
+
+    affected_routes: int = Field(ge=0)
+    affected_functions: int = Field(ge=0)
+    affected_lines: int = Field(ge=0)
+    affected_complexity: int = Field(ge=0)
+    optimistic_days: float = Field(gt=0)
+    most_likely_days: float = Field(gt=0)
+    pessimistic_days: float = Field(gt=0)
+    expected_days: float = Field(gt=0)
+    variance: float = Field(ge=0)
+    formula: str
+    assumptions: list[str]
+
+
+class MigrationTestResult(BaseModel):
+    name: str
+    target: Literal["legacy", "modern"]
+    status: Literal["passed", "failed", "not_run"]
+    duration_ms: float = Field(ge=0)
+    reason: str | None = None
+
+
+class MigrationResult(BaseModel):
+    status: Literal["passed", "failed", "not_run"]
+    reason: str | None = None
+    implementation_origin: str
+    endpoint: str
+    tests: list[MigrationTestResult] = Field(default_factory=list)
+    legacy_file: str | None = None
+    modern_file: str | None = None
+    facade_file: str | None = None
+    diff_file: str | None = None
+
+
 class Dossier(BaseModel):
     """Expediente técnico validado: salida de las etapas 2 y 3."""
 
@@ -96,7 +143,12 @@ class Dossier(BaseModel):
     repo_name: str
     generated_at: str
     bob_task_id: str | None = None
+    job_id: str | None = None
+    source_sha256: str | None = None
     findings: list[Finding]
     rejected_findings: list[Finding] = Field(default_factory=list)
     evidence_checks: list[EvidenceCheck]
     stats: DossierStats
+    risk_matrix: list[RiskMetric] = Field(default_factory=list)
+    first_cut_pert: PertEstimate | None = None
+    migration: MigrationResult | None = None
