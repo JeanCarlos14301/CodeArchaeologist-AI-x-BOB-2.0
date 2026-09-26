@@ -38,6 +38,8 @@ directiva con riesgos y esfuerzo PERT, y un primer corte de migración Strangler
 - No ejecutar código subido por usuarios (solo el repo demo corre en el sandbox controlado).
 - No pasar `evaluation/expected-findings.json` a Bob.
 - No escribir fuera de las rutas permitidas por cada modo.
+- No dar `edit` a un modo de Bob sin `__WORK_ROOT__` al inicio de su `fileRegex` (Bob compara con la ruta
+  absoluta; ver D31). Los subagentes con `edit` o `execute` no viajan a los workspaces de análisis.
 - No exponer credenciales, API keys ni tokens en el repo, en commits o en prompts a Bob u
   otro asistente de IA — ver [SECURITY.md](SECURITY.md). No quitar ni modificar los patrones
   de `.gitignore` ni `.bobignore` (heredados del template oficial del hackathon).
