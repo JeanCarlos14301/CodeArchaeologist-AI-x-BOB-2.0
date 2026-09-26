@@ -39,12 +39,15 @@ las corridas de Jean (`02833a24a7a7`) y de Felipe (`b7424d9733a6`, `0234884643c5
 
 ## Modos Personalizados Registrados (`.bob/custom_modes.yaml`)
 
-Solo `evidence-auditor` se invoca desde el código (`backend/app/pipeline/evidence_audit.py`); el resto está definido pero **no conectado a ningún flujo**.
+Cuatro modos personalizados se invocan desde el código: `evidence-auditor` y `migration-architect` en el análisis
+(`backend/app/pipeline/evidence_audit.py`), y `modernization-planner` y `modernization-surgeon` en el Estudio de
+modernización (`backend/app/modernization/`). El chat «Pregúntale a Bob» usa el modo nativo `ask`
+(`backend/app/jobs/assistant.py`). El resto está definido pero **no conectado a ningún flujo**.
 
 | Slug | Nombre | Permisos | Objetivo | Conectado al pipeline |
 |---|---|---|---|---|
 | `evidence-auditor` | Evidence Auditor | `read` | Inspección forense con evidencia de archivo y línea (schema v1). | Sí |
-| `migration-architect` | Migration Architect | `read` | Selección del primer corte y 3 opciones de migración Strangler Fig. | No |
+| `migration-architect` | Migration Architect | `read` | Lectura cualitativa de los 3 mejores cortes del ranking determinista; un validador rechaza cifras y cortes distintos del elegido por el motor. | Sí, solo en auditorías live (`backend/app/pipeline/migration_architect.py`); la vitrina importada no lo invoca |
 | `contract-keeper` | Contract Keeper | `read, edit` | Creación de pruebas de caracterización golden-master con pytest. | No |
 | `strangler-surgeon` | Strangler Surgeon | `read, edit, command` | Implementación del nuevo corte moderno bajo `modern/` detrás de fachada. | No |
 | `board-narrator` | Board Narrator | `read` | Redacción del memo ejecutivo para la junta sin inventar cifras. | No |

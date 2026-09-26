@@ -60,8 +60,9 @@ export function MigrationRecommendationView({ recommendation, findings, onOpenFi
           <Eyebrow>Cómo se calculó</Eyebrow>
           <p className="font-mono text-caption text-pretty text-fg-2">{recommended.formula}</p>
           <p className="text-caption text-subtle">
-            Puntaje = valor × facilidad de prueba / riesgo. El valor suma los hallazgos que el corte mitiga; el riesgo suma
-            funciones compartidas, tablas escritas, complejidad, líneas y dependencias circulares.
+            Puntaje = valor × facilidad de prueba × datos de negocio / riesgo. El valor suma los hallazgos que el corte
+            mitiga; el riesgo suma funciones compartidas, tablas escritas, complejidad, líneas y dependencias circulares.
+            Una ruta que no lee ni escribe datos de negocio pondera a la mitad.
           </p>
           {recommendation.reference_comparison && (
             <p className="border-l-2 border-verified pl-3 text-caption text-pretty text-fg-2">{recommendation.reference_comparison}</p>
@@ -115,6 +116,7 @@ export function MigrationRecommendationView({ recommendation, findings, onOpenFi
                   <th scope="col" className="py-1.5 pr-3 font-normal">Endpoint</th>
                   <th scope="col" className="py-1.5 pr-3 text-right font-normal">Valor</th>
                   <th scope="col" className="py-1.5 pr-3 text-right font-normal">Facilidad</th>
+                  <th scope="col" className="py-1.5 pr-3 text-right font-normal">Datos</th>
                   <th scope="col" className="py-1.5 pr-3 text-right font-normal">Riesgo</th>
                   <th scope="col" className="py-1.5 text-right font-normal">Puntaje</th>
                 </tr>
@@ -125,6 +127,7 @@ export function MigrationRecommendationView({ recommendation, findings, onOpenFi
                     <td className="max-w-[18rem] truncate py-1.5 pr-3 font-mono text-fg-2" title={candidate.endpoint}>{candidate.endpoint}</td>
                     <td className="py-1.5 pr-3 text-right font-mono text-fg-2">{formatDecimal(candidate.value)}</td>
                     <td className="py-1.5 pr-3 text-right font-mono text-fg-2">{TESTABILITY_LABEL[String(candidate.testability)] ?? formatDecimal(candidate.testability)}</td>
+                    <td className="py-1.5 pr-3 text-right font-mono text-fg-2">{candidate.touches_business_data === false ? "no" : candidate.touches_business_data ? "sí" : "—"}</td>
                     <td className="py-1.5 pr-3 text-right font-mono text-fg-2">{formatDecimal(candidate.risk)}</td>
                     <td className="py-1.5 text-right font-mono text-fg">{formatDecimal(candidate.score)}</td>
                   </tr>

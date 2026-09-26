@@ -1,5 +1,6 @@
 # Blueprint de Render (J-03). Render construye el Dockerfile y redespliega en cada push a main,
 # solo cuando el workflow de CI (.github/workflows/ci.yml) pasa. Pasos: docs/deploy.md.
+# Plan para publicar la app al jurado (API key, token y topes): docs/entrega/app-publica.md.
 services:
   - type: web
     name: codearchaeologist
@@ -13,8 +14,8 @@ services:
       # Se cargan a mano en el dashboard de Render; nunca en este archivo.
       - key: BOB_API_KEY
         sync: false
-      # Token que exige el modo live en la URL pública. Render genera un valor aleatorio;
-      # se consulta en el dashboard (Environment) y se comparte solo con el equipo/jurado.
+      # Token que exige toda operación que invoca a Bob en la URL pública. Render genera un valor
+      # aleatorio; se consulta en el dashboard (Environment) y se comparte solo por canal privado.
       - key: LIVE_AUDIT_TOKEN
         generateValue: true
       # El equipo ya aceptó la licencia de Bob Shell al instalarlo; sin esto `bob run` falla
@@ -23,3 +24,19 @@ services:
         value: "true"
       - key: ENABLE_DEV_CORS
         value: "false"
+      # Topes de gasto para la URL pública. Peor caso: ~4 bobcoins por auditoría live
+      # (3 de Bob + 1 del arquitecto) y ~9 por un recorrido completo del Estudio.
+      - key: BOB_MAX_COST
+        value: "3"
+      - key: BOB_MAX_TURNS
+        value: "30"
+      - key: BOB_TIMEOUT_S
+        value: "600"
+      - key: MODERNIZE_PLAN_MAX_COST
+        value: "1.5"
+      - key: MODERNIZE_STEP_MAX_COST
+        value: "2"
+      - key: MODERNIZE_TOTAL_MAX_COST
+        value: "4"
+      - key: MODERNIZE_MAX_STEPS
+        value: "5"

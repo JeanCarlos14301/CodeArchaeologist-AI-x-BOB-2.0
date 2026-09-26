@@ -92,6 +92,8 @@ export interface RouteCandidate {
   complexity: number;
   lines: number;
   in_circular_dependency: boolean;
+  /** Absent in dossiers produced before the business-data factor existed. */
+  touches_business_data?: boolean;
   why: string;
 }
 

@@ -5,11 +5,15 @@ Guía para agentes de IA (IBM Bob y otros) y para humanos que trabajen en este r
 ## Propósito
 CodeArchaeologist recibe un repositorio heredado (Python 3 + Flask + SQLite) y entrega
 un expediente técnico con evidencia por archivo y línea, un memo DOCX para la junta
-directiva con riesgos y esfuerzo PERT, y un primer corte de migración Strangler Fig probado.
+directiva con riesgos, recomendación de migración y esfuerzo PERT, y un primer corte de
+migración Strangler Fig probado. El Estudio de modernización propone y aplica un plan por
+pasos sobre una copia del proyecto.
 
 ## Stack
 - Backend: Python 3.11, FastAPI (API + worker en el mismo proceso), Pydantic v2, SQLite.
-- IA: IBM Bob 2.0 vía Bob Shell (`bob run`) invocado por `subprocess`, en 5 modos (`.bob/custom_modes.yaml`).
+- IA: IBM Bob 2.0 vía Bob Shell (`bob run`) invocado por `subprocess`. Hay 11 modos en `.bob/custom_modes.yaml`;
+  el producto usa 4 (`evidence-auditor`, `migration-architect`, `modernization-planner`,
+  `modernization-surgeon`) más el modo nativo `ask`. Ver `docs/bob-usage.md`.
 - Frontend: React + Vite + Tailwind, servido como estáticos por FastAPI.
 - Despliegue: un solo contenedor Docker.
 
@@ -30,7 +34,8 @@ directiva con riesgos y esfuerzo PERT, y un primer corte de migración Strangler
 - Ramas: `feat/<persona>-<tareaID>` (ej. `feat/daniel-D-02`).
 - Todo cambio entra por PR con un revisor.
 - `main` siempre desplegable.
-- Tareas y responsables: `docs/tasks.md`. Decisiones: `docs/decisions.md`.
+- Decisiones: `docs/decisions.md`. Entrega del hackatón: `docs/entrega/`.
+- Material histórico que no describe el producto: `docs/archivo/` (no lo cites como función).
 - Uso de Bob: registrar cada sesión relevante en `docs/bob-usage.md`.
 
 ## Qué no hacer

@@ -21,7 +21,7 @@ push a main ──► CI: pytest + build frontend + build y prueba de humo de la
    Render, nunca en el repo (SECURITY.md).
 5. **Apply**. El primer build tarda varios minutos (instala Python, Node 24 y Bob Shell).
 6. En **Environment**, copiar el valor de `LIVE_AUDIT_TOKEN` (Render lo generó al azar) y
-   compartirlo solo con el equipo y, si hace falta, con el jurado.
+   compartirlo solo por canal privado. Cómo entregarlo al jurado: `docs/entrega/app-publica.md`.
 7. Recomendado: en GitHub → *Settings → Branches*, proteger `main` exigiendo los checks
    `backend`, `frontend` y `docker` del CI. Así nadie rompe la URL pública con un push directo.
 
@@ -32,8 +32,9 @@ curl https://<servicio>.onrender.com/health          # {"status":"ok"}
 curl https://<servicio>.onrender.com/api/bob/status  # installed, api_key_configured y live_requires_token en true
 ```
 
-En la interfaz: **Ejemplo** e **Importado** funcionan para cualquiera. **Live** muestra un campo
-de token y solo arranca con el `LIVE_AUDIT_TOKEN` correcto.
+En la interfaz, **Ver auditoría real de FacturaYa** (vitrina importada) funciona para cualquiera y no
+consume bobcoins. Auditar en vivo, subir un ZIP, preguntarle a Bob y el Estudio de modernización piden
+el `LIVE_AUDIT_TOKEN` correcto. El modo `example` está apagado salvo `ALLOW_NON_LIVE_MODES=true`.
 
 ## Local, igual que en Render
 
@@ -41,17 +42,18 @@ de token y solo arranca con el `LIVE_AUDIT_TOKEN` correcto.
 docker compose up --build        # http://127.0.0.1:8000, lee .env si existe
 ```
 
-Sin `LIVE_AUDIT_TOKEN` en `.env`, live queda abierto (como en desarrollo).
+Sin `LIVE_AUDIT_TOKEN` en `.env`, el servidor rechaza toda operación que invoca a Bob (503); la
+vitrina importada sigue funcionando.
 
 ## Límites del plan free
 
 - **Se duerme tras 15 min sin tráfico**: la primera visita tarda ~1 min. Abrir la URL un par
   de minutos antes de grabar el video o de que la pruebe el jurado.
-- **512 MB de RAM**: Ejemplo e Importado van sobrados. Una auditoría **Live** lanza Bob Shell
+- **512 MB de RAM**: la vitrina importada va sobrada. Una auditoría **Live** lanza Bob Shell
   dentro del contenedor y **aún no está probada con ese límite**; si falla por memoria, las
   opciones son subir de plan en Render o grabar la parte live desde un PC (Plan B de D11/D12).
 - **Disco efímero**: el historial de jobs (`artifacts/`) se borra en cada despliegue o reinicio.
-  Para la demo no importa: Ejemplo e Importado siempre están disponibles.
+  Para la demo no importa: la vitrina importada siempre está disponible.
 
 ## Si algo sale mal
 

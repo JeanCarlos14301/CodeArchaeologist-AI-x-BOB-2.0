@@ -110,9 +110,10 @@ def _recommendation_section(document: Document, dossier: Dossier) -> None:
         return
     recommended = recommendation.recommended
     document.add_paragraph(
-        "Cada ruta se evalúa con el grafo de llamadas del código: puntaje = valor × facilidad de prueba / riesgo. "
-        "El valor suma los hallazgos que el corte mitiga; el riesgo suma funciones compartidas, tablas escritas, "
-        "complejidad, líneas y dependencias circulares. El motor es determinista; Bob no elige el corte."
+        "Cada ruta se evalúa con el grafo de llamadas del código: puntaje = valor × facilidad de prueba × datos de "
+        "negocio / riesgo. El valor suma los hallazgos que el corte mitiga; el riesgo suma funciones compartidas, "
+        "tablas escritas, complejidad, líneas y dependencias circulares; una ruta que no lee ni escribe datos de "
+        "negocio pondera a la mitad. El motor es determinista; Bob no elige el corte."
     )
     lead = document.add_paragraph()
     lead.add_run("Corte recomendado: ").bold = True

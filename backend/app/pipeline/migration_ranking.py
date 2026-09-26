@@ -349,7 +349,7 @@ def analyze_route_candidates(
              "No hay endpoints de solo lectura con bajo acoplamiento: se empieza por la ruta de mayor puntaje.",
              "Ola 1: ruta de mayor puntaje"),
             ("Ola 2 — Siguientes en el ranking",
-             "Las dos rutas que siguen en puntaje valor × facilidad / riesgo.",
+             "Las dos rutas que siguen en el puntaje del ranking.",
              "Ola 2: siguientes rutas del ranking"),
             ("Ola 3 — Resto de rutas",
              "Rutas restantes, de menor puntaje.",
