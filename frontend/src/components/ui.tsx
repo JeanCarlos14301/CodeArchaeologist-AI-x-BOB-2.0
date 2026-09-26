@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import type { ExecutionMode, Severity } from "../types";
 
-export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low"];
+export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 export const SEVERITY_LABEL: Record<Severity, string> = {
   critical: "Crítico",
   high: "Alto",
   medium: "Medio",
   low: "Bajo",
+  info: "Info",
 };
 
 const SEVERITY_BADGE: Record<Severity, string> = {
@@ -15,6 +16,7 @@ const SEVERITY_BADGE: Record<Severity, string> = {
   high: "bg-[color-mix(in_srgb,var(--sev-high)_16%,transparent)] text-[var(--sev-high)] ring-[var(--sev-high)]/30",
   medium: "bg-[color-mix(in_srgb,var(--sev-medium)_16%,transparent)] text-[var(--sev-medium)] ring-[var(--sev-medium)]/30",
   low: "bg-[color-mix(in_srgb,var(--sev-low)_16%,transparent)] text-[var(--sev-low)] ring-[var(--sev-low)]/30",
+  info: "bg-[color-mix(in_srgb,var(--sev-low)_10%,transparent)] text-muted ring-line",
 };
 
 export const SEVERITY_BAR: Record<Severity, string> = {
@@ -22,6 +24,7 @@ export const SEVERITY_BAR: Record<Severity, string> = {
   high: "bg-[var(--sev-high)]",
   medium: "bg-[var(--sev-medium)]",
   low: "bg-[var(--sev-low)]",
+  info: "bg-muted/50",
 };
 
 export function SeverityBadge({ severity }: { severity: Severity }) {

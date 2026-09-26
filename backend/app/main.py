@@ -36,6 +36,7 @@ try:
         is_bob_cli_available,
     )
     from app.api.artifacts import router as artifacts_router
+    from app.api.graph import router as graph_router
     from app.api.jobs import router as jobs_router
     from app.api.migrate import router as migrate_router
     from app.api.routes import router as felipe_routes_router
@@ -50,6 +51,7 @@ except ImportError:
         is_bob_cli_available,
     )
     from backend.app.api.artifacts import router as artifacts_router
+    from backend.app.api.graph import router as graph_router
     from backend.app.api.jobs import router as jobs_router
     from backend.app.api.migrate import router as migrate_router
     from backend.app.api.routes import router as felipe_routes_router
@@ -125,6 +127,7 @@ def create_app(
         app.include_router(jobs_router)
         app.include_router(migrate_router)
         app.include_router(artifacts_router)
+        app.include_router(graph_router)
 
     # Registro de router de auditorías de Felipe / Frontend
     app.include_router(felipe_routes_router)
