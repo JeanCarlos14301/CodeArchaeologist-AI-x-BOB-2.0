@@ -53,7 +53,8 @@ IMPORTED_RECORDED_AT: dict[str, str] = {
 }
 EXAMPLE_DOSSIER = FIXTURES_DIR / "dossier-example.json"
 MAX_SOURCE_LINES = 400
-BOB_VERSION_TIMEOUT_S = 15
+# `bob --version` arranca el CLI de Node: ~0.4 s en local, ~15 s en la instancia de Render.
+BOB_VERSION_TIMEOUT_S = 45
 
 
 STAGE_LABELS: dict[str, str] = {
@@ -262,24 +263,55 @@ class AuditService:
         )
 
 
+_BOB_VERSION_LOCK = threading.Lock()
+_BOB_VERSIONS: dict[str, str] = {}
+
+
+def _read_bob_version(binary: str) -> str | None:
+    completed = subprocess.run(  # noqa: S603 - lista de argumentos, sin shell
+        [binary, "--version"], capture_output=True, text=True,
+        timeout=BOB_VERSION_TIMEOUT_S, check=False,
+    )
+    output = completed.stdout.strip()
+    return output.splitlines()[0] if output else None
+
+
+def bob_version(binary: str) -> str | None:
+    """Versión de Bob Shell, calculada una sola vez por proceso.
+
+    El binario no cambia mientras el contenedor vive, y lanzar el CLI en cada consulta costaba ~15 s
+    en Render (con el botón de análisis bloqueado) y un proceso de Node por visita. Un fallo no se
+    guarda: la siguiente consulta lo reintenta.
+    """
+    with _BOB_VERSION_LOCK:  # consultas simultáneas esperan a un único cálculo
+        cached = _BOB_VERSIONS.get(binary)
+        if cached:
+            return cached
+        try:
+            version = _read_bob_version(binary)
+        except (OSError, subprocess.TimeoutExpired):
+            logger.warning("No se pudo obtener la versión de Bob", exc_info=True)
+            return None
+        if version:
+            _BOB_VERSIONS[binary] = version
+        return version
+
+
+def warm_bob_version() -> None:
+    """Calcula la versión al arrancar para que ninguna visita espere al CLI de Bob."""
+    binary = shutil.which(BobRunSettings.from_env().bob_binary)
+    if binary:
+        bob_version(binary)
+
+
 def bob_status() -> BobStatus:
     """Diagnóstico de la integración con Bob (sin gastar bobcoins)."""
     settings = BobRunSettings.from_env()
     binary = shutil.which(settings.bob_binary)
-    version = None
-    if binary:
-        try:
-            completed = subprocess.run(  # noqa: S603 - lista de argumentos, sin shell
-                [binary, "--version"], capture_output=True, text=True,
-                timeout=BOB_VERSION_TIMEOUT_S, check=False,
-            )
-            version = completed.stdout.strip().splitlines()[0] if completed.stdout.strip() else None
-        except (OSError, subprocess.TimeoutExpired):
-            logger.warning("No se pudo obtener la versión de Bob", exc_info=True)
     bob_dir = CUSTOM_MODES_FILE.parent
     return BobStatus(
         installed=binary is not None,
-        version=version,
+        version=bob_version(binary) if binary else None,
         api_key_configured=bool(os.environ.get("BOB_API_KEY")),
         custom_modes=sorted(load_custom_mode_slugs()),
         subagents=sorted(p.stem for p in (bob_dir / "agents").glob("*.md")),
