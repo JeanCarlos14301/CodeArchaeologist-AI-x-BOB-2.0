@@ -30,6 +30,11 @@ def run_pytest_in_sandbox(
         "pytest",
         "-v",
         "--tb=short",
+        # Keep pytest's temp dirs and cache inside the sandbox: the global temp dir
+        # (e.g. %TEMP%\pytest-of-<user>) can be locked or shared, which turns every
+        # tmp_path test into an error unrelated to the code under test.
+        f"--basetemp={(sandbox_dir / '.pytest-tmp').resolve()}",
+        "-p", "no:cacheprovider",
     ]
     if test_path:
         cmd.append(test_path)
