@@ -31,6 +31,7 @@ from app.adapters.bob_adapter import (
 from app.pipeline.activity import BobActivity, EventLog, inventory_events
 from app.contracts.schema_v1 import AuditorOutput, Dossier, DossierStats
 from app.pipeline.decision_metrics import calculate_decision_metrics, source_sha256
+from app.pipeline.migration_architect import run_migration_architect
 from app.renderers.board_memo import BOARD_MEMO_FILE, render_board_memo
 from app.sandbox.reference_cut import not_run_result, run_reference_cut
 from app.validators.evidence import validate_findings
@@ -207,6 +208,23 @@ def build_dossier(
     )
     risk_matrix, first_cut_pert = calculate_decision_metrics(workspace, dossier)
     return dossier.model_copy(update={"risk_matrix": risk_matrix, "first_cut_pert": first_cut_pert})
+
+
+def apply_migration_architect(dossier: Dossier, adapter: BobAdapter, events: EventLog | None) -> Dossier:
+    """Etapa migration-architect: invoca Bob y añade migration_options al dossier (tolerante a fallos).
+
+    Sus eventos viajan bajo la etapa `migration`: el vocabulario de etapas (PipelineEvent, cola de
+    trabajos e interfaz) es fijo y una etapa nueva rompería cada auditoría.
+    """
+    options, reason = run_migration_architect(dossier, adapter)
+    if events:
+        if options:
+            events.emit("migration", "architect.done", "migration-architect",
+                        f"Opciones propuestas: {len(options)}", data={"count": len(options)})
+        else:
+            events.emit("migration", "architect.skipped", "migration-architect",
+                        "migration-architect omitido", reason, {"reason": reason})
+    return dossier.model_copy(update={"migration_options": options})
 
 
 def _no_stage(_stage: str) -> None:
@@ -416,6 +434,9 @@ def run_evidence_audit(
     if events:
         _emit_validation(events, dossier)
     on_stage("migration")
+    if imported_result is None:
+        # Solo en corridas live: importar una respuesta grabada nunca debe invocar a Bob (ni gastar bobcoins).
+        dossier = apply_migration_architect(dossier, adapter or BobAdapter(workspace), events)
     migration = (
         run_reference_cut(source_repo, job_dir)
         if execute_reference_cut

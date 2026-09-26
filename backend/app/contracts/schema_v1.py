@@ -135,6 +135,28 @@ class MigrationResult(BaseModel):
     diff_file: str | None = None
 
 
+class MigrationOption(BaseModel):
+    """Opción de migración propuesta por el arquitecto (etapa migration-architect).
+
+    No contiene cifras numéricas de días, riesgo ni radio: esos valores los calcula
+    el código determinista (decision_metrics.py) y se leen del Dossier.
+    Los pros y cons son texto cualitativo sin porcentajes ni estimaciones.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=r"^OPT-\d+$", description="Identificador secuencial, p.ej. OPT-1.")
+    name: str = Field(min_length=3, max_length=120)
+    pattern: str = Field(min_length=3, max_length=120, description="Patrón de migración, p.ej. Strangler Fig.")
+    finding_ids: list[str] = Field(
+        min_length=1,
+        description="IDs de hallazgos del ranking que justifican esta opción (deben existir en risk_matrix).",
+    )
+    pros: list[str] = Field(min_length=1)
+    cons: list[str] = Field(min_length=1)
+    recommended: bool = Field(description="True solo para la opción recomendada; exactamente una debe serlo.")
+
+
 class Dossier(BaseModel):
     """Expediente técnico validado: salida de las etapas 2 y 3."""
 
@@ -152,3 +174,4 @@ class Dossier(BaseModel):
     risk_matrix: list[RiskMetric] = Field(default_factory=list)
     first_cut_pert: PertEstimate | None = None
     migration: MigrationResult | None = None
+    migration_options: list[MigrationOption] = Field(default_factory=list)
