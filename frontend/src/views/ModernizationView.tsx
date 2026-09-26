@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MessageSquareText } from "lucide-react";
 import { CodeViewer, toLines } from "../components/domain/CodeViewer";
+import { MigrationOptions } from "../components/domain/MigrationOptions";
 import { MigrationSequence } from "../components/domain/MigrationSequence";
 import { PertRange } from "../components/domain/PertRange";
 import { Button } from "../components/ui/Button";
@@ -16,7 +17,8 @@ export function ModernizationView() {
 }
 
 function Modernization({ dossier }: { dossier: Dossier }) {
-  const { seedComposer } = useWorkspace();
+  const { seedComposer, go } = useWorkspace();
+  const options = dossier.migration_options ?? [];
   const hasMigration = !!dossier.migration;
 
   return (
@@ -27,6 +29,22 @@ function Modernization({ dossier }: { dossier: Dossier }) {
         description="Strangler Fig: se extrae un endpoint cada vez detrás de una fachada, con pruebas que fijan el comportamiento del legado y deben pasar igual en el código nuevo."
         actions={<Button icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer("¿Qué debería migrar después del primer corte y en qué orden? Justifica con el código.")}>Preguntar a Bob el siguiente corte</Button>}
       />
+      <Section eyebrow="Opciones" title="Cómo podría migrarse">
+        {options.length > 0 ? (
+          <>
+            <MigrationOptions options={options} findings={dossier.findings} onOpenFinding={(id) => go("risks", { finding: id })} />
+            <p className="mt-3 text-caption text-subtle">
+              Propuestas de Bob sobre el ranking de riesgo. El código comprobó que cada hallazgo citado existe y que no traen cifras:
+              los días y el riesgo salen del ranking y de la estimación PERT, no de Bob.
+            </p>
+          </>
+        ) : (
+          <EmptyState title="Este análisis no incluye opciones de migración.">
+            Bob las propone solo en análisis live y se descartan si su respuesta cita hallazgos que no existen o trae cifras.
+            En análisis importados no se le consulta.
+          </EmptyState>
+        )}
+      </Section>
       {hasMigration ? <MigrationDetail /> : (
         <Section>
           <EmptyState title="Este análisis no incluye un primer corte probado.">
