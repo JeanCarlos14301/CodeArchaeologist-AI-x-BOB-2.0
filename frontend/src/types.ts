@@ -287,7 +287,7 @@ export interface Assessment {
   verdict: "recommended" | "conditional" | "not_recommended";
   summary: string; business_reading: string;
   tradeoffs: { axis: Axis; effect: "improves" | "worsens" | "neutral" | "depends"; detail: string; refs: { path: string; line_start: number; line_end: number; verified: boolean }[] }[];
-  blockers: string[]; questions: string[];
+  blockers: string[]; questions: string[]; fixes_during_migration: string[];
   recommended: { from_id: string; to_id: string; why: string }[];
   bob_cost: number | null; bob_duration_ms: number | null;
 }
@@ -298,13 +298,16 @@ export interface PlanStep {
 }
 export interface MigrationPlan { summary: string; steps: PlanStep[]; rollback: string; bob_cost: number | null; bob_duration_ms: number | null }
 export interface Implementation {
-  steps: { step_id: string; status: "done" | "failed" | "skipped"; changed: { path: string; action: string }[]; outside_plan: string[]; note: string; bob_cost: number | null }[];
+  steps: { step_id: string; status: "done" | "failed" | "skipped"; changed: { path: string; action: string }[]; outside_plan: string[]; note: string; fixed: string[]; bob_cost: number | null }[];
   checks: { path: string; kind: string; ok: boolean; detail: string }[];
   files_changed: number; lines_added: number; lines_removed: number; outside_plan: string[]; not_executed: string; bob_cost: number | null;
 }
 export interface StudioState {
   phase: StudioPhase; error: string | null; request: AssessRequest | null;
   assessment: Assessment | null; plan: MigrationPlan | null; implementation: Implementation | null;
-  events: { t: number; phase: string; message: string; step_id: string | null }[];
+  events: {
+    t: number; phase: string; message: string; step_id: string | null; kind: string; actor: string | null;
+    detail: string | null; data: Record<string, string | number | null>;
+  }[];
   updated_at: string | null;
 }

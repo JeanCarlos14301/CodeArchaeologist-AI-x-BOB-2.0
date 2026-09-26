@@ -63,6 +63,8 @@ class Assessment(BaseModel):
     tradeoffs: list[Tradeoff] = Field(min_length=3, max_length=12)
     blockers: list[str] = Field(default_factory=list, max_length=6)
     questions: list[str] = Field(default_factory=list, max_length=5)
+    # Defectos y vulnerabilidades del código actual que Bob corregirá durante la migración, no portará.
+    fixes_during_migration: list[str] = Field(default_factory=list, max_length=12)
     recommended: list[Recommended] = Field(default_factory=list, max_length=MAX_MAPPINGS)
     bob_cost: float | None = None
     bob_duration_ms: int | None = None
@@ -100,6 +102,7 @@ class StepRun(BaseModel):
     changed: list[FileChange] = Field(default_factory=list)
     outside_plan: list[str] = Field(default_factory=list)
     note: str = ""
+    fixed: list[str] = Field(default_factory=list, max_length=12)
     bob_cost: float | None = None
 
 
@@ -122,10 +125,16 @@ class Implementation(BaseModel):
 
 
 class StudioEvent(BaseModel):
+    """Actividad real de Bob o del backend durante una fase: qué lee, qué busca, en quién delega, qué edita."""
+
     t: float
     phase: str
     message: str
     step_id: str | None = None
+    kind: str = "info"
+    actor: str | None = None
+    detail: str | None = None
+    data: dict[str, str | int | float | None] = Field(default_factory=dict)
 
 
 class StudioState(BaseModel):

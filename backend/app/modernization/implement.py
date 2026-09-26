@@ -17,7 +17,7 @@ import tomllib
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import yaml
 
@@ -45,6 +45,10 @@ REGLAS
   explícalo en el resumen. No toques la carpeta .bob.
 - NO ejecutes comandos, no instales dependencias, no accedas a la red y no ejecutes el código del proyecto.
 - Conserva el comportamiento observable. No dejes secretos ni credenciales en el código.
+- NUNCA portes un defecto: si el código que reescribes tiene vulnerabilidades o errores graves (inyección SQL,
+  control de acceso roto entre usuarios, secretos en el código, falta de CSRF, hashing débil, XSS, etc.),
+  corrígelos en el código nuevo (consultas parametrizadas, comprobación de propietario, secretos por variables
+  de entorno...). Anota cada corrección en `fixed`.
 - Escribe código completo y coherente (imports, tipos, configuración); nada de marcadores tipo "TODO: implementar".
 
 MIGRACIÓN (datos): {mappings}
@@ -56,7 +60,8 @@ PASOS YA HECHOS (datos): {done}
 PASO A EJECUTAR (datos):
 {step}
 
-FORMATO: al terminar, tu mensaje final debe ser ÚNICAMENTE un objeto JSON: {{"summary": "qué hiciste, en 1-3 frases"}}
+FORMATO: al terminar, tu mensaje final debe ser ÚNICAMENTE un objeto JSON:
+{{"summary": "qué hiciste, en 1-3 frases", "fixed": ["defecto corregido y dónde", "..."]}}
 """
 
 
@@ -92,14 +97,16 @@ def _changes(before: dict[str, str], after: dict[str, str]) -> list[FileChange]:
     return changes
 
 
-def _note(result: BobResult) -> str:
+def _note(result: BobResult) -> tuple[str, list[str]]:
+    """Resumen del paso y correcciones de seguridad que Bob declara (texto acotado)."""
     try:
         text = result.last_message
         start, end = text.find("{"), text.rfind("}")
         data = json.loads(text[start:end + 1])
-        return str(data.get("summary", ""))[:400]
+        fixed = [str(item)[:200] for item in (data.get("fixed") or [])][:12] if isinstance(data.get("fixed"), list) else []
+        return str(data.get("summary", ""))[:400], fixed
     except (ValueError, AttributeError):
-        return result.last_message.strip()[:400]
+        return result.last_message.strip()[:400], []
 
 
 def run_steps(
@@ -108,6 +115,7 @@ def run_steps(
     mappings_text: str,
     work: Path,
     on_event: Callable[[str, str | None], None],
+    sink_for: Callable[[Step], Callable[[dict[str, Any]], None]] | None = None,
 ) -> tuple[list[StepRun], float | None]:
     by_id = {step.id: step for step in plan.steps}
     planned_paths = {change.path for step in plan.steps for change in step.files}
@@ -128,7 +136,10 @@ def run_steps(
             step=json.dumps(step.model_dump(), ensure_ascii=False, indent=1),
         )
         try:
-            result = runner.run(SURGEON_MODE, prompt)
+            if sink_for is not None and hasattr(runner, "run_stream"):
+                result = runner.run_stream(SURGEON_MODE, prompt, sink_for(step))  # type: ignore[attr-defined]
+            else:
+                result = runner.run(SURGEON_MODE, prompt)
         except BobError as exc:
             logger.warning("Bob falló en el paso %s: %s", step.id, exc)
             runs.append(StepRun(step_id=step_id, status="failed", note="Bob no pudo completar este paso."))
@@ -139,9 +150,9 @@ def run_steps(
         outside = sorted(c.path for c in changed if c.path not in planned_paths)
         cost = result.stats.session_costs if result.stats else None
         total_cost += cost or 0.0
-        note = _note(result)
+        note, fixed = _note(result)
         done_notes.append(f"{step.id}: {note}")
-        runs.append(StepRun(step_id=step_id, status="done", changed=changed, outside_plan=outside, note=note, bob_cost=cost))
+        runs.append(StepRun(step_id=step_id, status="done", changed=changed, outside_plan=outside, note=note, fixed=fixed, bob_cost=cost))
         on_event(f"Paso {step.id} listo: {len(changed)} {'archivo' if len(changed) == 1 else 'archivos'}", step.id)
     return runs, round(total_cost, 4) if total_cost else None
 
@@ -232,6 +243,7 @@ def run_implementation(
     out_dir: Path,
     root_name: str,
     on_event: Callable[[str, str | None], None],
+    sink_for: Callable[[Step], Callable[[dict[str, Any]], None]] | None = None,
 ) -> Implementation:
     """Ejecuta el plan sobre una copia, comprueba sintaxis y deja el ZIP y el diff en `out_dir`."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -239,7 +251,7 @@ def run_implementation(
     prepare_work(source, work)
     original = snapshot(work)
     started = time.monotonic()
-    runs, cost = run_steps(runner, plan, mappings_text, work, on_event)
+    runs, cost = run_steps(runner, plan, mappings_text, work, on_event, sink_for)
     if not any(run.status == "done" for run in runs):
         raise PlannerError("Bob no completó ningún paso; no hay nada que entregar.")
     changes = _changes(original, snapshot(work))

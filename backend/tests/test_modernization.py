@@ -87,7 +87,6 @@ def test_assessment_verifies_code_references(stack) -> None:
     ({"summary": "Mejora el rendimiento un 40% sin esfuerzo alguno."}, "cifras"),
     ({"business_reading": "Se resuelve en dos semanas de trabajo del equipo."}, "cifras"),
     ({"verdict": "recommended", "blockers": ["Falta cobertura."]}, "bloqueos"),
-    ({"recommended": [{"from_id": "flask", "to_id": "fastapi", "why": "Encaja mejor con el equipo."}]}, "recommended"),
 ])
 def test_assessment_rejects_invalid_answers(stack, patch: dict, message: str) -> None:
     request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
@@ -316,3 +315,121 @@ def test_api_full_flow_with_token_and_confirmation(client: TestClient) -> None:
     assert download.status_code == 200 and download.content[:2] == b"PK"
     assert client.get(f"{base}/download/state.json", headers=headers).status_code == 404
     assert "workspace" not in json.dumps(state) and str(SAMPLE) not in json.dumps(state)
+
+
+# ------------------------------------------------------------ actividad real, reintento con feedback y correcciones
+
+def test_percent_in_code_is_legitimate_but_percent_figures_are_not(stack) -> None:
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    sql = _tradeoffs()
+    sql[0]["detail"] = "La búsqueda concatena `WHERE number LIKE '%" + "' + q + '" + "%'` sin parametrizar (app.py líneas 78-79)."
+    assert validate_assessment(_assessment(tradeoffs=sql), request, stack, SAMPLE).tradeoffs[0].axis == "security"
+    with pytest.raises(PlannerError, match="cifras"):
+        validate_assessment(_assessment(summary="Mejora el rendimiento en un 40 % con el cambio."), request, stack, SAMPLE)
+
+
+def test_assessment_lists_fixes_and_checks_them(stack) -> None:
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    ok = _assessment(fixes_during_migration=["Inyección SQL en la búsqueda de facturas (app.py:78)."])
+    assert validate_assessment(ok, request, stack, SAMPLE).fixes_during_migration
+    with pytest.raises(PlannerError, match="cifras"):
+        validate_assessment(_assessment(fixes_during_migration=["Se corrige en tres semanas."]), request, stack, SAMPLE)
+
+
+class StreamingBob(FakeBob):
+    """Como Bob real: emite eventos stream-json mientras trabaja y, la primera vez, responde algo inválido."""
+
+    def __init__(self, *args, first_invalid: bool = False, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.first_invalid = first_invalid
+        self.asked = 0
+
+    def run_stream(self, mode: str, prompt: str, on_event, **_kwargs) -> BobResult:
+        on_event({"type": "tool_use", "tool_name": "read_file", "parameters": {"path": "app.py"}, "tool_id": "t1"})
+        on_event({"type": "tool_use", "tool_name": "search_files", "parameters": {"regex": "execute", "path": "."}, "tool_id": "t2"})
+        if mode == "modernization-surgeon":
+            on_event({"type": "tool_use", "tool_name": "write_to_file", "parameters": {"path": "main_fastapi.py"}, "tool_id": "t3"})
+        self.asked += 1
+        if self.first_invalid and self.asked == 1:
+            return self._result({"verdict": "conditional"})  # incompleto: el validador lo rechaza
+        return self.run(mode, prompt)
+
+
+def test_studio_shows_what_bob_is_really_doing(tmp_path: Path) -> None:
+    calls: list[str] = []
+    job_dir = tmp_path / "job"
+    shutil.copytree(SAMPLE, job_dir / "source", ignore=shutil.ignore_patterns("__pycache__", "*.sqlite3"))
+    made: list[StreamingBob] = []
+
+    def factory(work: Path, kind: str) -> StreamingBob:
+        made.append(StreamingBob(work, kind, calls, first_invalid=True))
+        return made[-1]
+
+    studio = Studio(job_dir, "f.zip", adapter_factory=factory)
+    studio.begin_assess(AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")]))
+    studio.run_assess()
+    state = studio.state()
+    assert state.phase == "assessed", state.error
+    titles = [e.message for e in state.events if e.phase == "assessing"]
+    assert any(t.startswith("Copiando el proyecto") for t in titles)
+    assert "Leyó app.py" in titles and any(t.startswith("Buscó «execute»") for t in titles)
+    assert any(e.kind == "validator" for e in state.events), "el rechazo del validador y el reintento son visibles"
+    assert made[0].asked == 2, "Bob corrigió su respuesta con el motivo del rechazo"
+    assert all("workspace" not in json.dumps(e.model_dump()) for e in state.events)
+
+    studio.begin_plan()
+    studio.run_plan()
+    studio.begin_implement()
+    studio.run_implement()
+    edits = [e for e in studio.state().events if e.kind == "bob.edit"]
+    assert edits and edits[0].message == "Escribió main_fastapi.py" and edits[0].step_id in {"S1", "S2"}
+
+
+def test_bob_failure_is_not_retried_with_feedback(tmp_path: Path) -> None:
+    calls: list[str] = []
+    job_dir = tmp_path / "job"
+    shutil.copytree(SAMPLE, job_dir / "source", ignore=shutil.ignore_patterns("__pycache__", "*.sqlite3"))
+
+    class Broken(FakeBob):
+        def run(self, mode: str, prompt: str):
+            self.calls.append(mode)
+            raise BobExecutionError("caído")
+
+    studio = Studio(job_dir, "f.zip", adapter_factory=lambda work, kind: Broken(work, kind, calls))
+    studio.begin_assess(AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")]))
+    studio.run_assess()
+    assert studio.state().phase == "failed" and calls == ["modernization-planner"]
+
+
+def test_surgeon_reports_the_security_fixes_it_made(tmp_path: Path) -> None:
+    class Fixing(FakeBob):
+        def run(self, mode: str, prompt: str):
+            result = super().run(mode, prompt)
+            if mode == "modernization-surgeon":
+                payload = json.loads(result.last_message)
+                payload["fixed"] = ["Búsqueda de facturas parametrizada (antes concatenaba SQL)."]
+                return self._result(payload)
+            return result
+
+    calls: list[str] = []
+    studio = _studio(tmp_path, calls)
+    studio.adapter_factory = lambda work, kind: Fixing(work, kind, calls)
+    _run_all(studio)
+    steps = studio.state().implementation.steps
+    assert steps[0].fixed == ["Búsqueda de facturas parametrizada (antes concatenaba SQL)."]
+
+
+def test_known_audit_findings_reach_the_planner(tmp_path: Path) -> None:
+    studio = _studio(tmp_path, [])
+    dossier = json.loads((REPO_ROOT / "contracts" / "fixtures" / "valid-dossier.json").read_text(encoding="utf-8")) if (REPO_ROOT / "contracts" / "fixtures" / "valid-dossier.json").is_file() else None
+    assert studio.findings_digest() == "[]"
+    if dossier and {"findings", "stats", "evidence_checks"} <= dossier.keys():
+        (studio.job_dir / "dossier.json").write_text(json.dumps(dossier), encoding="utf-8")
+        digest = json.loads(studio.findings_digest())
+        assert digest and {"id", "severity", "title", "where"} <= digest[0].keys()
+
+
+def test_chosen_mode_ignores_recommendations_instead_of_rejecting(stack) -> None:
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    echoed = _assessment(recommended=[{"from_id": "flask", "to_id": "fastapi", "why": "Encaja mejor con el equipo."}])
+    assert validate_assessment(echoed, request, stack, SAMPLE).recommended == []

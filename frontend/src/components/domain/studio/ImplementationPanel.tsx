@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, Hammer } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { Eyebrow } from "../../ui/Layout";
+import { BobWork } from "./BobWork";
 import { CodeViewer, toLines } from "../CodeViewer";
 import type { Implementation, MigrationPlan, StudioState } from "../../../types";
 
@@ -59,7 +60,7 @@ export function ImplementationPanel({ plan, state, busy, onImplement, onDownload
 
 function Progress({ plan, state, running }: { plan: MigrationPlan; state: StudioState; running: boolean }) {
   const runs = new Map((state.implementation?.steps ?? []).map((step) => [step.step_id, step]));
-  const events = state.events.filter((event) => event.phase === "implementing").slice(-6);
+  const events = state.events.filter((event) => event.phase === "implementing");
   const currentId = running ? events.filter((event) => event.step_id).slice(-1)[0]?.step_id ?? null : null;
   return (
     <div className="grid gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" aria-live="polite">
@@ -74,7 +75,10 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
                 <span className={`font-mono ${run ? STATUS[run.status].tone : live ? "text-activity" : "text-subtle"}`}>
                   {run ? STATUS[run.status].glyph : live ? <span aria-hidden className="inline-block h-1.5 w-1.5 animate-pulse rounded-pill bg-activity" /> : String(index + 1).padStart(2, "0")}
                 </span>
-                <span className="min-w-0 truncate text-body text-fg-2">{step.title}{run?.note && <span className="block truncate text-caption text-subtle" title={run.note}>{run.note}</span>}</span>
+                <span className="min-w-0 text-body text-fg-2"><span className="block truncate">{step.title}</span>
+                  {run?.note && <span className="block truncate text-caption text-subtle" title={run.note}>{run.note}</span>}
+                  {run?.fixed.map((fix) => <span key={fix} className="block text-caption text-verified"><span aria-hidden>✓ </span>Corrigió: {fix}</span>)}
+                </span>
                 <span className="font-mono text-subtle tabular-nums">{run ? `${run.changed.length} arch.` : live ? "en curso" : ""}</span>
               </li>
             );
@@ -82,11 +86,16 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
         </ol>
       </div>
       <div>
-        <Eyebrow>Actividad</Eyebrow>
-        <ul className="mt-2 space-y-1.5 text-caption text-muted">
-          {events.length === 0 && <li className="text-subtle">Esperando a Bob…</li>}
-          {events.map((event) => <li key={`${event.t}-${event.message}`} className="grid grid-cols-[1rem_1fr]"><span aria-hidden className="text-subtle">·</span><span>{event.message}</span></li>)}
-        </ul>
+        {running ? (
+          <BobWork title={currentId ? `Bob ejecuta el paso ${currentId}` : "Bob prepara la copia de trabajo"} events={events} />
+        ) : (
+          <>
+            <Eyebrow>Actividad</Eyebrow>
+            <ul className="mt-2 space-y-1.5 text-caption text-muted">
+              {events.slice(-8).map((event, index) => <li key={`${event.t}-${index}`} className="grid grid-cols-[1rem_1fr]"><span aria-hidden className="text-subtle">·</span><span>{event.message}</span></li>)}
+            </ul>
+          </>
+        )}
       </div>
     </div>
   );

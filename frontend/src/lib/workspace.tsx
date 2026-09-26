@@ -63,6 +63,7 @@ interface WorkspaceValue {
   ask: (question: string, context: AskContext) => Promise<void>;
   composerSeed: { text: string; nonce: number } | null;
   seedComposer: (text: string) => void;
+  clearComposerSeed: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -309,6 +310,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [jobId, token]);
 
+  const clearComposerSeed = useCallback(() => setComposerSeed(null), []);
   const seedComposer = useCallback((text: string) => {
     setAiOpen(true);
     setComposerSeed({ text, nonce: Date.now() });
@@ -317,7 +319,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceValue = {
     route, navigate, go, token, setToken, bob, offline, jobs, flow, dossier, accessDenied, jobError,
     notice, dismissNotice: () => setNotice(null), startUpload, openShowcase, resource, requestResource,
-    aiOpen, setAiOpen, paletteOpen, setPaletteOpen, aiContext, askHistory, ask, composerSeed, seedComposer,
+    aiOpen, setAiOpen, paletteOpen, setPaletteOpen, aiContext, askHistory, ask, composerSeed, seedComposer, clearComposerSeed,
     activity, activityReady,
   };
 

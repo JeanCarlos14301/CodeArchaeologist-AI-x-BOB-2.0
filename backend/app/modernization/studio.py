@@ -26,7 +26,8 @@ from app.modernization.models import (
 )
 from app.modernization.planner import PlannerError, Runner
 from app.modernization.stack_scan import StackReport, scan_stack
-from app.pipeline.activity import redact_paths
+from app.contracts.schema_v1 import Dossier
+from app.pipeline.activity import BobActivity, redact_paths
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,18 @@ _IO_LOCK = threading.RLock()
 _BOB_LOCK = threading.Lock()  # una sola sesión de Bob de modernización a la vez en todo el servidor
 
 AdapterFactory = Callable[[Path, str], Runner]
+
+
+class _StudioLog:
+    """Recibe los eventos de BobActivity (misma interfaz que EventLog) y los guarda como actividad del Estudio."""
+
+    def __init__(self, studio: "Studio", phase: str, step_id: str | None = None) -> None:
+        self.studio, self.phase, self.step_id = studio, phase, step_id
+
+    def emit(self, stage: str, kind: str, actor: str, title: str, detail: str | None = None,
+             data: dict | None = None, t: float | None = None, recorded: bool = False) -> None:
+        flat = {k: v for k, v in (data or {}).items() if isinstance(v, (str, int, float)) or v is None}
+        self.studio._event(self.phase, title, self.step_id, kind=kind, actor=actor, detail=detail, data=flat)
 
 
 class StudioBusyError(RuntimeError):
@@ -127,11 +140,35 @@ class Studio:
             self._save(state)
             return state
 
-    def _event(self, phase: str, message: str, step_id: str | None = None) -> None:
+    def _event(self, phase: str, message: str, step_id: str | None = None, kind: str = "info", actor: str | None = None,
+               detail: str | None = None, data: dict | None = None) -> None:
         with _IO_LOCK:
             state = self.state()
-            state.events.append(StudioEvent(t=round(time.time(), 1), phase=phase, message=redact_paths(message)[:300], step_id=step_id))
+            state.events.append(StudioEvent(
+                t=round(time.time(), 1), phase=phase, message=redact_paths(message)[:300], step_id=step_id, kind=kind, actor=actor,
+                detail=redact_paths(detail)[:400] if detail else None, data=data or {},
+            ))
             self._save(state)
+
+    def _sink(self, phase: str, actor: str, step_id: str | None = None):
+        """Convierte el stream de Bob en actividad real (lecturas, búsquedas, subagentes, ediciones)."""
+        return BobActivity(_StudioLog(self, phase, step_id), self.work, actor=actor).feed
+
+    def findings_digest(self) -> str:
+        """Hallazgos ya validados de la auditoría (si la hubo): títulos y ubicaciones, sin código."""
+        path = self.job_dir / "dossier.json"
+        if not path.is_file():
+            return "[]"
+        try:
+            dossier = Dossier.model_validate_json(path.read_text(encoding="utf-8"))
+        except ValueError:
+            return "[]"
+        items = [
+            {"id": f.id, "severity": f.severity, "category": f.category, "title": f.title,
+             "where": [f"{e.path}:{e.line_start}" for e in f.evidence[:2]]}
+            for f in dossier.findings[:25]
+        ]
+        return json.dumps(items, ensure_ascii=False)
 
     # ------------------------------------------------------------ stack
     def stack(self) -> StackReport:
@@ -220,8 +257,14 @@ class Studio:
             state = self.state()
             assert state.request is not None
             stack = self.stack()
+            self._event("assessing", "Copiando el proyecto a un espacio de trabajo aislado")
             prepare_work(self.source, self.work)
-            assessment = planner.run_assessment(self.adapter_factory(self.work, "planner"), stack, state.request, self.work)
+            self._event("assessing", f"Stack medido enviado a Bob: {len(stack.technologies)} tecnologías, arquitectura {stack.architecture.kind}")
+            assessment = planner.run_assessment(
+                self.adapter_factory(self.work, "planner"), stack, state.request, self.work,
+                findings=self.findings_digest(), sink=self._sink("assessing", "modernization-planner"),
+                note=lambda message: self._event("assessing", message, kind="validator"),
+            )
             self._event("assessed", f"Evaluación lista: veredicto {assessment.verdict}.")
             self._update(phase="assessed", assessment=assessment)
 
@@ -231,8 +274,13 @@ class Studio:
         def work() -> None:
             state = self.state()
             assert state.request is not None and state.assessment is not None
+            self._event("planning", "Copiando el proyecto a un espacio de trabajo aislado")
             prepare_work(self.source, self.work)
-            plan = planner.run_plan(self.adapter_factory(self.work, "planner"), self.stack(), state.request, state.assessment, self.work)
+            plan = planner.run_plan(
+                self.adapter_factory(self.work, "planner"), self.stack(), state.request, state.assessment, self.work,
+                findings=self.findings_digest(), sink=self._sink("planning", "modernization-planner"),
+                note=lambda message: self._event("planning", message, kind="validator"),
+            )
             self._event("planned", f"Plan listo con {len(plan.steps)} pasos.")
             self._update(phase="planned", plan=plan)
 
@@ -250,6 +298,7 @@ class Studio:
                 runner, state.plan, mappings_text, self.source, self.dir,
                 root_name=f"{_slug(self.project_name)}-modernizado",
                 on_event=lambda message, step: self._event("implementing", message, step),
+                sink_for=lambda step: self._sink("implementing", "modernization-surgeon", step.id),
             )
             self._event("implemented", f"Migración lista: {result.files_changed} archivos cambiados.")
             self._update(phase="implemented", implementation=result)

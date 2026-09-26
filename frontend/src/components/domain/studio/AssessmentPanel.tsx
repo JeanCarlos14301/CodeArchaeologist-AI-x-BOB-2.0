@@ -104,6 +104,16 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
         </table>
       </div>
 
+      {assessment.fixes_during_migration.length > 0 && (
+        <div className="mt-6">
+          <Eyebrow>Bob corregirá durante la migración</Eyebrow>
+          <ul className="mt-2 space-y-1.5 text-body text-fg-2">
+            {assessment.fixes_during_migration.map((item) => <li key={item} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>{item}</span></li>)}
+          </ul>
+          <p className="mt-2 text-caption text-subtle">Los defectos del código actual no se portan al nuevo: cada paso los corrige al reescribir esa parte.</p>
+        </div>
+      )}
+
       {(assessment.blockers.length > 0 || assessment.questions.length > 0) && (
         <div className="mt-6 grid gap-x-10 gap-y-4 @3xl:grid-cols-2">
           {assessment.blockers.length > 0 && (

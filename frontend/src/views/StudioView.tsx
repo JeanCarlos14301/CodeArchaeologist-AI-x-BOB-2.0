@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api";
 import { AssessmentPanel } from "../components/domain/studio/AssessmentPanel";
+import { BobWork } from "../components/domain/studio/BobWork";
 import { ImplementationPanel } from "../components/domain/studio/ImplementationPanel";
 import { PlanGraph } from "../components/domain/studio/PlanGraph";
 import { StackBoard } from "../components/domain/studio/StackBoard";
@@ -158,7 +159,11 @@ export function StudioView() {
         {actionError && <div className="mt-4"><ErrorState title="La acción no se completó." message={actionError} onRetry={() => setActionError(null)} retryLabel="Descartar" /></div>}
       </Section>
 
-      {phase === "assessing" && <Section eyebrow="03 · Evaluación" title="Bob está evaluando"><Loading label="Bob lee el código y pesa qué se gana y qué se sacrifica…" /></Section>}
+      {phase === "assessing" && (
+        <Section eyebrow="03 · Evaluación" title="Bob está evaluando">
+          <BobWork title="Bob lee tu código y pesa qué se gana y qué se sacrifica" events={state.events.filter((event) => event.phase === "assessing")} />
+        </Section>
+      )}
       {phase === "failed" && state.error && (
         <Section eyebrow="Algo salió mal" title="La última operación con Bob falló">
           <ErrorState
@@ -183,7 +188,11 @@ export function StudioView() {
         </Section>
       )}
 
-      {phase === "planning" && <Section eyebrow="04 · Plan" title="Bob está preparando el plan"><Loading label="Bob ordena los pasos por dependencias…" /></Section>}
+      {phase === "planning" && (
+        <Section eyebrow="04 · Plan" title="Bob está preparando el plan">
+          <BobWork title="Bob ordena los pasos por dependencias" events={state.events.filter((event) => event.phase === "planning")} />
+        </Section>
+      )}
 
       {state.plan && (
         <Section eyebrow="04 · Cómo hacerlo" title={`Plan de migración · ${state.plan.steps.length} pasos`}>
