@@ -16,7 +16,7 @@ type Purpose = "audit" | "modernization";
 
 export function ProjectsView() {
   const { jobs, bob, offline, notice, dismissNotice, startUpload, openShowcase, navigate } = useWorkspace();
-  const [source, setSource] = useState<Source>("zip");
+  const [source, setSource] = useState<Source>("showcase");
   const [purpose, setPurpose] = useState<Purpose>("audit");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);

@@ -113,7 +113,7 @@ export function BobWork({ title, events, since, compact = false }: Props) {
   };
 
   return (
-    <div>
+    <div className="relative">
       <p role="status" className="sr-only">{announcement}</p>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
         <p className={`flex items-center gap-2 text-fg ${compact ? "text-caption" : "text-body"}`}>
@@ -127,7 +127,7 @@ export function BobWork({ title, events, since, compact = false }: Props) {
       <div className={compact ? "mt-2" : "mt-3"}>
         {!compact && <Eyebrow>Actividad de Bob, en directo</Eyebrow>}
         <ul ref={list} onScroll={onScroll} aria-label="Pasos de Bob"
-          className={`${compact ? "max-h-44" : "mt-2 max-h-72"} space-y-1 overflow-y-auto overscroll-contain border-l border-line pl-3`}>
+          className={`${compact ? "max-h-44" : "mt-2 max-h-72"} relative space-y-1 overflow-y-auto overscroll-contain border-l border-line pl-3`}>
           {visible.length === 0 && (
             <li className="text-caption text-subtle">Esperando el primer movimiento de Bob… (arrancar la sesión puede tardar unos segundos)</li>
           )}

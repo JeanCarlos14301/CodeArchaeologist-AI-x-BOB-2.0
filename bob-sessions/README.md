@@ -13,18 +13,39 @@ no aparece en `.gitignore`.
 | Daniel | [daniel/](daniel/) | ❌ Las imágenes actuales muestran ejecuciones de pruebas (pytest y la batería de seguridad), no un resumen de sesión de Bob. Falta la captura. |
 | Edgar | [edgar/](edgar/) | ❌ Carpeta vacía. Falta la captura. |
 
-## Cómo tomar la captura (2 minutos)
+## Qué debe verse en cada captura
 
-1. Desde la raíz del repo, con la cuenta propia de Bob:
-   ```bash
-   bob run --mode evidence-auditor --max-turns 3 --max-cost 0.3 --trust "Sin modificar archivos: lista los archivos .py de samples/facturaya-v1 y explica qué hace app.py"
-   ```
-   Cuesta menos de 0,3 bobcoins. También sirve una sesión interactiva de `bob`: al cerrarla muestra el
-   resumen.
-2. Capturar la terminal donde se vean el comando, la respuesta y el bloque **Task Summary** (costo, duración,
-   Task ID).
-3. Guardarla como `bob-sessions/<integrante>/AAAA-MM-DD_<tarea>.png` (p. ej. `2026-09-26_E-09.png`).
-4. Registrar la sesión en `docs/bob-usage.md` (fecha, integrante, modo, tarea, resultado, respaldo).
+Lo que valida el jurado es que **cada integrante usó Bob desde su propia cuenta**. Cada captura debe mostrar:
+
+1. El comando `bob run --mode <modo> …` (o la sesión interactiva) con un **modo de este repo**.
+2. La respuesta de Bob sobre código real del proyecto.
+3. El bloque **Task Summary** completo: costo en bobcoins **mayor que 0**, duración y Task ID.
+
+Una captura de pytest, del navegador o de una tarea con 0 bobcoins no cuenta como resumen de sesión.
+
+## Qué captura toma cada integrante
+
+Cada uno usa un modo distinto, ligado a su parte del trabajo, para que el conjunto muestre el uso real de los
+modos. Todos son de solo lectura y tienen tope de costo. Se ejecutan desde la raíz del repo.
+
+| Integrante | Por qué este modo | Comando |
+|---|---|---|
+| **Jean** (producto, despliegue, pitch) | El modo que decide qué migrar primero: el corazón del pitch. | `bob run --mode migration-architect --max-turns 6 --max-cost 0.6 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué ruta migrarías primero con el patrón Strangler Fig y por qué? Cita archivo y líneas."` |
+| **Daniel** (backend y contrato) | Radio de impacto: qué se rompe al tocar la capa de datos. | `bob run --mode blast-radius-guard --max-turns 5 --max-cost 0.5 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué rutas y funciones se rompen si cambio db.py? Cita archivo y líneas."` |
+| **Edgar** (frontend) | Revisión escéptica del código: cuestiona supuestos antes de migrar. | `bob run --mode code-skeptic --max-turns 4 --max-cost 0.4 --trust "Sin modificar archivos: revisa samples/facturaya-v1/billing.py y señala qué supuestos del cálculo de totales podrían ser falsos. Cita archivo y líneas."` |
+| **Felipe** (modos de Bob) | ✅ Ya está (`evidence-auditor`). No hace falta repetir. | — |
+
+Si `bob run` no está disponible, sirve una sesión interactiva: ejecutar `bob`, elegir el modo con `/mode`,
+hacer la misma pregunta y cerrar la sesión para que aparezca el resumen.
+
+## Cómo guardarla
+
+1. Capturar la terminal completa (comando, respuesta y Task Summary). Si la respuesta es larga, dos capturas:
+   el comando al inicio y el resumen al final.
+2. Guardarla como `bob-sessions/<integrante>/AAAA-MM-DD_<modo>.png`, p. ej.
+   `bob-sessions/daniel/2026-09-26_blast-radius-guard.png`.
+3. Añadir una fila en `docs/bob-usage.md` (fecha, integrante, modo, tarea, costo, Task ID).
+4. Actualizar la tabla de estado de arriba.
 
 ## Antes de hacer commit de una captura
 

@@ -96,9 +96,8 @@ FacturaYa y entre 0,14 y 0,36 por pregunta o paso (ver `docs/bob-usage.md`).
   funcionando; la alternativa es el plan Starter.
 - **No fusionar a `main` durante el juzgamiento** salvo arreglos urgentes: cada merge redepliega y deja la
   URL caída unos minutos.
-- **Sugerencia de interfaz:** hoy Inicio abre en "Subir ZIP", que pide token. Si el equipo quiere que el
-  jurado caiga directo en la vitrina, basta con que la pestaña por defecto sea "FacturaYa · ya generado"
-  (`frontend/src/views/ProjectsView.tsx`, estado inicial de `source`).
+- **Inicio abre en la vitrina:** la pestaña por defecto es "FacturaYa · ya generado", que no pide token ni
+  gasta bobcoins. "Subir ZIP" sigue a un clic y pide token (`frontend/src/views/ProjectsView.tsx`).
 
 ## 7. Prueba de humo antes de enviar
 
