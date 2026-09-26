@@ -1,12 +1,7 @@
 import { EXAMPLE_JOB } from "../fixtures";
 import type { Job } from "../types";
 
-export const STAGES = [
-  { id: "preparing", label: "Sandbox", detail: "Copia aislada del repositorio, sin material de evaluación" },
-  { id: "auditing", label: "Auditoría con Bob", detail: "evidence-auditor recorre el código y emite hallazgos" },
-  { id: "validating", label: "Validación", detail: "Python comprueba archivo, líneas y fragmento de cada evidencia" },
-  { id: "done", label: "Expediente", detail: "Hallazgos con evidencia verificada" },
-] as const;
+const STAGES = [{ id: "preparing" }, { id: "auditing" }, { id: "validating" }, { id: "done" }] as const;
 
 const STEP_MS = 900;
 

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Timeline } from "../components/Timeline";
 import { Button, Card, ErrorState, ModeBadge } from "../components/ui";
-import type { BobStatus, ExecutionMode, Job, SampleInfo } from "../types";
+import type { BobStatus, EngineId, ExecutionMode, FlowJob } from "../types";
 
 type Source = "demo" | "holdout" | "zip";
 
@@ -11,25 +11,31 @@ const MODES: { value: ExecutionMode; label: string; hint: string }[] = [
   { value: "live", label: "Live", hint: "Bob en vivo, ≈1–2 min y consume bobcoins" },
 ];
 
-const MAX_ZIP_MB = 50;
+const MAX_ZIP_MB = 5; // backend/app/pipeline/ingestion.py: MAX_ZIP_COMPRESSED_BYTES
+
+export interface StartRequest {
+  source: Source;
+  mode: ExecutionMode;
+  file?: File;
+  liveToken?: string;
+}
 
 interface Props {
-  samples: SampleInfo[];
+  engine: EngineId | null;
   offline: boolean;
   bob: BobStatus | null;
   bobError: string | null;
   busy: boolean;
-  job: Job | null;
-  jobs: Job[];
+  job: FlowJob | null;
+  jobs: FlowJob[];
   error: string | null;
-  onStartSample: (sample: string, mode: ExecutionMode, liveToken: string) => void;
-  onStartFixture: (label: string) => void;
+  onStart: (request: StartRequest) => void;
   onSelectJob: (id: string) => void;
   onOpenResults: () => void;
 }
 
 export function HomeView(props: Props) {
-  const { samples, offline, bob, bobError, busy, job, jobs, error, onStartSample, onStartFixture, onSelectJob, onOpenResults } = props;
+  const { engine, offline, bob, bobError, busy, job, jobs, error, onStart, onSelectJob, onOpenResults } = props;
   const [source, setSource] = useState<Source>("demo");
   const [mode, setMode] = useState<ExecutionMode>("imported");
   const [liveToken, setLiveToken] = useState("");
@@ -37,9 +43,6 @@ export function HomeView(props: Props) {
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-
-  const demoSample = samples.find((item) => !/holdout/i.test(item.id)) ?? samples[0];
-  const holdoutSample = samples.find((item) => /holdout/i.test(item.id));
 
   const pickFile = (candidate: File | undefined) => {
     setFileError(null);
@@ -49,28 +52,20 @@ export function HomeView(props: Props) {
     setFile(candidate);
   };
 
-  const launch = () => {
-    if (source === "demo") {
-      if (offline || !demoSample) onStartFixture("facturaya-v1");
-      else onStartSample(demoSample.id, mode, liveToken);
-    } else if (source === "holdout") {
-      if (holdoutSample && !offline) onStartSample(holdoutSample.id, mode, liveToken);
-      else onStartFixture("holdout");
-    } else if (file) {
-      onStartFixture(file.name);
-    }
-  };
+  const live = engine === "jobs" && !offline;
+  const launch = () => onStart({ source, mode: live || source === "demo" ? mode : "example", file: file ?? undefined, liveToken });
 
-  const useMode = source === "demo" && !offline;
-  // On the public deployment the backend sets LIVE_AUDIT_TOKEN, so live runs (which spend the
-  // team's bobcoins) need the X-Live-Token header. Locally the flag is false and nothing changes.
-  const needsToken = useMode && mode === "live" && (bob?.live_requires_token ?? false);
+  const useMode = live || (engine === "audits" && !offline && source === "demo");
+
+  // En el despliegue público el backend define LIVE_AUDIT_TOKEN: los runs live (gastan bobcoins del
+  // equipo) exigen la cabecera X-Live-Token. En local el flag es falso y no cambia nada.
+  const needsToken = engine === "audits" && useMode && mode === "live" && (bob?.live_requires_token ?? false);
   const canLaunch = !busy && (source !== "zip" || file !== null) && (!needsToken || liveToken !== "");
 
   const cards: { id: Source; icon: string; title: string; text: string; tag?: string }[] = [
     { id: "demo", icon: "▶", title: "Repositorio demo", text: "FacturaYa v1: Flask + SQLite con fallos reales para ver el flujo completo." },
-    { id: "holdout", icon: "◐", title: "Repositorio holdout", text: "Segundo repositorio no visto, opcional, para comprobar que no está memorizado.", tag: holdoutSample ? undefined : "Sin backend aún" },
-    { id: "zip", icon: "⇪", title: "Subir un ZIP", text: "Sube tu propio repositorio Python 3 + Flask + SQLite.", tag: "Sin backend aún" },
+    { id: "holdout", icon: "◐", title: "Repositorio holdout", text: "Segundo repositorio no visto, opcional, para comprobar que no está memorizado.", tag: live ? undefined : "Solo ejemplo" },
+    { id: "zip", icon: "⇪", title: "Subir un ZIP", text: "Sube tu propio repositorio Python 3 + Flask + SQLite.", tag: live ? undefined : "Solo ejemplo" },
   ];
 
   return (
@@ -130,7 +125,7 @@ export function HomeView(props: Props) {
             <p className="text-sm">{file ? <><strong>{file.name}</strong> · {(file.size / 1024).toFixed(0)} KB</> : "Arrastra tu .zip aquí o"}</p>
             <Button variant="ghost" className="mt-2" onClick={() => input.current?.click()}>Elegir archivo</Button>
             {fileError && <p role="alert" className="mt-2 text-sm text-bad">{fileError}</p>}
-            <p className="mt-2 text-xs text-muted">El backend aún no acepta cargas: por ahora se recorre el flujo con datos de ejemplo. El contenido subido nunca se ejecuta.</p>
+            <p className="mt-2 text-xs text-muted">{live ? `Máximo ${MAX_ZIP_MB} MB. El contenido subido se analiza de forma estática y nunca se ejecuta.` : "Este backend no acepta cargas: se recorre el flujo con datos de ejemplo."}</p>
           </div>
         )}
       </div>
@@ -176,7 +171,7 @@ export function HomeView(props: Props) {
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold">Progreso</h2>
               <ModeBadge mode={job.execution_mode} />
-              <span className="font-mono text-xs text-muted">{job.id}</span>
+              <span className="font-mono text-xs text-muted">{job.id.slice(0, 8)}</span>
             </div>
             {job.status === "done" && <Button onClick={onOpenResults}>Ver resultados →</Button>}
           </div>
@@ -194,7 +189,7 @@ export function HomeView(props: Props) {
               {jobs.slice(0, 6).map((item) => (
                 <li key={item.id}>
                   <button type="button" onClick={() => onSelectJob(item.id)} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-2 ${job?.id === item.id ? "bg-surface-2" : ""}`}>
-                    <span className="min-w-0 truncate"><span className="font-mono text-xs">{item.id}</span> <span className="text-muted">· {item.sample}</span></span>
+                    <span className="min-w-0 truncate"><span className="font-mono text-xs">{item.id.slice(0, 8)}</span> <span className="text-muted">· {item.label}</span></span>
                     <span className="flex shrink-0 items-center gap-2"><ModeBadge mode={item.execution_mode} /><span className={`text-xs ${item.status === "failed" ? "text-bad" : item.status === "done" ? "text-ok" : "text-warn"}`}>{item.status}</span></span>
                   </button>
                 </li>
