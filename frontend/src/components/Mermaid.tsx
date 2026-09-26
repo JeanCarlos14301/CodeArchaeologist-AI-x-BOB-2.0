@@ -12,7 +12,7 @@ export function Mermaid({ chart, theme }: { chart: string; theme: "dark" | "ligh
     setError(null);
     import("mermaid")
       .then(async ({ default: mermaid }) => {
-        mermaid.initialize({ startOnLoad: false, theme: theme === "dark" ? "dark" : "neutral", securityLevel: "strict", flowchart: { htmlLabels: false, useMaxWidth: false }, er: { useMaxWidth: false } });
+        mermaid.initialize({ startOnLoad: false, theme: theme === "dark" ? "dark" : "neutral", securityLevel: "strict", flowchart: { useMaxWidth: true } });
         const out = await mermaid.render(`m-${id}-${theme}`, chart);
         if (!cancelled) setSvg(out.svg);
       })

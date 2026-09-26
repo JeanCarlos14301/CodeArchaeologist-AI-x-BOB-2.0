@@ -38,6 +38,7 @@ try:
     from app.api.artifacts import router as artifacts_router
     from app.api.graph import router as graph_router
     from app.api.jobs import router as jobs_router
+    from app.api.live import router as live_router
     from app.api.migrate import router as migrate_router
     from app.api.routes import router as felipe_routes_router
     from app.database import init_db
@@ -53,6 +54,7 @@ except ImportError:
     from backend.app.api.artifacts import router as artifacts_router
     from backend.app.api.graph import router as graph_router
     from backend.app.api.jobs import router as jobs_router
+    from backend.app.api.live import router as live_router
     from backend.app.api.migrate import router as migrate_router
     from backend.app.api.routes import router as felipe_routes_router
     from backend.app.database import init_db
@@ -120,16 +122,19 @@ def create_app(
         app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
                            allow_headers=["Content-Type", "X-Live-Token"])
 
+    # Motor de 11 etapas (Daniel), APAGADO por defecto: sus etapas 4-10 usan plantillas fijas (no Bob)
+    # y no exige token. Solo para desarrollo: ENABLE_JOBS_API=true.
     # Motor de 11 etapas (Daniel). Acepta ZIP arbitrarios y aún no aplica el token de live
     # ni el tope de coste, así que el Dockerfile lo apaga en el despliegue público
     # (ENABLE_JOBS_API=false). El frontend usa /api/audits, que no depende de esto.
-    if os.environ.get("ENABLE_JOBS_API", "true").lower() == "true":
+    if os.environ.get("ENABLE_JOBS_API", "false").lower() == "true":
         app.include_router(jobs_router)
         app.include_router(migrate_router)
         app.include_router(artifacts_router)
         app.include_router(graph_router)
 
     # Registro de router de auditorías de Felipe / Frontend
+    app.include_router(live_router)
     app.include_router(felipe_routes_router)
 
     @app.get("/health", tags=["health"])

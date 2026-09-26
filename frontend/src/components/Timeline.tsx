@@ -1,3 +1,4 @@
+import { elapsedSeconds } from "../lib/flow";
 import type { FlowJob } from "../types";
 
 const DOT: Record<string, string> = {
@@ -6,10 +7,6 @@ const DOT: Record<string, string> = {
   failed: "bg-bad text-bg",
   pending: "border border-line text-muted",
 };
-
-function formatMs(ms: number): string {
-  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
-}
 
 /** Línea de tiempo vertical: una fila por etapa real del pipeline, con duración y mensaje del backend. */
 export function Timeline({ job, onSelectStage, selectedStage }: { job: FlowJob; onSelectStage?: (n: number) => void; selectedStage?: number | null }) {
@@ -25,7 +22,7 @@ export function Timeline({ job, onSelectStage, selectedStage }: { job: FlowJob; 
           />
         </div>
         <span className="font-mono text-xs text-muted">
-          {doneCount}/{job.stages.length} etapas
+          {doneCount}/{job.stages.length} etapas{job.status !== "queued" && ` · ${elapsedSeconds(job)} s`}
         </span>
       </div>
 
@@ -44,11 +41,8 @@ export function Timeline({ job, onSelectStage, selectedStage }: { job: FlowJob; 
                   {stage.state === "done" ? "✓" : stage.state === "failed" ? "!" : stage.state === "running" ? <span className="h-2 w-2 animate-pulse rounded-full bg-accent" /> : stage.number}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className={`text-sm font-medium ${stage.state === "pending" ? "text-muted" : ""}`}>{stage.label}</span>
-                    {stage.duration_ms !== null && <span className="shrink-0 font-mono text-[11px] text-muted">{formatMs(stage.duration_ms)}</span>}
-                  </span>
-                  {stage.message && stage.state !== "pending" && <span className="block text-xs leading-snug text-muted">{stage.message}</span>}
+                  <span className={`block text-sm font-medium ${stage.state === "pending" ? "text-muted" : ""}`}>{stage.label}</span>
+                  <span className="block text-xs leading-snug text-muted">{stage.detail}</span>
                 </span>
               </Row>
             </li>

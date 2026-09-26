@@ -11,7 +11,7 @@ interface Selection {
   index: number;
 }
 
-function EvidenceViewer({ jobId, selection, dossier, canFetch }: { jobId: string; selection: Selection | null; dossier: Dossier; canFetch: boolean }) {
+function EvidenceViewer({ jobId, selection, dossier }: { jobId: string; selection: Selection | null; dossier: Dossier }) {
   const [excerpt, setExcerpt] = useState<SourceExcerpt | null>(null);
   const [failed, setFailed] = useState(false);
   const evidence: Evidence | undefined = selection?.finding.evidence[selection.index];
@@ -19,7 +19,7 @@ function EvidenceViewer({ jobId, selection, dossier, canFetch }: { jobId: string
   useEffect(() => {
     setExcerpt(null);
     setFailed(false);
-    if (!evidence || !canFetch) return;
+    if (!evidence) return;
     let cancelled = false;
     api
       .source(jobId, evidence.path, Math.max(1, evidence.line_start - CONTEXT_LINES), evidence.line_end + CONTEXT_LINES)
@@ -28,7 +28,7 @@ function EvidenceViewer({ jobId, selection, dossier, canFetch }: { jobId: string
     return () => {
       cancelled = true;
     };
-  }, [jobId, evidence, canFetch]);
+  }, [jobId, evidence]);
 
   if (!selection || !evidence) {
     return <EmptyState icon="‹/›" title="Elige una evidencia">Cada hallazgo tiene chips con archivo y línea: al pulsarlos verás aquí el código citado.</EmptyState>;
@@ -49,8 +49,7 @@ function EvidenceViewer({ jobId, selection, dossier, canFetch }: { jobId: string
         <CodeBlock path={excerpt.path} lines={excerpt.lines} highlight={range} caption={`líneas ${evidence.line_start}–${evidence.line_end} de ${excerpt.total_lines}`} />
       ) : (
         <>
-          {canFetch && failed && <p className="text-xs text-muted">No se pudo leer el archivo completo; se muestra el fragmento citado.</p>}
-          {canFetch && !failed && <p className="text-xs text-muted">Cargando código…</p>}
+          {failed ? <p className="text-xs text-muted">No se pudo leer el archivo completo; se muestra el fragmento citado por Bob.</p> : <p className="text-xs text-muted">Cargando código…</p>}
           <CodeBlock path={evidence.path} lines={toLines(evidence.snippet, evidence.line_start)} highlight={range} caption="fragmento citado" />
         </>
       )}
@@ -61,12 +60,11 @@ function EvidenceViewer({ jobId, selection, dossier, canFetch }: { jobId: string
 interface Props {
   jobId: string;
   dossier: Dossier | null;
-  canFetchSource: boolean;
   focusId: string | null;
   onGoHome: () => void;
 }
 
-export function FindingsView({ jobId, dossier, canFetchSource, focusId, onGoHome }: Props) {
+export function FindingsView({ jobId, dossier, focusId, onGoHome }: Props) {
   const [severity, setSeverity] = useState<Severity | "all">("all");
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -124,15 +122,7 @@ export function FindingsView({ jobId, dossier, canFetchSource, focusId, onGoHome
         </header>
         <h3 className="mt-2 font-semibold leading-snug">{finding.title}</h3>
         <p className="mt-1.5 text-sm text-muted">{finding.explanation}</p>
-        {(finding.confidence || finding.priority || finding.blast_radius_score !== undefined) && (
-          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-            {finding.confidence && <span>Confianza: <strong className="text-fg">{{ HIGH: "alta", MEDIUM: "media", LOW: "baja" }[finding.confidence]}</strong></span>}
-            {finding.priority && <span>Prioridad: <strong className="text-fg">{finding.priority}</strong></span>}
-            {finding.blast_radius_score !== undefined && <span>Radio de explosión: <strong className="text-fg">{finding.blast_radius_score}/100</strong></span>}
-          </p>
-        )}
-        {finding.recommendation && <p className="mt-2 rounded-lg bg-surface-2 px-3 py-2 text-sm"><span className="font-medium text-ok">Recomendación · </span>{finding.recommendation}</p>}
-        {finding.verification_method && <p className="mt-2 rounded-lg bg-surface-2 px-3 py-2 text-sm"><span className="font-medium text-accent">Cómo verificarlo · </span>{finding.verification_method}</p>}
+        <p className="mt-2 rounded-lg bg-surface-2 px-3 py-2 text-sm"><span className="font-medium text-ok">Recomendación · </span>{finding.recommendation}</p>
         {rejected && <p className="mt-2 text-xs text-bad">Rechazado por el validador: su evidencia no coincide con el código.</p>}
         <ul className="mt-3 flex flex-wrap gap-2">
           {finding.evidence.map((evidence, index) => {
@@ -182,11 +172,10 @@ export function FindingsView({ jobId, dossier, canFetchSource, focusId, onGoHome
         <div className="xl:sticky xl:top-20 xl:self-start">
           <Card className="p-4">
             <h2 className="mb-3 text-sm font-semibold">Visor de evidencia</h2>
-            <EvidenceViewer jobId={jobId} selection={selection} dossier={dossier} canFetch={canFetchSource} />
+            <EvidenceViewer jobId={jobId} selection={selection} dossier={dossier} />
           </Card>
         </div>
       </div>
-      {!canFetchSource && <p className="mt-4 text-xs text-muted">Modo demostración: se muestra el fragmento citado, no el archivo completo.</p>}
     </>
   );
 }

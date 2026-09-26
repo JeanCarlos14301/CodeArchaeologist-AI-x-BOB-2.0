@@ -53,25 +53,9 @@ export function SummaryView({ dossier, onOpenFinding, onGoHome, onOpenFindings }
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Hallazgos validados" value={`${stats.findings_validated}/${stats.findings_reported}`} hint="Con evidencia verificada" />
             <Stat label="Evidencias válidas" value={`${Math.round(stats.evidence_valid_ratio * 100)}%`} hint={`${stats.evidence_valid} de ${stats.evidence_total}`} />
-            {stats.pipeline_ms != null ? (
-              <Stat label="Duración del pipeline" value={`${(stats.pipeline_ms / 1000).toFixed(1)} s`} hint="Suma de las 11 etapas" />
-            ) : (
-              <Stat label="Coste Bob" value={stats.bob_cost == null ? "—" : `${stats.bob_cost.toFixed(2)} bc`} hint="bobcoins" />
-            )}
+            <Stat label="Coste Bob" value={stats.bob_cost == null ? "—" : `${stats.bob_cost.toFixed(2)} bc`} hint="bobcoins" />
             <Stat label="Duración Bob" value={stats.bob_duration_ms == null ? "—" : `${Math.round(stats.bob_duration_ms / 1000)} s`} />
           </div>
-
-          {dossier.snapshot && (
-            <p className="text-xs text-muted">
-              Repositorio analizado: {dossier.snapshot.total_files} archivos · {dossier.snapshot.total_loc} líneas · {dossier.snapshot.languages.join(", ")} · huella <span className="font-mono">{dossier.snapshot.sha256.slice(0, 12)}</span>
-            </p>
-          )}
-          {dossier.executive_summary && (
-            <Card className="p-5">
-              <h2 className="mb-2 text-sm font-semibold">Resumen ejecutivo</h2>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-muted">{dossier.executive_summary}</p>
-            </Card>
-          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5">

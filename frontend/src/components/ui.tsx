@@ -100,15 +100,6 @@ export function Loading({ label = "Cargando…" }: { label?: string }) {
   );
 }
 
-export function FixtureNotice({ show }: { show: boolean }) {
-  if (!show) return null;
-  return (
-    <p className="mb-4 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn">
-      Datos de ejemplo: el backend aún no expone este contenido. Se reemplazan automáticamente cuando el contrato esté publicado.
-    </p>
-  );
-}
-
 export function Button({
   children, onClick, type = "button", variant = "primary", disabled, className = "",
 }: {

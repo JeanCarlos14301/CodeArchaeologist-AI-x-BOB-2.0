@@ -239,6 +239,8 @@ class BobAdapter:
                 input=prompt,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",  # Bob emite UTF-8; sin esto Windows decodifica con cp1252 y corrompe tildes
+                errors="replace",
                 timeout=self.settings.timeout_s,
                 cwd=self.workspace,
                 env=os.environ.copy(),
@@ -298,6 +300,8 @@ class BobAdapter:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",  # Bob emite UTF-8; sin esto Windows decodifica con cp1252 y corrompe tildes
+                errors="replace",
                 timeout=timeout_seconds,
                 env=env,
                 cwd=str(self.workspace_dir),

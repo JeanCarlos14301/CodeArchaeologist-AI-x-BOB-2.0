@@ -77,15 +77,16 @@ body {
   border-radius: 6px;
 }
 
+/* Sin selector universal: forzar duraciones en `*` rompe la medición de texto de Mermaid. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
   }
 }
 
 .mermaid-host svg {
-  max-width: none;
+  max-width: 100%;
   height: auto;
   margin: 0 auto;
 }

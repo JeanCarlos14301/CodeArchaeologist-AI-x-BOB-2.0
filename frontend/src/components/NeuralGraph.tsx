@@ -6,7 +6,6 @@ export interface Layers {
   structure: boolean;
   findings: boolean;
   blast: boolean;
-  migration: boolean;
 }
 
 const SEV_VAR: Record<string, string> = {
@@ -57,8 +56,7 @@ export function NeuralGraph({ graph, layers, selectedId, focusFindingId, onSelec
     return { worst, origin, impacted, focusNodes };
   }, [graph, focusFindingId]);
 
-  const cut = graph.migration_cut;
-  const visible = (_id: string, kind: string) => layers.structure && (kind !== "modern" || layers.migration);
+  const visible = () => layers.structure;
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   const files = useMemo(() => {
@@ -118,7 +116,7 @@ export function NeuralGraph({ graph, layers, selectedId, focusFindingId, onSelec
         const b = positions[edge.target];
         const na = nodeById.get(edge.source);
         const nb = nodeById.get(edge.target);
-        if (!a || !b || !na || !nb || !visible(na.id, na.kind) || !visible(nb.id, nb.kind)) return null;
+        if (!a || !b || !na || !nb || !visible()) return null;
         const active = selectedId !== null && (edge.source === selectedId || edge.target === selectedId);
         const inBlast = layers.blast && derived.impacted.has(edge.source) && (derived.impacted.has(edge.target) || derived.origin.has(edge.target));
         const mx = (a.x + b.x) / 2 + (b.y - a.y) * 0.12;
@@ -136,36 +134,23 @@ export function NeuralGraph({ graph, layers, selectedId, focusFindingId, onSelec
         );
       })}
 
-      {/* corte Strangler: legado -> nodos modernos */}
-      {layers.migration &&
-        cut?.legacy_node &&
-        cut.modern_nodes.map((id) => {
-          const a = positions[cut.legacy_node!];
-          const b = positions[id];
-          if (!a || !b) return null;
-          return <line key={`cut-${id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--ok)" strokeWidth="1.4" strokeOpacity="0.7" strokeDasharray="2 6" className="ca-flow" />;
-        })}
-
       {/* nodos */}
       {graph.nodes.map((node) => {
         const p = positions[node.id];
-        if (!p || !visible(node.id, node.kind)) return null;
+        if (!p || !visible()) return null;
         const span = node.line_end - node.line_start + 1;
         const r = Math.max(6, Math.min(15, 5 + Math.sqrt(span) * 1.1));
         const worst = layers.findings ? derived.worst.get(node.id) : undefined;
         const isOrigin = layers.blast && derived.origin.has(node.id);
         const isImpacted = layers.blast && derived.impacted.has(node.id);
-        const migrated = layers.migration && cut?.legacy_node === node.id;
-        const modern = node.kind === "modern";
         const dim = selectedId !== null && !activeSet.has(node.id);
-        const fill = modern ? "var(--ok)" : "var(--accent)";
-        const showLabel = !dim && (node.id === selectedId || activeSet.has(node.id) || !!node.route || !!worst || isOrigin || node.id === cut?.legacy_node || derived.focusNodes.has(node.id));
+        const fill = "var(--accent)";
+        const showLabel = !dim && (node.id === selectedId || activeSet.has(node.id) || !!node.route || !!worst || isOrigin || derived.focusNodes.has(node.id));
         return (
           <g key={node.id} opacity={dim ? 0.22 : 1} className="cursor-pointer transition-opacity" onClick={(event) => { event.stopPropagation(); onSelect(node.id === selectedId ? null : node.id); }}>
             <title>{`${node.file}:${node.line_start}-${node.line_end} · ${node.qualname}`}</title>
             {(isImpacted || isOrigin) && <circle cx={p.x} cy={p.y} r={r + 9} fill={isOrigin ? "var(--bad)" : "var(--warn)"} opacity="0.22" className="ca-pulse" />}
             {worst && <circle cx={p.x} cy={p.y} r={r + 5} fill="none" stroke={SEV_VAR[worst]} strokeWidth="2" className="ca-pulse" />}
-            {migrated && <circle cx={p.x} cy={p.y} r={r + 8} fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeDasharray="3 3" />}
             <circle cx={p.x} cy={p.y} r={r} fill={fill} fillOpacity={node.route ? 0.95 : 0.7} stroke={node.id === selectedId ? "var(--fg)" : fill} strokeWidth={node.id === selectedId ? 2.5 : 1} filter="url(#glow)" />
             {node.route && <circle cx={p.x} cy={p.y} r={2.4} fill="var(--accent-fg)" />}
             {showLabel && (
