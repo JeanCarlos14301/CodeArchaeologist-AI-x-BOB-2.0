@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Eyebrow } from "../../ui/Layout";
 import type { MigrationPlan, PlanStep } from "../../../types";
+import { InlineText } from "../../ui/InlineText";
 
 const RISK = { low: { glyph: "○", label: "Riesgo bajo", tone: "text-risk-low" }, medium: { glyph: "●", label: "Riesgo medio", tone: "text-risk-medium" }, high: { glyph: "▲", label: "Riesgo alto", tone: "text-risk-high" } } as const;
 const LEVEL = { low: "baja", medium: "media", high: "alta" } as const;
@@ -41,12 +42,12 @@ export function PlanGraph({ plan, runs = {}, onOpenFile }: Props) {
 
   return (
     <div>
-      <div className="grid gap-x-10 gap-y-3 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <p className="text-body text-pretty text-fg">{plan.summary}</p>
-        <div><Eyebrow>Si algo falla</Eyebrow><p className="mt-1 text-caption text-pretty text-muted">{plan.rollback}</p></div>
+      <div className="grid grid-cols-1 gap-x-10 gap-y-3 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <p className="text-body text-pretty text-fg"><InlineText text={plan.summary} /></p>
+        <div><Eyebrow>Si algo falla</Eyebrow><p className="mt-1 text-caption text-pretty text-muted"><InlineText text={plan.rollback} /></p></div>
       </div>
 
-      <div className="mt-6 grid gap-x-8 gap-y-6 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-6 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <ol aria-label="Secuencia de pasos">
           {rows.map((row, rowIndex) => (
             <li key={rowIndex}>
@@ -90,9 +91,9 @@ export function PlanGraph({ plan, runs = {}, onOpenFile }: Props) {
           <aside aria-label={`Detalle del paso ${selected.title}`} className="rounded-panel border border-line bg-surface p-5 @4xl:sticky @4xl:top-4 @4xl:self-start">
             <Eyebrow>Paso {String(number(selected.id)).padStart(2, "0")} · {KIND[selected.kind] ?? selected.kind}</Eyebrow>
             <h3 className="mt-1 font-display text-title text-fg">{selected.title}</h3>
-            <p className="mt-2 text-body text-pretty text-fg-2">{selected.why}</p>
+            <p className="mt-2 text-body text-pretty text-fg-2"><InlineText text={selected.why} /></p>
             <dl className="mt-4 space-y-4 text-caption">
-              <div><dt className="text-micro tracking-eyebrow text-subtle uppercase">Qué cambia</dt><dd className="mt-1 text-body text-pretty whitespace-pre-line text-fg-2">{selected.changes}</dd></div>
+              <div><dt className="text-micro tracking-eyebrow text-subtle uppercase">Qué cambia</dt><dd className="mt-1 text-body text-pretty whitespace-pre-line text-fg-2"><InlineText text={selected.changes} /></dd></div>
               {selected.files.length > 0 && (
                 <div>
                   <dt className="text-micro tracking-eyebrow text-subtle uppercase">Archivos</dt>
@@ -114,7 +115,7 @@ export function PlanGraph({ plan, runs = {}, onOpenFile }: Props) {
                   </dd>
                 </div>
               )}
-              <div><dt className="text-micro tracking-eyebrow text-subtle uppercase">Cómo validarlo</dt><dd className="mt-1 text-body text-pretty text-fg-2">{selected.validation}</dd></div>
+              <div><dt className="text-micro tracking-eyebrow text-subtle uppercase">Cómo validarlo</dt><dd className="mt-1 text-body text-pretty text-fg-2"><InlineText text={selected.validation} /></dd></div>
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-subtle">
                 <span className={RISK[selected.risk].tone}><span aria-hidden>{RISK[selected.risk].glyph} </span>{RISK[selected.risk].label}</span>
                 <span>Complejidad {LEVEL[selected.complexity]}</span>

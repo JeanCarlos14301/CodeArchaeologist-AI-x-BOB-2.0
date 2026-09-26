@@ -5,6 +5,7 @@ import { Eyebrow } from "../../ui/Layout";
 import { EvidenceRef } from "../EvidenceRef";
 import { TechIcon } from "./TechIcon";
 import type { Assessment, StackReport } from "../../../types";
+import { InlineText } from "../../ui/InlineText";
 
 const VERDICT = {
   recommended: { glyph: "✓", label: "Recomendado", tone: "text-verified", note: "Bob no encontró bloqueos. Aun así, valida cada paso con pruebas." },
@@ -51,15 +52,15 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
 
   return (
     <div>
-      <div className="grid gap-x-10 gap-y-4 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-4 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div>
           <p className={`flex items-center gap-2 font-display text-title ${verdict.tone}`}><span aria-hidden>{verdict.glyph}</span>{verdict.label}</p>
-          <p className="mt-2 text-body text-pretty text-fg">{assessment.summary}</p>
+          <p className="mt-2 text-body text-pretty text-fg"><InlineText text={assessment.summary} /></p>
           <p className="mt-1 text-caption text-subtle">{verdict.note}</p>
         </div>
         <div>
           <Eyebrow>Lectura de tu negocio</Eyebrow>
-          <p className="mt-1 text-body text-pretty text-fg-2">{assessment.business_reading}</p>
+          <p className="mt-1 text-body text-pretty text-fg-2"><InlineText text={assessment.business_reading} /></p>
         </div>
       </div>
 
@@ -71,13 +72,13 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
               const from = name(item.from_id);
               const to = name(item.to_id);
               return (
-                <li key={`${item.from_id}-${item.to_id}`} className="grid gap-x-6 gap-y-1 py-3 @2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
+                <li key={`${item.from_id}-${item.to_id}`} className="grid grid-cols-1 gap-x-6 gap-y-1 py-3 @2xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
                   <p className="flex items-center gap-2 text-body text-fg">
                     <TechIcon slug={from?.icon ?? null} name={from?.name ?? item.from_id} size={18} />{from?.name ?? item.from_id}
                     <span aria-hidden className="text-subtle">→</span>
                     <TechIcon slug={to?.icon ?? null} name={to?.name ?? item.to_id} size={18} />{to?.name ?? item.to_id}
                   </p>
-                  <p className="text-caption text-pretty text-muted">{item.why}</p>
+                  <p className="text-caption text-pretty text-muted"><InlineText text={item.why} /></p>
                 </li>
               );
             })}
@@ -98,7 +99,7 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
                   <th scope="row" className="w-32 py-3 pr-4 text-left text-body font-normal text-fg">{AXIS[tradeoff.axis]}</th>
                   <td className={`w-28 py-3 pr-4 text-caption font-semibold ${effect.tone}`}><span aria-hidden className="mr-1.5">{effect.glyph}</span>{effect.label}</td>
                   <td className="py-3 text-body text-pretty text-fg-2">
-                    {tradeoff.detail}
+                    <InlineText text={tradeoff.detail} />
                     {tradeoff.refs.length > 0 && (
                       <span className="mt-2 flex flex-wrap gap-1.5">
                         {tradeoff.refs.map((ref) => (
@@ -129,7 +130,7 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
         <div className="mt-6">
           <Eyebrow>Bloqueos</Eyebrow>
           <ul className="mt-2 space-y-1.5 text-body text-fg-2">
-            {assessment.blockers.map((item) => <li key={item} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-danger">✗</span><span>{item}</span></li>)}
+            {assessment.blockers.map((item) => <li key={item} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-danger">✗</span><span><InlineText text={item} /></span></li>)}
           </ul>
         </div>
       )}
@@ -144,7 +145,7 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
               const value = answers[question] ?? "";
               return (
                 <li key={question}>
-                  <label htmlFor={id} className="grid grid-cols-[1.25rem_1fr] text-body text-fg"><span aria-hidden className="text-warning">?</span><span>{question}</span></label>
+                  <label htmlFor={id} className="grid grid-cols-[1.25rem_1fr] text-body text-fg"><span aria-hidden className="text-warning">?</span><span><InlineText text={question} /></span></label>
                   <div className="mt-2 ml-5 flex flex-wrap items-start gap-2">
                     <div role="group" aria-label="Respuestas rápidas" className="flex gap-1.5">
                       {QUICK.map((quick) => (
@@ -183,7 +184,7 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
       {!planReady && (
         <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
           <label className="flex max-w-xl cursor-pointer items-start gap-3 text-body text-fg-2">
-            <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-[var(--ca-signal-orange)]" />
+            <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-accent" />
             <span>Entiendo lo que mejora y lo que empeora{assessment.verdict === "not_recommended" ? ", incluida la advertencia de que Bob no lo recomienda," : ""} y quiero seguir con esta decisión.</span>
           </label>
           <Button variant="primary" disabled={!understood || busy} onClick={onPlan} icon={<ArrowRight size={14} aria-hidden />}>

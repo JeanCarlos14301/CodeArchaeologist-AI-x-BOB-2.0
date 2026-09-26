@@ -94,7 +94,7 @@ function Modernization({ dossier }: { dossier: Dossier }) {
       )}
       {dossier.first_cut_pert && (
         <Section eyebrow="Esfuerzo" title="Estimación PERT del primer corte">
-          <div className="grid gap-x-12 gap-y-6 @4xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-x-12 gap-y-6 @4xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <PertRange pert={dossier.first_cut_pert} />
             <div>
               <Eyebrow>Medido sobre el código</Eyebrow>
@@ -127,14 +127,14 @@ function MigrationDetail() {
   return (
     <>
       <Section eyebrow="Transformación" title="Actual → objetivo">
-        <div className="grid items-stretch gap-3 @2xl:grid-cols-[1fr_auto_1fr]">
+        <div className="grid grid-cols-1 items-stretch gap-3 @2xl:grid-cols-[1fr_auto_1fr]">
           <Endpoint tag="ACTUAL" framework={legacy} file={result.legacy_file} note="Monolito legado, sigue sirviendo el resto de rutas" />
           <div className="flex items-center justify-center font-mono text-caption text-subtle" aria-hidden>→ fachada →</div>
           <Endpoint tag="OBJETIVO" framework={modern} file={result.modern_file} note={result.implementation_origin} />
         </div>
         <p className="mt-3 text-caption text-subtle">Framework detectado en los imports de cada archivo · fachada: <span className="font-mono text-fg-2">{result.facade_file ?? "—"}</span></p>
       </Section>
-      <div className="grid gap-x-12 @4xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-x-12 @4xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Section eyebrow="Secuencia" title="Pasos y dependencias">
           <MigrationSequence result={result} />
         </Section>

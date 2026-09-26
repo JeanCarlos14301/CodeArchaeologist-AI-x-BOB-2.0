@@ -21,7 +21,7 @@ export function EvidenceRef({ path, lineStart, lineEnd, verified, reason, active
   const content = (
     <>
       {mark && <span aria-hidden className={tone}>{mark}</span>}
-      <span className="truncate text-fg">{path}</span>
+      <span className="min-w-0 truncate text-fg" title={path}>{path}</span>
       <span className="text-subtle">:{lineRange(lineStart, lineEnd)}</span>
       <span className="sr-only">, evidencia {status}{reason ? `: ${reason}` : ""}</span>
     </>

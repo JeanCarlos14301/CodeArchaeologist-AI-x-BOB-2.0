@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+  <!-- Marca de CodeArchaeologist (BrandMark.tsx): testigo de sondeo con estratos; el inferior en naranja señal. -->
+  <defs><clipPath id="c"><rect x="5.5" y="1.5" width="9" height="17" rx="4.5"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect x="5.5" y="1.5" width="9" height="17" fill="#000000"/>
+    <rect x="5.5" y="6" width="9" height="1.6" fill="#ffffff"/>
+    <rect x="5.5" y="9.6" width="9" height="1.6" fill="#bfbfbf"/>
+    <rect x="5.5" y="13.2" width="9" height="5.3" fill="#ff4800"/>
+  </g>
+  <rect x="5.5" y="1.5" width="9" height="17" rx="4.5" fill="none" stroke="#ffffff" stroke-opacity="0.55"/>
+</svg>

@@ -114,7 +114,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
         )}
       </section>
 
-      <div className="grid gap-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-1 gap-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <section aria-label="Plan de Bob">
           <Eyebrow>Plan de Bob</Eyebrow>
           {bob.plan.length === 0 ? (

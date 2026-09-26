@@ -41,7 +41,7 @@ function Overview({ dossier }: { dossier: Dossier }) {
         actions={<Button variant="secondary" onClick={() => go("risks")} icon={<ArrowRight size={14} aria-hidden />}>Revisar {dossier.findings.length} riesgos</Button>}
       />
 
-      <div className="grid gap-x-12 @3xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-12 @3xl:grid-cols-2">
         <Section eyebrow="Salud" title="Qué encontró el análisis">
           <DataList rows={[
             { label: "Hallazgos con evidencia verificada", value: `${dossier.stats.findings_validated}/${dossier.stats.findings_reported}`, hint: dossier.rejected_findings.length ? `${dossier.rejected_findings.length} descartados por el validador` : "ninguno descartado" },
@@ -81,7 +81,7 @@ function Overview({ dossier }: { dossier: Dossier }) {
         </ul>
       </Section>
 
-      <div className="grid gap-x-12 @3xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-12 @3xl:grid-cols-2">
         <Section eyebrow="Primer corte" title={dossier.migration ? `Migrar ${dossier.migration.endpoint}` : "Estimación del primer corte"}>
           {dossier.first_cut_pert ? (
             <>

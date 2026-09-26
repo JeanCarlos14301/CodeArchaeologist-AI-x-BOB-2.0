@@ -16,7 +16,7 @@ export function MigrationOptions({ options, findings, onOpenFinding }: Props) {
   return (
     <ol className="divide-y divide-line-subtle border-y border-line-subtle">
       {options.map((option) => (
-        <li key={option.id} className={`grid gap-x-8 gap-y-3 px-1 py-4 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] ${option.recommended ? "bg-raised" : ""}`}>
+        <li key={option.id} className={`grid grid-cols-1 gap-x-8 gap-y-3 px-1 py-4 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] ${option.recommended ? "bg-raised" : ""}`}>
           <div>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-micro tracking-eyebrow text-subtle uppercase">
               <span className="font-mono">{option.id}</span>
@@ -46,7 +46,7 @@ export function MigrationOptions({ options, findings, onOpenFinding }: Props) {
               })}
             </ul>
           </div>
-          <div className="grid gap-4 @xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2">
             <ul className="space-y-1.5 text-caption text-fg-2">
               {option.pros.map((pro) => <li key={pro} className="grid grid-cols-[1rem_1fr] gap-1"><span aria-hidden className="text-verified">+</span><span><span className="sr-only">Ventaja: </span>{pro}</span></li>)}
             </ul>
