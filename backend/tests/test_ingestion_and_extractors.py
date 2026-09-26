@@ -9,7 +9,6 @@ from backend.app.extractors.code_inventory import analyze_repository_inventory
 from backend.app.pipeline.ingestion import (
     IngestionSecurityError,
     validate_and_extract_zip,
-    prepare_repository,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
