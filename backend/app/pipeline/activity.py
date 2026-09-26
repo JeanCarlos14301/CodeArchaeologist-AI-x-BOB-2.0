@@ -116,23 +116,50 @@ class EventLog:
         return event
 
 
+# Dónde continuar la lectura de cada registro: (seq del último evento entregado, byte siguiente). Los sondeos
+# piden siempre `after` = lo último que recibieron, así que solo se lee lo que se añadió desde entonces.
+_TAIL_LOCK = threading.Lock()
+_TAILS: dict[str, tuple[int, int]] = {}
+_MAX_TAILS = 512
+
+
+def _remember_tail(key: str, seq: int, position: int) -> None:
+    with _TAIL_LOCK:
+        _TAILS.pop(key, None)
+        _TAILS[key] = (seq, position)
+        while len(_TAILS) > _MAX_TAILS:
+            _TAILS.pop(next(iter(_TAILS)))
+
+
 def read_events(path: Path, after: int = 0, limit: int = MAX_EVENTS_PER_PAGE) -> list[PipelineEvent]:
-    """Eventos con `seq > after`, en orden. Ignora líneas corruptas (escritura interrumpida)."""
+    """Eventos con `seq > after`, en orden. Ignora líneas corruptas y deja para el siguiente sondeo una a medio escribir."""
     if not path.is_file():
         return []
+    key = str(path.resolve())
+    with _TAIL_LOCK:
+        cached = _TAILS.get(key)
+    size = path.stat().st_size
+    position = cached[1] if cached and cached[0] == after and cached[1] <= size else 0
     events: list[PipelineEvent] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        prefix = _SEQ_PREFIX.match(line)
-        if prefix and int(prefix.group(1)) <= after:
-            continue  # ya entregado: no se valida de nuevo en cada sondeo
-        try:
-            event = PipelineEvent.model_validate_json(line)
-        except ValueError:
-            continue
-        if event.seq > after:
-            events.append(event)
-        if len(events) >= limit:
-            break
+    with path.open("rb") as handle:
+        handle.seek(position)
+        for raw in handle:
+            if not raw.endswith(b"\n"):
+                break  # la escribe otro hilo ahora mismo: se entrega completa en el próximo sondeo
+            position += len(raw)
+            line = raw.decode("utf-8", errors="replace").strip()
+            prefix = _SEQ_PREFIX.match(line)
+            if prefix and int(prefix.group(1)) <= after:
+                continue  # ya entregado: no se valida de nuevo en cada sondeo
+            try:
+                event = PipelineEvent.model_validate_json(line)
+            except ValueError:
+                continue
+            if event.seq > after:
+                events.append(event)
+            if len(events) >= limit:
+                break
+    _remember_tail(key, events[-1].seq if events else after, position)
     return events
 
 

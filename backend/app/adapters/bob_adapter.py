@@ -39,6 +39,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CUSTOM_MODES_FILE = REPO_ROOT / ".bob" / "custom_modes.yaml"
 _SLUG_PATTERN = re.compile(r"^\s*-\s*slug:\s*([a-z0-9-]+)\s*$", re.MULTILINE)
 _STDERR_TAIL_CHARS = 2000
+# Variables que nunca llegan al proceso de Bob: un subagente o una herramienta no puede filtrar lo que no recibe.
+_SECRET_ENV_NAME = re.compile(r"TOKEN|SECRET|PASSW|PRIVATE|CREDENTIAL|API_?KEY|ACCESS_KEY", re.IGNORECASE)
 
 ExecutionMode = Literal["live", "imported", "example"]
 
@@ -178,6 +180,20 @@ class BobResult(BaseModel):
     last_message: str
     stats: BobStats | None = None
     execution_mode: ExecutionMode
+
+
+def bob_child_env() -> dict[str, str]:
+    """Entorno del proceso de Bob: el del servidor sin los secretos de la aplicación.
+
+    Bob solo necesita los suyos (`BOB_*`, p. ej. BOB_API_KEY). LIVE_AUDIT_TOKEN y cualquier otra clave se
+    quitan: aunque un repositorio consiguiera que Bob ejecutara algo, no tendría credenciales que filtrar.
+    """
+    env = {
+        key: value for key, value in os.environ.items()
+        if key.upper().startswith("BOB") or not _SECRET_ENV_NAME.search(key)
+    }
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    return env
 
 
 class BobRunSettings(BaseModel):
@@ -357,7 +373,7 @@ class BobAdapter:
                 errors="replace",
                 timeout=self.settings.timeout_s,
                 cwd=self.workspace,
-                env=os.environ.copy(),
+                env=bob_child_env(),
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
@@ -393,8 +409,7 @@ class BobAdapter:
         binary_path = self._validate(mode, prompt)
         command = self.build_command(mode, binary_path, settings, "stream-json", resume_task_id)
         started_at = time.time()
-        child_env = os.environ.copy()
-        child_env.setdefault("PYTHONIOENCODING", "utf-8")
+        child_env = bob_child_env()
         process = subprocess.Popen(  # noqa: S603 - lista de argumentos, sin shell
             command,
             stdin=subprocess.PIPE,
@@ -439,8 +454,17 @@ class BobAdapter:
         final: dict[str, Any] | None = None
         try:
             assert process.stdin is not None and process.stdout is not None
-            process.stdin.write(prompt)
-            process.stdin.close()
+            stdin = process.stdin
+
+            def feed_prompt() -> None:
+                # En su propio hilo: si Bob escribe antes de leer todo el prompt, nadie se queda esperando.
+                try:
+                    stdin.write(prompt)
+                    stdin.close()
+                except (BrokenPipeError, OSError, ValueError):
+                    logger.debug("Bob cerró stdin antes de leer el prompt completo")
+
+            threading.Thread(target=feed_prompt, name="bob-stdin", daemon=True).start()
             for line in process.stdout:
                 line = line.strip()
                 if not line.startswith("{"):

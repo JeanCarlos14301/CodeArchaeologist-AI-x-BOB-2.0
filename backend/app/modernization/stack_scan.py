@@ -133,7 +133,8 @@ def _read(path: Path) -> str | None:
     try:
         if path.stat().st_size > MAX_TEXT_BYTES:
             return None
-        return path.read_text(encoding="utf-8", errors="replace")
+        # utf-8-sig: manifiestos guardados con BOM (Windows) no pierden su primera línea ni invalidan el TOML.
+        return path.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return None
 

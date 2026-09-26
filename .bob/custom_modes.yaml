@@ -3,7 +3,9 @@
 # El orquestador en Python decide cuándo invocar cada modo; Bob nunca decide el flujo.
 # Grupos válidos en Bob Shell: read, edit, execute, browser, mcp, skill, todo, subagent, mode.
 # `subagent` permite delegar en .bob/agents/*.md y `skill` activar .bob/skills/*/SKILL.md.
-# `edit` puede restringirse por ruta con fileRegex.
+# `edit` se restringe por ruta con fileRegex. Bob lo compara con la RUTA ABSOLUTA del archivo: por eso
+# los modos que editan usan el marcador __WORK_ROOT__, que no coincide con nada (falla cerrado) hasta que
+# backend/app/adapters/bob_workspace.py lo sustituye por la raíz absoluta de cada workspace.
 customModes:
   - slug: evidence-auditor
     name: Evidence Auditor
@@ -33,7 +35,7 @@ customModes:
       You are a characterization-test author. You write pytest tests that pin down the
       current observable behavior of the legacy endpoint selected as the first cut.
     whenToUse: Stage 6 — write characterization tests inside the sandbox only.
-    groups: ["read", "skill", "todo", ["edit", {fileRegex: "^tests/characterization/.*\\.py$", description: "Solo pruebas de caracterización"}]]
+    groups: ["read", "skill", "todo", ["edit", {fileRegex: "^__WORK_ROOT__/tests/characterization/[^/\\n]+\\.py$", description: "Solo pruebas de caracterización"}]]
     customInstructions: >-
       Write golden-master characterization tests using pytest. Write ONLY to tests/characterization/. Tests must capture observable status codes, headers, and response payloads. Tests must pass 100% against the legacy endpoint before modern code is written. Follow .bob/agents/contract-keeper.md and .bob/skills/characterization-testing/SKILL.md.
 
@@ -43,7 +45,7 @@ customModes:
       You are a migration engineer. You implement the first cut in FastAPI behind a
       facade so the characterization tests pass against both legacy and modern code.
     whenToUse: Stage 8 — write the new implementation, only under modern/.
-    groups: ["read", "skill", "execute", "todo", ["edit", {fileRegex: "^modern/", description: "Solo el código nuevo bajo modern/"}]]
+    groups: ["read", "skill", "execute", "todo", ["edit", {fileRegex: "^__WORK_ROOT__/modern/(?!(?:[^\\n]*/)?\\.\\.(?:/|$))[^\\n]+$", description: "Solo el código nuevo bajo modern/"}]]
     customInstructions: >-
       Implement the modern cut in FastAPI (Python 3.11+, Pydantic v2, parameterized queries). Write new code ONLY under modern/. Maintain the Strangler Fig routing facade. Run characterization tests. If tests fail, you have a MAXIMUM OF ONE repair attempt. Follow .bob/agents/strangler-surgeon.md and .bob/rules/migration-safety.md.
 
@@ -119,7 +121,7 @@ customModes:
       You are a migration engineer. You execute ONE step of an approved migration plan by editing files in a copy of
       the project. You never run commands or project code.
     whenToUse: Modernization Studio — implement a single plan step on a working copy of the project.
-    groups: ["read", "skill", "todo", ["edit", {fileRegex: "^(?!\\.bob/|\\.git/).*", description: "Cualquier archivo del proyecto salvo .bob y .git"}]]
+    groups: ["read", "skill", "todo", ["edit", {fileRegex: "^__WORK_ROOT__/(?!\\.bob/|\\.git/)(?!(?:[^\\n]*/)?\\.\\.(?:/|$))[^\\n]+$", description: "Cualquier archivo del proyecto salvo .bob y .git"}]]
     customInstructions: >-
       Do only what the given step asks and keep observable behavior. Edit only project files, never .bob. Do NOT run
       commands, install dependencies, use the network or execute the project's code. Write complete, coherent code

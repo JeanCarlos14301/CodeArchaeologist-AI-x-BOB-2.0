@@ -18,7 +18,6 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.adapters.bob_adapter import (
-    CUSTOM_MODES_FILE,
     BobAdapter,
     BobConfigError,
     BobError,
@@ -28,6 +27,7 @@ from app.adapters.bob_adapter import (
     BobStats,
     BobTimeoutError,
 )
+from app.adapters.bob_workspace import install_bob_assets
 from app.pipeline.activity import BobActivity, EventLog, inventory_events
 from app.contracts.schema_v1 import AuditorOutput, Dossier, DossierStats
 from app.pipeline.decision_metrics import calculate_decision_metrics, source_sha256
@@ -115,8 +115,8 @@ def prepare_workspace(source_repo: Path, job_dir: Path, keep_tests: bool = False
     if workspace.exists():
         shutil.rmtree(workspace)
     shutil.copytree(source_repo, workspace, ignore=_COPY_IGNORE_KEEP_TESTS if keep_tests else _COPY_IGNORE)
-    # Modos, subagentes, skills y reglas del proyecto viajan con el sandbox para que Bob los use.
-    shutil.copytree(CUSTOM_MODES_FILE.parent, workspace / ".bob")
+    # Modos, skills, reglas y los subagentes de solo lectura viajan con el sandbox, anclados a él.
+    install_bob_assets(workspace)
     return workspace
 
 

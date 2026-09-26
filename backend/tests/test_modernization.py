@@ -485,3 +485,36 @@ def test_assistant_also_works_on_modernization_only_projects(tmp_path: Path, mon
             time.sleep(0.05)
         client.post(f"/api/audits/{job_id}/ask", json={"question": "¿Qué migrar primero?"}, headers=headers)
     assert seen["workspace"].name == "source", "sin auditoría, Bob lee la copia íntegra del proyecto"
+
+
+def test_concurrent_requests_start_a_single_bob_operation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    studio = _studio(tmp_path, [])
+    studio.stack()
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    original_state = Studio.state
+
+    def slow_state(self: Studio):
+        state = original_state(self)
+        time.sleep(0.02)  # ensancha la ventana entre leer la fase y escribirla (doble clic, reintentos)
+        return state
+
+    monkeypatch.setattr(Studio, "state", slow_state)
+    outcomes: list[str] = []
+    barrier = threading.Barrier(4)
+
+    def attempt() -> None:
+        barrier.wait()
+        try:
+            studio.begin_assess(request)
+            outcomes.append("started")
+        except StudioBusyError:
+            outcomes.append("busy")
+
+    threads = [threading.Thread(target=attempt) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(outcomes) == ["busy", "busy", "busy", "started"]

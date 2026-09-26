@@ -98,7 +98,8 @@ class JobStore:
         """Lista solo muestras registradas; nunca deja que subidas desplacen la vitrina."""
         with self._lock:
             rows = self._connection.execute(
-                "SELECT * FROM jobs WHERE substr(sample, 1, 7) != 'upload:' "
+                # Las subidas (auditoría o solo modernización) son privadas: ni siquiera su nombre se lista.
+                "SELECT * FROM jobs WHERE sample NOT LIKE 'upload:%' AND sample NOT LIKE 'modernize:%' "
                 "ORDER BY created_at DESC, rowid DESC LIMIT ?",
                 (limit,),
             ).fetchall()

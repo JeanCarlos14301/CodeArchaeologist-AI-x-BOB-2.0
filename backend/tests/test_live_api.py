@@ -166,7 +166,6 @@ def test_private_jobs_cannot_displace_public_showcase_from_limited_list(client: 
 def test_defaults_are_real_only(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Sin las banderas de desarrollo: sin /api/jobs, sin example/imported y con token siempre."""
     monkeypatch.delenv("ALLOW_NON_LIVE_MODES")
-    monkeypatch.delenv("ENABLE_JOBS_API")
     app = create_app(artifacts_dir=tmp_path / "strict", frontend_dist=tmp_path / "no-dist")
     with TestClient(app) as strict:
         assert strict.post("/api/jobs", json={"source_type": "demo"}).status_code in {404, 405}

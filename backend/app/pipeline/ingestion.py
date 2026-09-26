@@ -14,11 +14,13 @@ import shutil
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import BinaryIO, Dict, List, Optional, Set, Tuple
 
 MAX_ZIP_COMPRESSED_BYTES = 5 * 1024 * 1024       # 5 MB
 MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024         # 20 MB
-MAX_FILES_COUNT = 300
+MAX_FILES_COUNT = 300                              # auditoría: acota el presupuesto de Bob
+MODERNIZE_MAX_FILES = 3000                         # modernización: monorepos reales (el tope de bytes sigue igual)
+_COPY_CHUNK = 64 * 1024
 DANGEROUS_EXTENSIONS = {".exe", ".dll", ".so", ".bin", ".dylib", ".bat", ".cmd", ".vbs"}
 SENSITIVE_FILES_OR_DIRS = {".env", ".bob", "agents.md", ".git", ".github", "hooks"}
 
@@ -95,9 +97,23 @@ def count_loc_and_languages(directory: Path) -> Tuple[int, List[str], List[str]]
     return total_loc, sorted(list(languages)), entrypoints
 
 
+def copy_bounded(source: BinaryIO, dest: BinaryIO, budget: int) -> int:
+    """Copia contando los bytes REALES escritos; aborta al superar `budget` (no confía en el tamaño declarado)."""
+    written = 0
+    while chunk := source.read(_COPY_CHUNK):
+        written += len(chunk)
+        if written > budget:
+            raise IngestionSecurityError(
+                f"El contenido descomprimido excede el límite de {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB"
+            )
+        dest.write(chunk)
+    return written
+
+
 def validate_and_extract_zip(
     zip_bytes_or_path: bytes | Path | str,
     destination_dir: Path,
+    max_files: int = MAX_FILES_COUNT,
 ) -> Path:
     """Valida y extrae un archivo ZIP aplicando todas las restricciones de seguridad."""
     destination_dir.mkdir(parents=True, exist_ok=True)
@@ -122,9 +138,9 @@ def validate_and_extract_zip(
 
     try:
         members = zf.infolist()
-        if len(members) > MAX_FILES_COUNT:
+        if len(members) > max_files:
             raise IngestionSecurityError(
-                f"El archivo ZIP contiene demasiados archivos ({len(members)} > {MAX_FILES_COUNT})"
+                f"El archivo ZIP contiene demasiados archivos ({len(members)} > {max_files})"
             )
 
         total_uncompressed = sum(m.file_size for m in members)
@@ -137,7 +153,7 @@ def validate_and_extract_zip(
             # 1. Protección contra ZipSlip: normalización y escape de directorio
             member_path = Path(member.filename)
             target_path = (destination_dir / member_path).resolve()
-            if not str(target_path).startswith(str(dest_resolved)):
+            if not target_path.is_relative_to(dest_resolved):
                 raise IngestionSecurityError(
                     f"Violación de seguridad ZipSlip detectada: '{member.filename}' intenta salir del sandbox"
                 )
@@ -161,7 +177,8 @@ def validate_and_extract_zip(
                     f"Extensión binaria o ejecutable no permitida: '{member.filename}'"
                 )
 
-        # Extracción segura miembro a miembro
+        # Extracción segura miembro a miembro, con el tope aplicado a los bytes que de verdad se escriben.
+        remaining = MAX_UNCOMPRESSED_BYTES
         for member in members:
             target_path = (destination_dir / member.filename).resolve()
             if member.is_dir():
@@ -169,7 +186,7 @@ def validate_and_extract_zip(
             else:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 with zf.open(member) as source, open(target_path, "wb") as dest:
-                    shutil.copyfileobj(source, dest)
+                    remaining -= copy_bounded(source, dest, remaining)
     finally:
         zf.close()
 
