@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 import logging
 import os
 from pathlib import Path
+import threading
 from typing import Any, Dict
 
 from fastapi import FastAPI
@@ -48,7 +49,7 @@ try:
     from app.api.migrate import router as migrate_router
     from app.api.routes import router as felipe_routes_router
     from app.database import init_db
-    from app.jobs.service import AuditService
+    from app.jobs.service import AuditService, warm_bob_version
     from app.jobs.store import JobStore
 except ImportError:
     from backend.app.adapters.bob_adapter import (
@@ -67,7 +68,7 @@ except ImportError:
     from backend.app.api.migrate import router as migrate_router
     from backend.app.api.routes import router as felipe_routes_router
     from backend.app.database import init_db
-    from backend.app.jobs.service import AuditService
+    from backend.app.jobs.service import AuditService, warm_bob_version
     from backend.app.jobs.store import JobStore
 
 if "app" in sys.modules and "backend.app" not in sys.modules:
@@ -113,6 +114,8 @@ def create_app(
         store.fail_orphans()
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="audit")
         app.state.audit_service = AuditService(store, jobs_dir, executor)
+        # En segundo plano: el CLI de Bob tarda ~15 s en arrancar en Render y el arranque no lo espera.
+        threading.Thread(target=warm_bob_version, name="bob-version", daemon=True).start()
 
         yield
 
