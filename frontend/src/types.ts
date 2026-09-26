@@ -281,7 +281,12 @@ export interface StackReport {
 export type StudioPhase = "idle" | "assessing" | "assessed" | "planning" | "planned" | "implementing" | "implemented" | "failed";
 export type Priority = "security" | "performance" | "cost" | "time" | "team" | "compatibility";
 export interface StudioMapping { from_id: string; to_id: string; service?: string | null }
-export interface AssessRequest { mode: "chosen" | "recommend"; mappings: StudioMapping[]; business_context: string; priorities: Priority[] }
+export interface StudioAnswer { question: string; answer: string }
+export interface AssessRequest {
+  mode: "chosen" | "recommend"; mappings: StudioMapping[]; business_context: string; priorities: Priority[];
+  /** Respuestas de la persona a las preguntas que Bob dejó abiertas. */
+  answers?: StudioAnswer[];
+}
 export type Axis = "security" | "performance" | "cost" | "maintainability" | "compatibility" | "team" | "operations";
 export interface Assessment {
   verdict: "recommended" | "conditional" | "not_recommended";

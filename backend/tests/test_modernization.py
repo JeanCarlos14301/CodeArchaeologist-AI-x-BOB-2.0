@@ -433,3 +433,55 @@ def test_chosen_mode_ignores_recommendations_instead_of_rejecting(stack) -> None
     request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
     echoed = _assessment(recommended=[{"from_id": "flask", "to_id": "fastapi", "why": "Encaja mejor con el equipo."}])
     assert validate_assessment(echoed, request, stack, SAMPLE).recommended == []
+
+
+# ------------------------------------------------------------ respuestas de la persona a las preguntas de Bob
+
+def test_answers_reach_both_prompts_and_are_limited(stack) -> None:
+    from app.modernization.models import Answer
+    from app.modernization.planner import build_assess_prompt, build_plan_prompt
+
+    answers = [Answer(question="¿El sistema correrá en contenedores?", answer="Sí, un solo servidor con Docker.")]
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")], answers=answers)
+    assert "un solo servidor con Docker" in build_assess_prompt(stack, request)
+    assessment = validate_assessment(_assessment(), request, stack, SAMPLE)
+    assert "un solo servidor con Docker" in build_plan_prompt(stack, request, assessment)
+    with pytest.raises(Exception):
+        AssessRequest(mode="recommend", answers=[Answer(question="¿Pregunta número %d?" % i, answer="sí") for i in range(11)])
+
+
+def test_studio_keeps_answers_across_reassessments(tmp_path: Path) -> None:
+    from app.modernization.models import Answer
+
+    studio = _studio(tmp_path, [])
+    first = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    studio.begin_assess(first)
+    studio.run_assess()
+    again = first.model_copy(update={"answers": [Answer(question="¿Hay clientes externos?", answer="No lo sé")]})
+    studio.begin_assess(again)
+    studio.run_assess()
+    state = studio.state()
+    assert state.phase == "assessed" and state.request.answers[0].answer == "No lo sé"
+    assert state.plan is None, "evaluar de nuevo descarta el plan anterior"
+
+
+def test_assistant_also_works_on_modernization_only_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.api import assistant
+
+    seen: dict[str, Path] = {}
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", TOKEN)
+    def fake_ask(workspace: Path, body) -> assistant.AskAnswer:
+        seen["workspace"] = workspace
+        return assistant.AskAnswer(summary="Respuesta de prueba sin Bob real.")
+
+    monkeypatch.setattr(assistant, "ask_bob", fake_ask)
+    app = create_app(artifacts_dir=tmp_path / "artifacts", frontend_dist=tmp_path / "no-dist")
+    with TestClient(app) as client:
+        headers = {"X-Live-Token": TOKEN}
+        job_id = client.post("/api/audits/upload", files={"zip_file": ("f.zip", _zip_of(SAMPLE), "application/zip")}, data={"purpose": "modernization"}, headers=headers).json()["id"]
+        for _ in range(100):
+            if client.get(f"/api/audits/{job_id}", headers=headers).json()["job"]["status"] == "done":
+                break
+            time.sleep(0.05)
+        client.post(f"/api/audits/{job_id}/ask", json={"question": "¿Qué migrar primero?"}, headers=headers)
+    assert seen["workspace"].name == "source", "sin auditoría, Bob lee la copia íntegra del proyecto"

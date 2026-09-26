@@ -37,8 +37,9 @@ def ask_about_audit(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     if job.status != "done":
         raise HTTPException(status.HTTP_409_CONFLICT, "El análisis aún no termina; pregunta cuando esté completo.")
-    workspace = service.job_dir(job_id) / "workspace"
-    if not workspace.is_dir():
+    # Las auditorías tienen `workspace`; los proyectos subidos solo para modernizar, su copia íntegra `source`.
+    workspace = next((d for d in (service.job_dir(job_id) / "workspace", service.job_dir(job_id) / "source") if d.is_dir()), None)
+    if workspace is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "El código de este análisis no está disponible.")
     try:
         return ask_bob(workspace, body)

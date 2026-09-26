@@ -13,6 +13,7 @@ Phase = Literal["idle", "assessing", "assessed", "planning", "planned", "impleme
 Priority = Literal["security", "performance", "cost", "time", "team", "compatibility"]
 
 MAX_MAPPINGS = 6
+MAX_ANSWERS = 10
 
 
 class Mapping(BaseModel):
@@ -25,6 +26,15 @@ class Mapping(BaseModel):
     service: str | None = Field(default=None, max_length=200)
 
 
+class Answer(BaseModel):
+    """Respuesta de la persona a una pregunta que Bob dejó abierta en una evaluación anterior."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=3, max_length=400)
+    answer: str = Field(min_length=1, max_length=800)
+
+
 class AssessRequest(BaseModel):
     """`chosen`: la persona eligió destinos. `recommend`: Bob propone destinos entre los del catálogo."""
 
@@ -34,6 +44,7 @@ class AssessRequest(BaseModel):
     mappings: list[Mapping] = Field(default_factory=list, max_length=MAX_MAPPINGS)
     business_context: str = Field(default="", max_length=1500)
     priorities: list[Priority] = Field(default_factory=list, max_length=4)
+    answers: list[Answer] = Field(default_factory=list, max_length=MAX_ANSWERS)
 
 
 class CodeRef(BaseModel):

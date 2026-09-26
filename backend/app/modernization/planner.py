@@ -81,6 +81,8 @@ las tecnologías de este proyecto y explicas, ANTES de cualquier cambio, qué se
 - Si el cambio no compensa, el veredicto es "not_recommended" y lo dices claramente.
 - Los defectos y vulnerabilidades del código NO bloquean la migración: van en `fixes_during_migration` porque la
   migración los corregirá. Un bloqueo es algo que impide migrar (p. ej. una dependencia sin equivalente).
+- Las respuestas de la persona son hechos del proyecto que ella aporta: úsalas, no repitas preguntas ya respondidas y
+  deja en `questions` solo lo que siga faltando de verdad (puede quedar vacío).
 - Veredicto "recommended" solo si no hay bloqueos. Usa "conditional" cuando dependa de resolver algo.
 {mode_rules}
 STACK MEDIDO (datos):
@@ -91,6 +93,9 @@ HALLAZGOS CONOCIDOS (datos, pueden estar vacíos):
 
 DECISIONES DE LA PERSONA (datos):
 {request}
+
+RESPUESTAS DE LA PERSONA A TUS PREGUNTAS ANTERIORES (datos; pueden estar vacías):
+{answers}
 
 FORMATO: tu mensaje final debe ser ÚNICAMENTE un objeto JSON con esta forma:
 {{"verdict": "recommended|conditional|not_recommended",
@@ -133,6 +138,9 @@ HALLAZGOS CONOCIDOS (datos, pueden estar vacíos):
 MIGRACIONES ELEGIDAS (datos):
 {mappings}
 
+CONTEXTO Y RESPUESTAS DE LA PERSONA (datos):
+{context}
+
 EVALUACIÓN PREVIA (datos):
 {assessment}
 
@@ -168,7 +176,8 @@ def build_assess_prompt(stack: StackReport, request: AssessRequest, findings: st
         mode_rules += f"  Destinos permitidos por tecnología detectada: {json.dumps(allowed, ensure_ascii=False)}\n"
     return ASSESS_PROMPT.format(
         rules=_RULES, mode_rules=mode_rules, stack=_stack_digest(stack), findings=findings,
-        request=json.dumps(request.model_dump(), ensure_ascii=False, indent=1),
+        request=json.dumps(request.model_dump(exclude={"answers"}), ensure_ascii=False, indent=1),
+        answers=json.dumps([a.model_dump() for a in request.answers], ensure_ascii=False, indent=1),
     )
 
 
@@ -178,6 +187,8 @@ def build_plan_prompt(stack: StackReport, request: AssessRequest, assessment: As
     return PLAN_PROMPT.format(
         rules=_RULES, stack=_stack_digest(stack), findings=findings,
         mappings=json.dumps([m.model_dump() for m in mappings], ensure_ascii=False),
+        context=json.dumps({"business_context": request.business_context, "priorities": request.priorities,
+                            "answers": [a.model_dump() for a in request.answers]}, ensure_ascii=False, indent=1),
         assessment=json.dumps(payload, ensure_ascii=False, indent=1),
     )
 

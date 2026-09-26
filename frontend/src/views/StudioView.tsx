@@ -44,6 +44,8 @@ export function StudioView() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Respuestas en curso a las preguntas de la evaluación actual (por texto de la pregunta).
+  const [qa, setQa] = useState<Record<string, string>>({});
   const seeded = useRef<string | null>(null);
 
   const refresh = useCallback(() => api.studio(jobId, token).then(setState).catch((err: Error) => setActionError(err.message)), [jobId, token]);
@@ -86,14 +88,28 @@ export function StudioView() {
     }
   };
 
-  const assess = () => {
-    const request: AssessRequest = {
+  const history = state?.request?.answers ?? [];
+
+  /** Solicitud de evaluación con las decisiones actuales y todo lo que la persona ya le respondió a Bob. */
+  const buildRequest = (fresh: { question: string; answer: string }[]): AssessRequest => {
+    const byQuestion = new Map([...history, ...fresh].map((item) => [item.question, item]));
+    return {
       mode: draft.mode,
       mappings: draft.mode === "chosen" ? Object.entries(draft.mappings).map(([from_id, to_id]) => ({ from_id, to_id })) : [],
       business_context: draft.business_context.trim(),
       priorities: draft.priorities,
+      answers: [...byQuestion.values()].slice(-10),
     };
-    void run(() => api.studioAssess(jobId, request, token));
+  };
+
+  const assess = () => void run(() => api.studioAssess(jobId, buildRequest([]), token));
+
+  const reassess = () => {
+    const fresh = Object.entries(qa)
+      .map(([question, answer]) => ({ question, answer: answer.trim() }))
+      .filter((item) => item.answer.length > 0);
+    setQa({});
+    void run(() => api.studioAssess(jobId, buildRequest(fresh), token));
   };
 
   const download = useCallback(async (name: "modernized.zip" | "migration.diff") => {
@@ -184,6 +200,12 @@ export function StudioView() {
             busy={busy || phase === "planning"}
             onPlan={() => void run(() => api.studioPlan(jobId, token))}
             onOpenFile={openFile}
+            answers={qa}
+            onAnswer={(question, answer) => setQa((current) => ({ ...current, [question]: answer }))}
+            history={history}
+            onReassess={reassess}
+            reassessBusy={busy || phase === "assessing"}
+            hasToken={!!token}
           />
         </Section>
       )}
