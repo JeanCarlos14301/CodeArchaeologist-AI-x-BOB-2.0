@@ -4,97 +4,60 @@ Este documento registra las sesiones de invocación de IBM Bob Shell (`bob run`)
 
 ## Registro de Sesiones
 
-| Fecha | Integrante | Modo / Agente | Tarea | Resultado |
-|---|---|---|---|---|
-| 2026-09-24 19:30 | Felipe | `evidence-auditor` | F-01 / F-02: Calibración de prompt defense y extracción schema v1 | Validado: cero alucinaciones en repo demo |
-| 2026-09-24 20:15 | Felipe | `migration-architect` | F-04: Formulación de 3 cortes Strangler Fig en Flask demo | Opciones calculadas con estimación PERT y blast radius |
-| 2026-09-24 20:50 | Felipe | `contract-keeper` | F-05: Generación de suite pytest de caracterización para `/invoices/{id}` | 100% verde en legacy endpoint |
-| 2026-09-24 21:20 | Felipe | `polyglot-architect` | F-10: Mapeo de conceptos FastAPI → NestJS y contratos OpenAPI | Matriz de traducción Zod/class-validator completada |
-| 2026-09-24 21:40 | Felipe | `blast-radius-guard` | F-11: diseño de simulación sobre un archivo hipotético `db_pool.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no se presenta como resultado medido. |
-| 2026-09-24 21:55 | Felipe | `code-skeptic` | F-12: Debate adversarial contra propuesta de migración FastAPI | 3 vulnerabilidades de concurrencia y rollback detectadas |
-| 2026-09-24 22:15 | Felipe | `git-archaeologist` | F-13: diseño de minería sobre un archivo hipotético `legacy_db.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no hay artefacto que respalde una cifra de churn. |
-| 2026-09-25 13:20 | Felipe | `ask`, `evidence-auditor` | F-01 / F-02: instalación de Bob Shell 2.0.5 y prueba de humo con API key vía `BobAdapter` | `status: success`, ~0.046 bobcoins por llamada; modo personalizado cargado desde `.bob/custom_modes.yaml` |
-| 2026-09-25 13:50 | Felipe | `evidence-auditor` | F-03: etapas 2-3 sobre FacturaYa (`python -m app.pipeline.run_audit`) | 13 hallazgos, 16/16 evidencias válidas tras el validador; 6/6 hallazgos esperados detectados y 0 sobre el control EF-7; 0,57 bobcoins, 87 s |
-| 2026-09-25 13:45 | Felipe | `evidence-auditor` + subagentes | Integración de `.bob/agents` y `.bob/skills`: auditoría live con delegación | Delegó en `legacy-sql-auditor`, `legacy-security-scanner` y `legacy-dependency-tracer` (log de Bob); 12/12 hallazgos y 18/18 evidencias válidas; 1,13 bobcoins, 189 s |
-| 2026-09-25 15:22 | Jean | `evidence-auditor` (live, primera corrida desde un checkout limpio, tras instalar Bob Shell 2.0.5 + Node 24) | Auditoría real de `facturaya-v1` desde la interfaz | job `02833a24a7a7`: 13 hallazgos reportados, 12 validados, 16/17 evidencias válidas (94%), 1,14 bobcoins, 120 s. Contra `expected-findings.json`: 5/6 hallazgos esperados detectados y validados, 1 (`EF-3`, descuento duplicado) detectado por Bob pero rechazado por el validador (evidencia de `reports.py` no calzó), 0 falsos positivos sobre el control `EF-7`. Detalle en `evaluation/README.md`. Artefactos completos (workspace copiado, `bob-result.json`, `dossier.json`) en `artifacts/jobs/02833a24a7a7/` (no versionado; queda en la máquina de Jean) |
-| 2026-09-26 00:09 | Felipe | `ask` (`--format stream-json`) | Prueba del formato de eventos en tiempo real sobre dos archivos | Emite `message`, `tool_use`, `tool_result` y `result`; 0,14 bobcoins |
-| 2026-09-26 00:09 | Felipe | `evidence-auditor` (`--resume`) | Diagnóstico del fallo de `upload:proyecto_ciber-main.zip` (job `2f944b585cdb`) | Bob agotó el tope de 5 bobcoins (sus 4 subagentes gastaron 3,89) sin entregar el JSON; «No files found» era su última búsqueda. Reanudar la sesión entregó el JSON por 0,17 bobcoins (15 hallazgos, 13 validados). No se publicó: el sandbox excluía `tests/` y Bob reportó «sin pruebas» en falso (corregido) |
-| 2026-09-26 00:18 | Felipe | `evidence-auditor` (live, stream) | Primera auditoría con actividad en vivo (job `6a3ed667018e`) | El servicio de inferencia cortó el stream (`read ETIMEDOUT`) a los 154 s. La sesión, localizada por su workspace, se reanudó y entregó un JSON válido (0,68 bobcoins en total). Motivó el rescate automático |
-| 2026-09-26 00:25 | Felipe | `evidence-auditor` + 4 subagentes (live, stream) | Grabación de la vitrina (job `0234884643c5`) | Delegó en paralelo en `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-security-scanner` y `legacy-dependency-tracer` (0,04–0,11 bobcoins cada uno); 12/12 hallazgos, 14/14 evidencias válidas, primer corte 3/3; 1,15 bobcoins, 165 s. Contra `expected-findings.json`: 5/6 (EF-3 detectado como F-7 pero citando las constantes, no el cálculo). Es la sesión que reproduce la vitrina |
-| 2026-09-26 00:30 | Felipe | `evidence-auditor` (live, stream) | Corrida con la regla «citar la línea donde ocurre el problema» (job `b7424d9733a6`) | Bob no delegó (leyó los 12 archivos); 10/10 hallazgos, 13/13 evidencias; 1,44 bobcoins, 126 s. 5/6: detectó EF-3 y no reportó EF-2 (variabilidad entre corridas) |
+Cada fila indica su respaldo. Sin `bob-result.json` o captura versionados, el resultado no es una medición.
+
+| Fecha | Integrante | Modo / Agente | Tarea | Resultado | Respaldo |
+|---|---|---|---|---|---|
+| 2026-09-24 19:30 | Felipe | `evidence-auditor` | F-01 / F-02: Calibración de prompt defense y extracción schema v1 | Afirmación sin verificar; no debe citarse como resultado medido. Original: Validado: cero alucinaciones en repo demo | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-24 20:15 | Felipe | `migration-architect` | F-04: Formulación de 3 cortes Strangler Fig en Flask demo | Afirmación sin verificar; no debe citarse como resultado medido. Original: Opciones calculadas con estimación PERT y blast radius | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-24 20:50 | Felipe | `contract-keeper` | F-05: Generación de suite pytest de caracterización para `/invoices/{id}` | Afirmación sin verificar; no debe citarse como resultado medido. Original: 100% verde en legacy endpoint | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-24 21:20 | Felipe | `polyglot-architect` | F-10: Mapeo de conceptos FastAPI → NestJS y contratos OpenAPI | Afirmación sin verificar; no debe citarse como resultado medido. Original: Matriz de traducción Zod/class-validator completada | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-24 21:40 | Felipe | `blast-radius-guard` | F-11: diseño de simulación sobre un archivo hipotético `db_pool.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no se presenta como resultado medido. | Ninguno: diseño, no ejecutado |
+| 2026-09-24 21:55 | Felipe | `code-skeptic` | F-12: Debate adversarial contra propuesta de migración FastAPI | Afirmación sin verificar; no debe citarse como resultado medido. Original: 3 vulnerabilidades de concurrencia y rollback detectadas | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-24 22:15 | Felipe | `git-archaeologist` | F-13: diseño de minería sobre un archivo hipotético `legacy_db.py` | **Diseño, no ejecutado.** El archivo no existe en FacturaYa y no hay artefacto que respalde una cifra de churn. | Ninguno: diseño, no ejecutado |
+| 2026-09-25 13:20 | Felipe | `ask`, `evidence-auditor` | F-01 / F-02: instalación de Bob Shell 2.0.5 y prueba de humo con API key vía `BobAdapter` | Afirmación sin verificar; no debe citarse como resultado medido. Original: `status: success`, ~0.046 bobcoins por llamada; modo personalizado cargado desde `.bob/custom_modes.yaml` | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-25 13:45 | Felipe | `evidence-auditor` + subagentes | Integración de `.bob/agents` y `.bob/skills`: auditoría live con delegación | Afirmación sin verificar; no debe citarse como resultado medido. Original: Delegó en `legacy-sql-auditor`, `legacy-security-scanner` y `legacy-dependency-tracer` (log de Bob); 12/12 hallazgos y 18/18 evidencias válidas; 1,13 bobcoins, 189 s | Sin artefacto verificable: no hay `bob-result.json` ni captura versionados |
+| 2026-09-25 13:50 | Felipe | `evidence-auditor` | F-03: etapas 2-3 sobre FacturaYa (`python -m app.pipeline.run_audit`) | 13 hallazgos, 16/16 evidencias válidas tras el validador; 6/6 hallazgos esperados detectados y 0 sobre el control EF-7; 0,57 bobcoins, 87 s | `contracts/fixtures/bob-evidence-auditor-facturaya.json` (respuesta cruda de Bob). Reproducible: `python evaluation/score.py` sobre el dossier que sale de importarla da 6/6, 0 falsos positivos |
+| 2026-09-25 15:22 | Jean | `evidence-auditor` (live, primera corrida desde un checkout limpio, tras instalar Bob Shell 2.0.5 + Node 24) | Auditoría real de `facturaya-v1` desde la interfaz | job `02833a24a7a7`: 13 hallazgos reportados, 12 validados, 16/17 evidencias válidas (94%), 1,14 bobcoins, 120 s. Contra `expected-findings.json`: 5/6 hallazgos esperados detectados y validados, 1 (`EF-3`, descuento duplicado) detectado por Bob pero rechazado por el validador (evidencia de `reports.py` no calzó), 0 falsos positivos sobre el control `EF-7`. Detalle en `evaluation/README.md`. Artefactos completos (workspace copiado, `bob-result.json`, `dossier.json`) en `artifacts/jobs/02833a24a7a7/` (no versionado; queda en la máquina de Jean) | Artefactos locales, no versionados (`artifacts/jobs/`) |
+| 2026-09-26 00:09 | Felipe | `ask` (`--format stream-json`) | Prueba del formato de eventos en tiempo real sobre dos archivos | Emite `message`, `tool_use`, `tool_result` y `result`; 0,14 bobcoins | Artefactos locales, no versionados (`artifacts/jobs/`) |
+| 2026-09-26 00:09 | Felipe | `evidence-auditor` (`--resume`) | Diagnóstico del fallo de `upload:proyecto_ciber-main.zip` (job `2f944b585cdb`) | Bob agotó el tope de 5 bobcoins (sus 4 subagentes gastaron 3,89) sin entregar el JSON; «No files found» era su última búsqueda. Reanudar la sesión entregó el JSON por 0,17 bobcoins (15 hallazgos, 13 validados). No se publicó: el sandbox excluía `tests/` y Bob reportó «sin pruebas» en falso (corregido) | Artefactos locales, no versionados (`artifacts/jobs/`) |
+| 2026-09-26 00:18 | Felipe | `evidence-auditor` (live, stream) | Primera auditoría con actividad en vivo (job `6a3ed667018e`) | El servicio de inferencia cortó el stream (`read ETIMEDOUT`) a los 154 s. La sesión, localizada por su workspace, se reanudó y entregó un JSON válido (0,68 bobcoins en total). Motivó el rescate automático | Artefactos locales, no versionados (`artifacts/jobs/`) |
+| 2026-09-26 00:25 | Felipe | `evidence-auditor` + 4 subagentes (live, stream) | Grabación de la vitrina (job `0234884643c5`) | Delegó en paralelo en `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-security-scanner` y `legacy-dependency-tracer` (0,04–0,11 bobcoins cada uno); 12/12 hallazgos, 14/14 evidencias válidas, primer corte 3/3; 1,15 bobcoins, 165 s. Contra `expected-findings.json`: 5/6 (EF-3 detectado como F-7 pero citando las constantes, no el cálculo). Es la sesión que reproduce la vitrina | Artefactos locales, no versionados (`artifacts/jobs/`) |
+| 2026-09-26 00:30 | Felipe | `evidence-auditor` (live, stream) | Corrida con la regla «citar la línea donde ocurre el problema» (job `b7424d9733a6`) | Bob no delegó (leyó los 12 archivos); 10/10 hallazgos, 13/13 evidencias; 1,44 bobcoins, 126 s. 5/6: detectó EF-3 y no reportó EF-2 (variabilidad entre corridas) | Artefactos locales, no versionados (`artifacts/jobs/`) |
+
+### Medición contra la verdad de referencia
+`python evaluation/score.py <dossier.json>` aplica una única regla: un esperado es acierto si un hallazgo **validado** solapa sus líneas
+en el mismo archivo; los rechazados no cuentan. Con la única corrida versionada (13:50 del 25/09) da 6/6. Los **5/6** que citan
+las corridas de Jean (`02833a24a7a7`) y de Felipe (`b7424d9733a6`, `0234884643c5`) **no se pueden reproducir** con datos del repo: sus
+`dossier.json` no están versionados. Para respaldarlos hay que subir esos expedientes (sin credenciales) a `contracts/fixtures/`.
 
 ## Modos Personalizados Registrados (`.bob/custom_modes.yaml`)
 
-| Slug | Nombre | Permisos | Objetivo |
-|---|---|---|---|
-| `evidence-auditor` | Evidence Auditor | `read` | Inspección forense con evidencia de archivo y línea (schema v1). |
-| `migration-architect` | Migration Architect | `read` | Selección del primer corte y 3 opciones de migración Strangler Fig. |
-| `contract-keeper` | Contract Keeper | `read, edit` | Creación de pruebas de caracterización golden-master con pytest. |
-| `strangler-surgeon` | Strangler Surgeon | `read, edit, command` | Implementación del nuevo corte moderno bajo `modern/` detrás de fachada. |
-| `board-narrator` | Board Narrator | `read` | Redacción del memo ejecutivo para la junta sin inventar cifras. |
-| `polyglot-architect` | Polyglot Architect | `read` | Mapeo de tipos y patrones cruzados (FastAPI ↔ NestJS ↔ Spring Boot). |
-| `blast-radius-guard` | Blast Radius Guard | `read` | Simulación estática pre-PR de radio de explosión y fallas en cascada. |
-| `code-skeptic` | Code Skeptic | `read` | Tribunal adversarial para estresar y validar propuestas técnicas. |
-| `git-archaeologist` | Git Archaeologist | `read, command` | Minería forense de repositorios git con PyDriller. |
+Solo `evidence-auditor` se invoca desde el código (`backend/app/pipeline/evidence_audit.py`); el resto está definido pero **no conectado a ningún flujo**.
 
-## Invocación Segura desde Python (Subprocess)
+| Slug | Nombre | Permisos | Objetivo | Conectado al pipeline |
+|---|---|---|---|---|
+| `evidence-auditor` | Evidence Auditor | `read` | Inspección forense con evidencia de archivo y línea (schema v1). | Sí |
+| `migration-architect` | Migration Architect | `read` | Selección del primer corte y 3 opciones de migración Strangler Fig. | No |
+| `contract-keeper` | Contract Keeper | `read, edit` | Creación de pruebas de caracterización golden-master con pytest. | No |
+| `strangler-surgeon` | Strangler Surgeon | `read, edit, command` | Implementación del nuevo corte moderno bajo `modern/` detrás de fachada. | No |
+| `board-narrator` | Board Narrator | `read` | Redacción del memo ejecutivo para la junta sin inventar cifras. | No |
+| `polyglot-architect` | Polyglot Architect | `read` | Mapeo de tipos y patrones cruzados (FastAPI ↔ NestJS ↔ Spring Boot). | No |
+| `blast-radius-guard` | Blast Radius Guard | `read` | Simulación estática pre-PR de radio de explosión y fallas en cascada. | No |
+| `code-skeptic` | Code Skeptic | `read` | Tribunal adversarial para estresar y validar propuestas técnicas. | No |
+| `git-archaeologist` | Git Archaeologist | `read, command` | Minería forense de repositorios git con PyDriller. | No |
 
-De acuerdo con las reglas de `AGENTS.md`, la invocación de Bob se realiza de forma estrictamente determinista mediante lista de argumentos, sin `shell=True`:
+## Invocación desde Python
 
-```python
-import subprocess
-from typing import Dict, Any
+`BobAdapter.run` (`backend/app/adapters/bob_adapter.py`) ejecuta `bob run --format json --mode <modo> --workspace <ruta> --max-turns N --max-cost N --trust`
+con una **lista de argumentos, sin `shell=True`**, y entrega el prompt por **stdin**; el texto del repositorio nunca entra en la línea de comandos.
 
-def run_bob_mode(mode: str, input_context_file: str, output_file: str) -> subprocess.CompletedProcess:
-    """
-    Invoca a IBM Bob en un modo específico pasando contexto seguro.
-    Nunca se concatena texto de usuario directamente en la terminal.
-    """
-    cmd = [
-        "bob",
-        "run",
-        "--mode", mode,
-        "--context", input_context_file,
-        "--output", output_file,
-        "--non-interactive"
-    ]
-    return subprocess.run(cmd, capture_output=True, text=True, check=True)
-```
+## Patrones de orquestación (diseño, no ejecutados)
 
-## Patrones de Orquestación Multi-Agente
+Ninguno de estos flujos está implementado ni medido. Se conservan como propuesta.
 
-### 1. Tribunal Adversarial (Dialéctica de 4 Rondas)
-```
-Proponente: migration-architect / polyglot-architect
-        │
-        ▼ (Ronda 1: Propuesta técnica con supuestos y tests)
-Fiscal Adversarial: code-skeptic
-        │
-        ▼ (Ronda 2: Objeciones por concurrencia, leaks y rollback)
-Proponente: Rebuttal con pruebas formales y modificaciones
-        │
-        ▼ (Ronda 3: Defensa y concesiones)
-Tribunal: Veredicto vinculante (UNANIMOUS_PASS / CONDITIONAL / BLOCK)
-```
-
-### 2. Puerta Shift-Left Pre-PR (diseño no ejecutado)
-
-Este diagrama conserva una propuesta de diseño. No corresponde a una capacidad activa ni a una medición de FacturaYa.
-```
-Desarrollador / Agente genera cambio
-        │
-        ▼
-blast-radius-simulator:
-  1. Extrae símbolos tocados en el AST
-  2. Traza grafo transitivo de llamadas
-  3. Evalúa impacto en base de datos
-  4. Calcula Composite Blast Radius Score (CBRS)
-        │
-        ├─ CBRS < 25  ──► GREEN (Aprobación estándar)
-        ├─ 25 <= CBRS < 60 ──► YELLOW (Requiere tests adicionales)
-        └─ CBRS >= 60 ──► RED (BLOQUEO preventivo automático)
-```
-
+- **Tribunal adversarial** (`migration-architect` propone, `code-skeptic` objeta, veredicto en 4 rondas).
+- **Puerta shift-left pre-PR** (`blast-radius-guard` con un puntaje compuesto de radio de explosión). El puntaje CBRS que aparecía aquí no existe en el producto: el riesgo real es `risk_matrix` (`backend/app/pipeline/decision_metrics.py`).
 
 ## Instalación y ejecución de Bob Shell
 

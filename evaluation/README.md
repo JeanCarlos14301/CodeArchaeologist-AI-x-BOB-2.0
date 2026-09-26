@@ -38,9 +38,21 @@ esa lista es un mínimo curado, no exhaustivo — no se cuentan como falsos posi
 manual, pero valdría la pena que alguien del equipo los revise para decidir si se agregan a la
 verdad de referencia.
 
+## Medición automática
+
+```bash
+python evaluation/score.py <dossier.json>      # exit 0 solo si acierta todos y no hay falsos positivos
+```
+
+Regla única: un esperado es acierto si un hallazgo **validado** solapa sus líneas en el mismo archivo; los rechazados no cuentan
+(`evaluation/score.py`, con pruebas en `backend/tests/test_score.py`).
+
+Con la respuesta real grabada de Bob (`contracts/fixtures/bob-evidence-auditor-facturaya.json`) y el validador sobre `samples/facturaya-v1`
+da **6/6 y 0 falsos positivos**. Los **5/6** de la tabla anterior (job `02833a24a7a7`) siguen sin poder reproducirse: su `dossier.json` no está
+versionado. Súbelo (sin credenciales) a `contracts/fixtures/` y `score.py` lo confirmará.
+
 ## TODO
-- [ ] Automatizar esta comparación (script que lea un `dossier.json` + `expected-findings.json` y
-  calcule precisión/recall por rango de líneas, no a mano) — F-07.
+- [ ] Versionar el `dossier.json` de la corrida `02833a24a7a7` para reproducir el 5/6.
 - [ ] Revisar por qué el segundo fragmento de `F-5` no calzó en `reports.py` (¿tolerancia de línea,
   o el snippet de Bob no es literal?) y decidir si vale la pena ajustar `LINE_TOLERANCE` o pedirle
   a Bob una sola línea representativa por evidencia en vez de fragmentos con `...`.
