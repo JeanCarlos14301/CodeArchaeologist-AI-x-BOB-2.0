@@ -9,12 +9,15 @@ import json
 import logging
 import re
 import threading
+import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError
 
 from app.adapters.bob_adapter import BobAdapter, BobError, BobResult, BobRunSettings, BobTimeoutError
+from app.pipeline.activity import BobActivity, redact_paths
 from app.validators.evidence import resolve_inside
 
 logger = logging.getLogger(__name__)
@@ -30,6 +33,13 @@ ContextKind = Literal["project", "finding", "file", "function", "module"]
 
 # Una sola pregunta a la vez en todo el servidor: acota el gasto de bobcoins.
 _ASK_LOCK = threading.Lock()
+
+# Lo que Bob hace mientras responde (lecturas, búsquedas, skills...), por pregunta, para verlo en vivo.
+MAX_PROGRESS_STEPS = 80
+MAX_TRACKED_QUESTIONS = 32
+REQUEST_ID_PATTERN = r"^[A-Za-z0-9_-]{8,64}$"
+_PROGRESS_LOCK = threading.Lock()
+_PROGRESS: "OrderedDict[str, list[AskStep]]" = OrderedDict()
 
 
 class AssistantBusyError(RuntimeError):
@@ -54,6 +64,19 @@ class AskContext(BaseModel):
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=800)
     context: AskContext = Field(default_factory=AskContext)
+    # Lo genera el navegador para seguir en vivo lo que hace Bob con esta pregunta.
+    request_id: str | None = Field(default=None, pattern=REQUEST_ID_PATTERN)
+
+
+class AskStep(BaseModel):
+    """Una acción real de Bob mientras responde (del stream de Bob, sin contenido de archivos)."""
+
+    seq: int
+    t: float
+    kind: str
+    message: str
+    detail: str | None = None
+    data: dict[str, str | int | float | None] = Field(default_factory=dict)
 
 
 class CodeRef(BaseModel):
@@ -77,6 +100,7 @@ class AskAnswer(BaseModel):
     structured: bool = True
     bob_cost: float | None = None
     bob_duration_ms: int | None = None
+    activity: list[AskStep] = Field(default_factory=list)
 
 
 class AskRunner(Protocol):
@@ -180,6 +204,38 @@ def parse_answer(result: BobResult, workspace: Path) -> AskAnswer:
                      structured=False, **stats)
 
 
+class _ProgressLog:
+    """Recibe los eventos de BobActivity (misma interfaz que EventLog) y los guarda para una pregunta."""
+
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+        self._started = time.monotonic()
+        self._seq = 0
+        with _PROGRESS_LOCK:
+            _PROGRESS[request_id] = []
+            while len(_PROGRESS) > MAX_TRACKED_QUESTIONS:
+                _PROGRESS.popitem(last=False)
+
+    def emit(self, stage: str, kind: str, actor: str, title: str, detail: str | None = None,
+             data: dict | None = None, t: float | None = None, recorded: bool = False) -> None:
+        flat = {key: value for key, value in (data or {}).items() if isinstance(value, (str, int, float)) or value is None}
+        with _PROGRESS_LOCK:
+            steps = _PROGRESS.get(self.request_id)
+            if steps is None or len(steps) >= MAX_PROGRESS_STEPS:
+                return
+            self._seq += 1
+            steps.append(AskStep(
+                seq=self._seq, t=round(time.monotonic() - self._started, 1), kind=kind,
+                message=redact_paths(title)[:200], detail=redact_paths(detail)[:300] if detail else None, data=flat,
+            ))
+
+
+def ask_progress(request_id: str, after: int = 0) -> list[AskStep]:
+    """Pasos de Bob en una pregunta con `seq > after` (vacío si no existe o ya se descartó)."""
+    with _PROGRESS_LOCK:
+        return [step for step in _PROGRESS.get(request_id, []) if step.seq > after]
+
+
 def ask_settings() -> BobRunSettings:
     base = BobRunSettings.from_env()
     return base.model_copy(update={
@@ -197,8 +253,14 @@ def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = Non
         raise AssistantBusyError("Bob ya está respondiendo otra pregunta; espera a que termine.")
     try:
         bob = runner or BobAdapter(workspace, ask_settings())
+        progress = _ProgressLog(request.request_id) if request.request_id else None
         try:
-            result = bob.run(ASK_MODE, build_prompt(request))
+            if progress is not None and hasattr(bob, "run_stream"):
+                # stream-json: cada lectura, búsqueda o skill de Bob se ve en el chat mientras ocurre.
+                sink = BobActivity(progress, workspace, actor="bob").feed  # type: ignore[arg-type]
+                result = bob.run_stream(ASK_MODE, build_prompt(request), sink)  # type: ignore[attr-defined]
+            else:
+                result = bob.run(ASK_MODE, build_prompt(request))
         except BobTimeoutError as exc:
             logger.warning("Pregunta a Bob agotó el tiempo: %s", exc)
             raise AssistantError(f"Bob superó el tiempo máximo de {ASK_TIMEOUT_S} s. Prueba con una pregunta más acotada.") from exc
@@ -206,6 +268,9 @@ def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = Non
             # El detalle (stderr de Bob) puede contener rutas o diagnósticos internos: solo al log.
             logger.warning("Pregunta a Bob falló: %s", exc)
             raise AssistantError("Bob no pudo responder a esta pregunta. Inténtalo de nuevo o reformúlala.") from exc
-        return parse_answer(result, workspace)
+        answer = parse_answer(result, workspace)
+        if progress is None:
+            return answer
+        return answer.model_copy(update={"activity": ask_progress(progress.request_id)})
     finally:
         _ASK_LOCK.release()

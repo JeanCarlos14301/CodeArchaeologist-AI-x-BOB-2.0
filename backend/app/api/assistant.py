@@ -6,10 +6,20 @@ y el mismo control de acceso que el resto de lecturas del job.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, status
+from pydantic import BaseModel
 
 from app.api.access import require_job_access, require_upload_token
-from app.jobs.assistant import AskAnswer, AskRequest, AssistantBusyError, AssistantError, ask_bob
+from app.jobs.assistant import (
+    REQUEST_ID_PATTERN,
+    AskAnswer,
+    AskRequest,
+    AskStep,
+    AssistantBusyError,
+    AssistantError,
+    ask_bob,
+    ask_progress,
+)
 from app.jobs.service import AuditService, NotFoundError
 
 router = APIRouter(prefix="/api/audits", tags=["assistant"])
@@ -47,3 +57,24 @@ def ask_about_audit(
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(exc)) from exc
     except AssistantError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+
+
+class AskProgressPage(BaseModel):
+    steps: list[AskStep]
+
+
+@router.get("/{job_id}/ask/{request_id}/progress", response_model=AskProgressPage)
+def ask_progress_page(
+    job_id: str,
+    service: Service,
+    request_id: Annotated[str, Path(pattern=REQUEST_ID_PATTERN)],
+    after: Annotated[int, Query(ge=0)] = 0,
+    x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+) -> AskProgressPage:
+    """Lo que Bob está haciendo para responder una pregunta (se sondea mientras responde)."""
+    require_upload_token(x_live_token)
+    try:
+        require_job_access(service.get_job(job_id), x_live_token)
+    except NotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    return AskProgressPage(steps=ask_progress(request_id, after))

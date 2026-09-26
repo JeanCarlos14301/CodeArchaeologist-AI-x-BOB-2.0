@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Download, Hammer } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { Eyebrow } from "../../ui/Layout";
-import { BobWork } from "./BobWork";
+import { BobWork } from "../BobWork";
 import { CodeViewer, toLines } from "../CodeViewer";
 import type { Implementation, MigrationPlan, StudioState } from "../../../types";
 
@@ -30,7 +30,7 @@ export function ImplementationPanel({ plan, state, busy, onImplement, onDownload
   return (
     <div>
       {!started && (
-        <div className="grid gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <div>
             <p className="text-body text-pretty text-fg">
               Bob ejecutará los {plan.steps.length} pasos en orden sobre una <strong className="font-medium">copia</strong> del proyecto y te devolverá un ZIP con el resultado y el diff completo.
@@ -43,7 +43,7 @@ export function ImplementationPanel({ plan, state, busy, onImplement, onDownload
           </div>
           <div className="flex flex-col justify-end gap-4">
             <label className="flex cursor-pointer items-start gap-3 text-body text-fg-2">
-              <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-[var(--ca-signal-orange)]" />
+              <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-accent" />
               <span>Entiendo que Bob va a escribir código nuevo y que debo revisarlo y probarlo yo.</span>
             </label>
             <div><Button variant="primary" disabled={!understood || busy} onClick={onImplement} icon={<Hammer size={14} aria-hidden />}>Implementar el plan con Bob</Button></div>
@@ -63,7 +63,7 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
   const events = state.events.filter((event) => event.phase === "implementing");
   const currentId = running ? events.filter((event) => event.step_id).slice(-1)[0]?.step_id ?? null : null;
   return (
-    <div className="grid gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" aria-live="polite">
+    <div className="grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" aria-live="polite">
       <div>
         <Eyebrow>Pasos</Eyebrow>
         <ol className="mt-2 divide-y divide-line-subtle border-y border-line-subtle">

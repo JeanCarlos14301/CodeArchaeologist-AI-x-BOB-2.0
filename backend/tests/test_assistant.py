@@ -160,3 +160,67 @@ def test_ask_endpoint_answers_with_verified_refs(client: TestClient, monkeypatch
 def test_ask_endpoint_unknown_job_is_404(client: TestClient) -> None:
     response = client.post("/api/audits/nope/ask", headers={"X-Live-Token": TOKEN}, json={"question": "¿Qué es?"})
     assert response.status_code == 404
+
+
+# --- Actividad de Bob en vivo mientras responde -----------------------------------------------
+
+class StreamingRunner(FakeRunner):
+    """Como Bob con stream-json: cuenta lo que hace mientras responde."""
+
+    def __init__(self, message: str, events: list[dict]) -> None:
+        super().__init__(message)
+        self.events = events
+
+    def run_stream(self, mode: str, prompt: str, on_event, settings=None, resume_task_id=None, raw_log=None) -> BobResult:  # noqa: ANN001
+        self.calls.append((mode, prompt))
+        for event in self.events:
+            on_event(event)
+        return BobResult(mode=mode, status="success", last_message=self.message,
+                         stats=BobStats(task_id="t", duration_ms=900, session_costs=0.1), execution_mode="live")
+
+
+def _tool(name: str, **parameters: str) -> dict:
+    return {"type": "tool_use", "tool_name": name, "tool_id": name, "parameters": parameters}
+
+
+def test_the_answer_carries_what_bob_did_to_reach_it(workspace: Path) -> None:
+    runner = StreamingRunner(json.dumps(STRUCTURED), [_tool("read_file", path="app.py"), _tool("search_files", regex="SELECT", path=".")])
+    answer = ask_bob(workspace, AskRequest(question="¿Hay SQL inseguro?", request_id="pregunta-0001"), runner=runner)
+    assert answer.structured and len(answer.activity) >= 2
+    assert any("app.py" in step.message for step in answer.activity)
+    assert [step.seq for step in assistant.ask_progress("pregunta-0001")] == [step.seq for step in answer.activity]
+    assert assistant.ask_progress("pregunta-0001", after=answer.activity[0].seq) == answer.activity[1:]
+
+
+def test_live_progress_never_exposes_server_paths(workspace: Path) -> None:
+    runner = StreamingRunner(json.dumps(STRUCTURED), [_tool("read_file", path=str(workspace / "app.py")), _tool("read_file", path="/etc/passwd")])
+    answer = ask_bob(workspace, AskRequest(question="¿Qué lee?", request_id="pregunta-0002"), runner=runner)
+    published = json.dumps([step.model_dump() for step in answer.activity], ensure_ascii=False)
+    assert "app.py" in published and "passwd" in published
+    assert str(workspace) not in published and "/etc/" not in published
+
+
+def test_without_request_id_bob_answers_as_before(workspace: Path) -> None:
+    answer = ask_bob(workspace, AskRequest(question="¿Qué es?"), runner=FakeRunner(json.dumps(STRUCTURED)))
+    assert answer.structured and answer.activity == []
+
+
+@pytest.mark.parametrize("request_id", ["corto", "con espacios 12345", "../../etc/passwd", "x" * 65])
+def test_request_id_is_validated(request_id: str) -> None:
+    with pytest.raises(ValueError):
+        AskRequest(question="¿Qué es?", request_id=request_id)
+
+
+def test_progress_endpoint_is_private_to_the_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    job_id = _done_job(client)
+    real_ask = assistant.ask_bob
+    runner = StreamingRunner(json.dumps(STRUCTURED), [_tool("read_file", path="app.py")])
+    monkeypatch.setattr("app.api.assistant.ask_bob", lambda workspace, body: real_ask(workspace, body, runner=runner))
+    headers = {"X-Live-Token": TOKEN}
+    response = client.post(f"/api/audits/{job_id}/ask", headers=headers,
+                           json={"question": "¿Qué lee Bob?", "request_id": "pregunta-0003"})
+    assert response.status_code == 200 and response.json()["activity"]
+    progress = client.get(f"/api/audits/{job_id}/ask/pregunta-0003/progress", headers=headers)
+    assert progress.status_code == 200 and progress.json()["steps"][0]["message"]
+    assert client.get(f"/api/audits/{job_id}/ask/pregunta-0003/progress").status_code == 403
+    assert client.get(f"/api/audits/{job_id}/ask/no valido/progress", headers=headers).status_code == 422

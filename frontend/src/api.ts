@@ -1,4 +1,4 @@
-import type { ActivityPage, ArchitectureData, AssessRequest, StackReport, StudioState, AskAnswer, AskContext, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
+import type { ActivityPage, ArchitectureData, AssessRequest, StackReport, StudioState, AskAnswer, AskContext, AskStep, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -80,12 +80,15 @@ export const api = {
     return response.blob();
   },
   /** Pregunta contextual a IBM Bob (modo ask, solo lectura). Siempre exige token: gasta bobcoins. */
-  ask: (id: string, question: string, context: AskContext, token: string) =>
+  ask: (id: string, question: string, context: AskContext, token: string, requestId?: string) =>
     request<AskAnswer>(`/api/audits/${enc(id)}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Live-Token": token },
-      body: JSON.stringify({ question, context }),
+      body: JSON.stringify({ question, context, request_id: requestId }),
     }),
+  /** Lo que Bob está haciendo para responder (lecturas, búsquedas...). Se sondea mientras responde. */
+  askProgress: (id: string, requestId: string, after: number, token: string) =>
+    request<{ steps: AskStep[] }>(`/api/audits/${enc(id)}/ask/${enc(requestId)}/progress?after=${after}`, { headers: auth(token) }),
   download: async (id: string, name: "dossier.json" | "bob-result.json" | "board_memo.docx" | "migration.diff", token?: string) => {
     const response = await fetch(`/api/audits/${enc(id)}/files/${name}`, { headers: auth(token) });
     if (!response.ok) throw await readError(response);
