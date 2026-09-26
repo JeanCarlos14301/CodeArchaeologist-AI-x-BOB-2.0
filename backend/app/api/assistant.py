@@ -52,7 +52,7 @@ def ask_about_audit(
     if workspace is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "El código de este análisis no está disponible.")
     try:
-        return ask_bob(workspace, body)
+        return ask_bob(workspace, body, job_id=job_id)
     except AssistantBusyError as exc:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(exc)) from exc
     except AssistantError as exc:
@@ -77,4 +77,4 @@ def ask_progress_page(
         require_job_access(service.get_job(job_id), x_live_token)
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-    return AskProgressPage(steps=ask_progress(request_id, after))
+    return AskProgressPage(steps=ask_progress(job_id, request_id, after))

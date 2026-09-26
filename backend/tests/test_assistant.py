@@ -150,7 +150,7 @@ def test_ask_endpoint_answers_with_verified_refs(client: TestClient, monkeypatch
     payload = {"summary": "Concatena SQL.", "facts": [{"text": "Línea 78.", "refs": [{"path": "app.py", "line_start": 78, "line_end": 78}]}]}
     real_ask = assistant.ask_bob
     monkeypatch.setattr("app.api.assistant.ask_bob",
-                        lambda workspace, body: real_ask(workspace, body, runner=FakeRunner(json.dumps(payload))))
+                        lambda workspace, body, **kwargs: real_ask(workspace, body, runner=FakeRunner(json.dumps(payload)), **kwargs))
     response = client.post(f"/api/audits/{job_id}/ask", headers={"X-Live-Token": TOKEN},
                            json={"question": "¿Dónde está la inyección?", "context": {"kind": "finding", "finding_id": "F-1"}})
     assert response.status_code == 200, response.text
@@ -188,8 +188,8 @@ def test_the_answer_carries_what_bob_did_to_reach_it(workspace: Path) -> None:
     answer = ask_bob(workspace, AskRequest(question="¿Hay SQL inseguro?", request_id="pregunta-0001"), runner=runner)
     assert answer.structured and len(answer.activity) >= 2
     assert any("app.py" in step.message for step in answer.activity)
-    assert [step.seq for step in assistant.ask_progress("pregunta-0001")] == [step.seq for step in answer.activity]
-    assert assistant.ask_progress("pregunta-0001", after=answer.activity[0].seq) == answer.activity[1:]
+    assert [step.seq for step in assistant.ask_progress("", "pregunta-0001")] == [step.seq for step in answer.activity]
+    assert assistant.ask_progress("", "pregunta-0001", after=answer.activity[0].seq) == answer.activity[1:]
 
 
 def test_live_progress_never_exposes_server_paths(workspace: Path) -> None:
@@ -215,7 +215,7 @@ def test_progress_endpoint_is_private_to_the_token(client: TestClient, monkeypat
     job_id = _done_job(client)
     real_ask = assistant.ask_bob
     runner = StreamingRunner(json.dumps(STRUCTURED), [_tool("read_file", path="app.py")])
-    monkeypatch.setattr("app.api.assistant.ask_bob", lambda workspace, body: real_ask(workspace, body, runner=runner))
+    monkeypatch.setattr("app.api.assistant.ask_bob", lambda workspace, body, **kwargs: real_ask(workspace, body, runner=runner, **kwargs))
     headers = {"X-Live-Token": TOKEN}
     response = client.post(f"/api/audits/{job_id}/ask", headers=headers,
                            json={"question": "¿Qué lee Bob?", "request_id": "pregunta-0003"})
@@ -224,3 +224,10 @@ def test_progress_endpoint_is_private_to_the_token(client: TestClient, monkeypat
     assert progress.status_code == 200 and progress.json()["steps"][0]["message"]
     assert client.get(f"/api/audits/{job_id}/ask/pregunta-0003/progress").status_code == 403
     assert client.get(f"/api/audits/{job_id}/ask/no valido/progress", headers=headers).status_code == 422
+
+
+def test_progress_is_scoped_to_its_own_job(workspace: Path) -> None:
+    runner = StreamingRunner(json.dumps(STRUCTURED), [_tool("read_file", path="app.py")])
+    ask_bob(workspace, AskRequest(question="¿Qué lee?", request_id="pregunta-0004"), runner=runner, job_id="job-a")
+    assert assistant.ask_progress("job-a", "pregunta-0004"), "su propio análisis la ve"
+    assert assistant.ask_progress("job-b", "pregunta-0004") == [], "con el token de otro análisis no se ve"

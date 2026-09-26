@@ -38,10 +38,11 @@ export interface AskEntry {
 
 const ASK_PROGRESS_MS = 900;
 
-/** Identificador aleatorio de la pregunta para seguir su progreso (formato que acepta el backend). */
+/** Identificador aleatorio (criptográfico) de la pregunta para seguir su progreso; formato que acepta el backend. */
 function newRequestId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID().replace(/-/g, "");
-  return Array.from({ length: 24 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID().replace(/-/g, "");
+  // randomUUID solo existe en contextos seguros; getRandomValues, en todos.
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 interface WorkspaceValue {

@@ -470,7 +470,7 @@ def test_assistant_also_works_on_modernization_only_projects(tmp_path: Path, mon
 
     seen: dict[str, Path] = {}
     monkeypatch.setenv("LIVE_AUDIT_TOKEN", TOKEN)
-    def fake_ask(workspace: Path, body) -> assistant.AskAnswer:
+    def fake_ask(workspace: Path, body, **_kwargs) -> assistant.AskAnswer:
         seen["workspace"] = workspace
         return assistant.AskAnswer(summary="Respuesta de prueba sin Bob real.")
 

@@ -39,13 +39,16 @@ function CurrentView() {
   }
 }
 
-/** Remonta la vista al cambiar de análisis para que su estado local (pestañas, filtros) no se arrastre. */
+/**
+ * Remonta la vista al cambiar de análisis o de sección: su estado local (pestañas, filtros) no se arrastra
+ * y un error de una sección no bloquea las demás.
+ */
 function KeyedView() {
   const { route } = useWorkspace();
   return (
     <ViewBoundary key={`${route.jobId ?? "projects"}:${route.section}`}>
       <Suspense fallback={<div className="px-6 py-6 @3xl:px-10"><Loading label="Cargando la sección…" /></div>}>
-        <CurrentView key={route.jobId ?? "projects"} />
+        <CurrentView />
       </Suspense>
     </ViewBoundary>
   );

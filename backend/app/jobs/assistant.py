@@ -39,7 +39,8 @@ MAX_PROGRESS_STEPS = 80
 MAX_TRACKED_QUESTIONS = 32
 REQUEST_ID_PATTERN = r"^[A-Za-z0-9_-]{8,64}$"
 _PROGRESS_LOCK = threading.Lock()
-_PROGRESS: "OrderedDict[str, list[AskStep]]" = OrderedDict()
+# Clave (job_id, request_id): el progreso de una pregunta solo se ve desde su propio análisis.
+_PROGRESS: "OrderedDict[tuple[str, str], list[AskStep]]" = OrderedDict()
 
 
 class AssistantBusyError(RuntimeError):
@@ -207,12 +208,12 @@ def parse_answer(result: BobResult, workspace: Path) -> AskAnswer:
 class _ProgressLog:
     """Recibe los eventos de BobActivity (misma interfaz que EventLog) y los guarda para una pregunta."""
 
-    def __init__(self, request_id: str) -> None:
-        self.request_id = request_id
+    def __init__(self, job_id: str, request_id: str) -> None:
+        self.key = (job_id, request_id)
         self._started = time.monotonic()
         self._seq = 0
         with _PROGRESS_LOCK:
-            _PROGRESS[request_id] = []
+            _PROGRESS[self.key] = []
             while len(_PROGRESS) > MAX_TRACKED_QUESTIONS:
                 _PROGRESS.popitem(last=False)
 
@@ -220,7 +221,7 @@ class _ProgressLog:
              data: dict | None = None, t: float | None = None, recorded: bool = False) -> None:
         flat = {key: value for key, value in (data or {}).items() if isinstance(value, (str, int, float)) or value is None}
         with _PROGRESS_LOCK:
-            steps = _PROGRESS.get(self.request_id)
+            steps = _PROGRESS.get(self.key)
             if steps is None or len(steps) >= MAX_PROGRESS_STEPS:
                 return
             self._seq += 1
@@ -230,10 +231,10 @@ class _ProgressLog:
             ))
 
 
-def ask_progress(request_id: str, after: int = 0) -> list[AskStep]:
-    """Pasos de Bob en una pregunta con `seq > after` (vacío si no existe o ya se descartó)."""
+def ask_progress(job_id: str, request_id: str, after: int = 0) -> list[AskStep]:
+    """Pasos de Bob en una pregunta de ESTE análisis con `seq > after` (vacío si no existe o es de otro)."""
     with _PROGRESS_LOCK:
-        return [step for step in _PROGRESS.get(request_id, []) if step.seq > after]
+        return [step for step in _PROGRESS.get((job_id, request_id), []) if step.seq > after]
 
 
 def ask_settings() -> BobRunSettings:
@@ -247,13 +248,13 @@ def ask_settings() -> BobRunSettings:
     })
 
 
-def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = None) -> AskAnswer:
+def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = None, job_id: str = "") -> AskAnswer:
     """Hace una pregunta a Bob sobre el workspace. Una sola a la vez en el proceso."""
     if not _ASK_LOCK.acquire(blocking=False):
         raise AssistantBusyError("Bob ya está respondiendo otra pregunta; espera a que termine.")
     try:
         bob = runner or BobAdapter(workspace, ask_settings())
-        progress = _ProgressLog(request.request_id) if request.request_id else None
+        progress = _ProgressLog(job_id, request.request_id) if request.request_id else None
         try:
             if progress is not None and hasattr(bob, "run_stream"):
                 # stream-json: cada lectura, búsqueda o skill de Bob se ve en el chat mientras ocurre.
@@ -271,6 +272,6 @@ def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = Non
         answer = parse_answer(result, workspace)
         if progress is None:
             return answer
-        return answer.model_copy(update={"activity": ask_progress(progress.request_id)})
+        return answer.model_copy(update={"activity": ask_progress(*progress.key)})
     finally:
         _ASK_LOCK.release()
