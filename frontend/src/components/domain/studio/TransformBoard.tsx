@@ -61,10 +61,17 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
   const chosen = Object.entries(draft.mappings).filter(([from, to]) => from && to);
   const ready = draft.mode === "recommend" || chosen.length > 0;
   const picker = useRef<HTMLDivElement>(null);
+  // Disparador de cada fila ("Elegir destino" o el destino elegido): recibe el foco al cerrar el selector.
+  const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
+  const focusTrigger = (id: string) => requestAnimationFrame(() => triggers.current[id]?.focus());
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(null);
+      focusTrigger(open);
+    };
     window.addEventListener("keydown", onKey);
     picker.current?.querySelector<HTMLButtonElement>("button")?.focus();
     return () => window.removeEventListener("keydown", onKey);
@@ -77,6 +84,7 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
     else delete mappings[from];
     set({ mappings });
     setOpen(null);
+    focusTrigger(from);
   };
   const togglePriority = (id: Priority) => {
     const on = draft.priorities.includes(id);
@@ -99,7 +107,7 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
         </p>
       </div>
 
-      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4 border-b border-line-subtle pb-2 text-micro text-subtle tracking-eyebrow uppercase">
+      <div className="mt-5 hidden items-center gap-x-4 border-b border-line-subtle pb-2 text-micro text-subtle tracking-eyebrow uppercase @md:grid @md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <span>Actual</span><span className="hidden w-14 @xl:block" aria-hidden /><span>Objetivo</span>
       </div>
 
@@ -116,7 +124,7 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
             const evidence = tech.evidence.find((item) => item.path);
             return (
               <li key={tech.id} className="border-b border-line-subtle py-3">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4">
+                <div className="grid grid-cols-1 items-center gap-x-4 gap-y-2 @md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="text-fg"><TechIcon slug={tech.icon} name={tech.name} size={24} /></span>
                     <div className="min-w-0">
@@ -133,7 +141,8 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
                       <span className="text-caption text-subtle">Bob propondrá un destino si conviene.</span>
                     ) : target ? (
                       <>
-                        <button type="button" onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
+                        <button type="button" ref={(el) => { triggers.current[tech.id] = el; }} onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
+                          aria-label={`Destino de ${tech.name}: ${target.name}. Cambiar`}
                           className="inline-flex h-9 min-w-0 items-center gap-2.5 rounded-pill border border-line-strong bg-raised pr-4 pl-3 text-body text-fg transition-[border-color] duration-150 ease-out hover:border-fg/40">
                           <TechIcon slug={target.icon} name={target.name} size={18} />
                           <span className="truncate">{target.name}</span>
@@ -142,7 +151,8 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
                           className="inline-flex h-7 w-7 items-center justify-center rounded-pill text-subtle hover:bg-raised hover:text-fg"><X size={14} aria-hidden /></button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
+                      <button type="button" ref={(el) => { triggers.current[tech.id] = el; }} onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
+                        aria-label={`Elegir destino para ${tech.name}`}
                         className="inline-flex h-9 items-center gap-2 rounded-pill border border-dashed border-line-strong px-4 text-caption text-muted transition-[border-color,color] duration-150 ease-out hover:border-fg/40 hover:text-fg">
                         Elegir destino <ArrowRight size={13} aria-hidden />
                       </button>
@@ -180,7 +190,7 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
         </ul>
       )}
 
-      <div className="mt-6 grid gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <label className="block">
           <Eyebrow>Contexto de tu negocio</Eyebrow>
           <span className="mt-1 mb-1.5 block text-caption text-muted">Qué hace el sistema, quién lo usa y qué no puede fallar. Con esto Bob pesa seguridad frente a velocidad para TU caso.</span>
@@ -235,8 +245,9 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
           )}
           {resetsWork && <p className="mt-2 text-caption text-warning">Evaluar de nuevo descarta la evaluación, el plan y la implementación actuales.</p>}
         </div>
-        <Button variant="primary" disabled={!ready || busy || !token.trim()} onClick={onSubmit} icon={<ArrowRight size={14} aria-hidden />}>
-          {busy ? "Bob está evaluando…" : "Evaluar impacto con Bob"}
+        {/* Primaria solo antes de la primera evaluación: después la acción principal es la siguiente fase. */}
+        <Button variant={resetsWork ? "secondary" : "primary"} disabled={!ready || busy || !token.trim()} onClick={onSubmit} icon={<ArrowRight size={14} aria-hidden />}>
+          {busy ? "Bob está evaluando…" : resetsWork ? "Evaluar de nuevo con Bob" : "Evaluar impacto con Bob"}
         </Button>
       </div>
     </div>

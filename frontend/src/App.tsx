@@ -1,14 +1,20 @@
+import { lazy, Suspense } from "react";
 import { AppShell } from "./components/shell/AppShell";
+import { Loading } from "./components/ui/States";
+import { ViewBoundary } from "./components/ui/ViewBoundary";
 import { WorkspaceProvider, useWorkspace } from "./lib/workspace";
-import { ArchitectureView } from "./views/ArchitectureView";
-import { DependenciesView } from "./views/DependenciesView";
-import { ModernizationView } from "./views/ModernizationView";
 import { OverviewView } from "./views/OverviewView";
 import { ProjectsView } from "./views/ProjectsView";
-import { ReportsView } from "./views/ReportsView";
-import { RepositoryView } from "./views/RepositoryView";
-import { RisksView } from "./views/RisksView";
-import { SessionView } from "./views/SessionView";
+
+// Proyectos y Resumen van en el bundle inicial; el resto se descarga al abrir su sección
+// (el Estudio arrastra los iconos de tecnologías y la Arquitectura, los grafos).
+const SessionView = lazy(() => import("./views/SessionView").then((m) => ({ default: m.SessionView })));
+const ArchitectureView = lazy(() => import("./views/ArchitectureView").then((m) => ({ default: m.ArchitectureView })));
+const RepositoryView = lazy(() => import("./views/RepositoryView").then((m) => ({ default: m.RepositoryView })));
+const DependenciesView = lazy(() => import("./views/DependenciesView").then((m) => ({ default: m.DependenciesView })));
+const RisksView = lazy(() => import("./views/RisksView").then((m) => ({ default: m.RisksView })));
+const ModernizationView = lazy(() => import("./views/ModernizationView").then((m) => ({ default: m.ModernizationView })));
+const ReportsView = lazy(() => import("./views/ReportsView").then((m) => ({ default: m.ReportsView })));
 
 function CurrentView() {
   const { route } = useWorkspace();
@@ -36,7 +42,13 @@ function CurrentView() {
 /** Remonta la vista al cambiar de análisis para que su estado local (pestañas, filtros) no se arrastre. */
 function KeyedView() {
   const { route } = useWorkspace();
-  return <CurrentView key={route.jobId ?? "projects"} />;
+  return (
+    <ViewBoundary key={`${route.jobId ?? "projects"}:${route.section}`}>
+      <Suspense fallback={<div className="px-6 py-6 @3xl:px-10"><Loading label="Cargando la sección…" /></div>}>
+        <CurrentView key={route.jobId ?? "projects"} />
+      </Suspense>
+    </ViewBoundary>
+  );
 }
 
 export default function App() {

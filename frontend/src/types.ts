@@ -225,6 +225,17 @@ export interface Claim {
   refs: CodeRef[];
 }
 
+/** Una acción real de Bob mientras responde una pregunta (del stream de Bob, sin contenido de archivos). */
+export interface AskStep {
+  seq: number;
+  /** Segundos desde que Bob empezó a responder. */
+  t: number;
+  kind: string;
+  message: string;
+  detail: string | null;
+  data: Record<string, string | number | null>;
+}
+
 export interface AskAnswer {
   summary: string;
   facts: Claim[];
@@ -234,6 +245,8 @@ export interface AskAnswer {
   structured: boolean;
   bob_cost: number | null;
   bob_duration_ms: number | null;
+  /** Lo que Bob hizo para llegar a la respuesta. */
+  activity: AskStep[];
 }
 
 // --- Actividad del análisis (GET /api/audits/{id}/events) ----------------------------------

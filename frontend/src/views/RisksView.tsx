@@ -81,7 +81,7 @@ function Risks({ dossier }: { dossier: Dossier }) {
         </div>
       </div>
 
-      <div className="grid border-t border-line @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="grid grid-cols-1 border-t border-line @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="@3xl:min-h-0 @3xl:overflow-y-auto @3xl:border-r @3xl:border-line">
           {groups.length === 0 ? (
             <div className="p-6">

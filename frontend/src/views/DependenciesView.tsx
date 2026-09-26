@@ -52,7 +52,7 @@ function Dependencies() {
       </Section>
       <ModuleDependencies arch={arch} />
       <Section eyebrow="Datos" title="Capa de persistencia">
-        <div className="grid gap-x-12 gap-y-6 @3xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-12 gap-y-6 @3xl:grid-cols-2">
           <div>
             <p className="text-body text-muted">Tablas detectadas en scripts SQL</p>
             {arch.tables.length === 0 ? <p className="mt-2 text-body text-subtle">Ninguna.</p> : (

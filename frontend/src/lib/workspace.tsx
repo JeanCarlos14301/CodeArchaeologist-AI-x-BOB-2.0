@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError, api } from "../api";
-import type { ArchitectureData, AskAnswer, AskContext, BobStatus, Dossier, FlowJob, GraphData, MigrationViewData, PipelineEvent, SourceExcerpt } from "../types";
+import type { ArchitectureData, AskAnswer, AskContext, AskStep, BobStatus, Dossier, FlowJob, GraphData, MigrationViewData, PipelineEvent, SourceExcerpt } from "../types";
 import { isActive, jobToFlow } from "./flow";
 import { useHashRoute, type Route, type Section } from "./router";
 import { parseRequirements, type DeclaredPackage } from "./stack";
@@ -30,6 +30,18 @@ export interface AskEntry {
   status: "pending" | "done" | "error";
   answer?: AskAnswer;
   error?: string;
+  /** Lo que Bob va haciendo mientras responde (en vivo). */
+  progress: AskStep[];
+  /** Instante (s epoch) en que se envió la pregunta. */
+  startedAt: number;
+}
+
+const ASK_PROGRESS_MS = 900;
+
+/** Identificador aleatorio de la pregunta para seguir su progreso (formato que acepta el backend). */
+function newRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID().replace(/-/g, "");
+  return Array.from({ length: 24 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
 }
 
 interface WorkspaceValue {
@@ -299,14 +311,37 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const ask = useCallback(async (question: string, context: AskContext) => {
     if (!jobId) return;
     const id = ++askId.current;
-    setAskHistory((history) => [...history, { id, question, context, status: "pending" }]);
-    const settle = (patch: Partial<AskEntry>) =>
-      setAskHistory((history) => history.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+    const requestId = newRequestId();
+    setAskHistory((history) => [...history, { id, question, context, status: "pending", progress: [], startedAt: Date.now() / 1000 }]);
+    const update = (change: (entry: AskEntry) => AskEntry) =>
+      setAskHistory((history) => history.map((entry) => (entry.id === id ? change(entry) : entry)));
+
+    // Mientras Bob responde se muestra lo que hace de verdad (lecturas, búsquedas, skills).
+    let answered = false;
+    let after = 0;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const page = await api.askProgress(jobId, requestId, after, token);
+        if (!answered && page.steps.length > 0) {
+          after = page.steps[page.steps.length - 1].seq;
+          update((entry) => ({ ...entry, progress: [...entry.progress, ...page.steps] }));
+        }
+      } catch {
+        // El progreso es opcional: la respuesta llega igual por la petición principal.
+      }
+      if (!answered) timer = window.setTimeout(poll, ASK_PROGRESS_MS);
+    };
+    timer = window.setTimeout(poll, ASK_PROGRESS_MS);
     try {
-      const answer = await api.ask(jobId, question, context, token);
-      settle({ status: "done", answer });
+      const answer = await api.ask(jobId, question, context, token, requestId);
+      answered = true;
+      update((entry) => ({ ...entry, status: "done", answer, progress: answer.activity?.length ? answer.activity : entry.progress }));
     } catch (err) {
-      settle({ status: "error", error: (err as Error).message });
+      answered = true;
+      update((entry) => ({ ...entry, status: "error", error: (err as Error).message }));
+    } finally {
+      window.clearTimeout(timer);
     }
   }, [jobId, token]);
 

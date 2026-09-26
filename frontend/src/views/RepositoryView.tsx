@@ -93,7 +93,7 @@ function Repository({ dossier }: { dossier: Dossier }) {
   );
 
   return (
-    <div className="grid @2xl:h-full @2xl:min-h-0 @2xl:grid-cols-[240px_minmax(0,1fr)] @5xl:grid-cols-[240px_minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 @2xl:h-full @2xl:min-h-0 @2xl:grid-cols-[240px_minmax(0,1fr)] @5xl:grid-cols-[240px_minmax(0,1fr)_300px]">
       <h1 className="sr-only">Repositorio{path ? ` · ${path}` : ""}</h1>
       <div className="border-b border-line @2xl:min-h-0 @2xl:overflow-y-auto @2xl:border-r @2xl:border-b-0">
         <div className="flex h-10 items-center border-b border-line px-3">

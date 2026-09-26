@@ -63,7 +63,7 @@ function ModulesPanel({ arch, dossier }: { arch: ArchitectureData; dossier: Doss
   const inCycle = arch.circular_dependencies.some((cycle) => selected && cycle.includes(selected));
 
   return (
-    <div className="grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-5 @4xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0 space-y-3">
         <Legend />
         <ModuleMap data={arch} selected={selected} onSelect={(file) => go("architecture", { file: file ?? undefined })} />
@@ -129,7 +129,7 @@ function FunctionsPanel({ graph }: { graph: GraphData }) {
   const findingIds = [...new Set(graph.findings.filter((m) => m.status !== "rejected").map((m) => m.finding_id))];
 
   return (
-    <div className="grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-5 @4xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {(["findings", "impact"] as const).map((key) => (
@@ -227,7 +227,7 @@ function Legend() {
 function EntryPoints({ arch }: { arch: ArchitectureData }) {
   const { go } = useWorkspace();
   return (
-    <div className="grid gap-x-12 @4xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-x-12 @4xl:grid-cols-2">
       <Section eyebrow="Puntos de entrada" title={`Rutas HTTP · ${arch.routes.length}`}>
         {arch.routes.length === 0 ? <p className="text-body text-muted">No se detectaron rutas HTTP.</p> : (
           <table className="w-full text-left">

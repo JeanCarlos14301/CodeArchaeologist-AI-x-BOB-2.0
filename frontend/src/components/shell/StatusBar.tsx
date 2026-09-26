@@ -1,11 +1,18 @@
 import { isActive, statusLabel } from "../../lib/flow";
 import { useWorkspace } from "../../lib/workspace";
+import { visibleSteps } from "../domain/AskBob";
 import { StatusDot } from "../ui/Badge";
 
 /** Contexto y operaciones en segundo plano (PRODUCT.md §7): etapa, backend, Bob, trazabilidad. */
 export function StatusBar() {
-  const { flow, dossier, offline, bob, jobs } = useWorkspace();
+  const { flow, dossier, offline, bob, jobs, askHistory } = useWorkspace();
   const running = jobs.find((job) => isActive(job)) ?? (flow && isActive(flow) ? flow : null);
+  // Bob trabajando en una pregunta del chat: visible desde cualquier pantalla, con sus pasos reales.
+  const asking = askHistory.find((entry) => entry.status === "pending");
+  const steps = asking ? visibleSteps(asking.progress) : [];
+  const askLabel = asking
+    ? `Bob responde tu pregunta${steps.length ? ` · ${steps.length} ${steps.length === 1 ? "paso" : "pasos"} · ${steps[steps.length - 1].message}` : ""}`
+    : null;
 
   return (
     <footer className="relative flex h-7 min-w-0 shrink-0 items-center gap-4 overflow-hidden border-t border-line bg-canvas px-3 font-mono text-micro whitespace-nowrap text-subtle">
@@ -19,7 +26,8 @@ export function StatusBar() {
           <StatusDot tone="idle" label="Sin análisis en curso" />
         )}
       </span>
-      {dossier?.source_sha256 && <span className="hidden shrink-0 lg:inline" title={dossier.source_sha256}>sha256 {dossier.source_sha256.slice(0, 12)}</span>}
+      {askLabel && <span className="hidden min-w-0 max-w-2/5 shrink truncate sm:inline"><StatusDot tone="busy" label={askLabel} /></span>}
+      {dossier?.source_sha256 && !askLabel && <span className="hidden shrink-0 lg:inline" title={dossier.source_sha256}>sha256 {dossier.source_sha256.slice(0, 12)}</span>}
       <span className="ml-auto flex shrink-0 items-center gap-4">
         <StatusDot tone={offline ? "bad" : "ok"} label={offline ? "Backend sin conexión" : "Backend conectado"} />
         <span className="hidden sm:inline">

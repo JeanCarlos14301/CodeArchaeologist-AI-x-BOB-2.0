@@ -7,6 +7,8 @@ import { AskAnswerView, AskComposer } from "../domain/AskBob";
 import { IconButton } from "../ui/Button";
 import { Eyebrow } from "../ui/Layout";
 
+const BOTTOM_SLACK_PX = 96;
+
 const KIND_LABEL: Record<AskContext["kind"], string> = {
   project: "Proyecto",
   finding: "Hallazgo",
@@ -36,11 +38,23 @@ function suggestions(context: AskContext): string[] {
 
 export function AIPanel({ onClose }: { onClose: () => void }) {
   const { aiContext, askHistory, route, flow, bob, seedComposer } = useWorkspace();
-  const end = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const atBottom = useRef(true);
+  const asked = useRef(askHistory.length);
 
+  // Solo se sigue el final si la persona ya estaba abajo o acaba de preguntar: si sube a releer
+  // mientras Bob trabaja, la vista no le salta cuando llega la respuesta.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
+    const el = scroller.current;
+    const justAsked = askHistory.length > asked.current;
+    asked.current = askHistory.length;
+    if (el && (justAsked || atBottom.current)) el.scrollTo({ top: el.scrollHeight });
   }, [askHistory]);
+
+  const onScroll = () => {
+    const el = scroller.current;
+    if (el) atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_SLACK_PX;
+  };
 
   const disabledReason = !route.jobId
     ? "Abre un análisis para preguntar sobre su código."
@@ -61,7 +75,7 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
         </IconButton>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+      <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
         <section aria-label="Contexto actual" className="rounded-inner border border-line px-3 py-2.5">
           <Eyebrow>Contexto · {KIND_LABEL[aiContext.kind]}</Eyebrow>
           <p className="mt-1 text-body text-pretty text-fg">{aiContext.label ?? (route.jobId ? "Este repositorio" : "Ningún proyecto abierto")}</p>
@@ -99,7 +113,6 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
                 <AskAnswerView entry={entry} />
               </article>
             ))}
-            <div ref={end} />
           </section>
         )}
       </div>

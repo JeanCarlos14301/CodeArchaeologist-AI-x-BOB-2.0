@@ -74,7 +74,7 @@ export function ProjectsView() {
         </div>
       )}
 
-      <div className="mt-10 grid gap-x-12 gap-y-4 @5xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+      <div className="mt-10 grid grid-cols-1 gap-x-12 gap-y-4 @5xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
         <div>
           <Section eyebrow="01 · Conectar" title="Repositorio a analizar" className="pt-0">
             <Segmented<Source>
@@ -126,7 +126,7 @@ export function ProjectsView() {
                   {fileError && <p role="alert" className="mt-2 text-caption text-danger">{fileError}</p>}
                 </div>
 
-                <div className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_auto] @xl:items-end">
+                <div className="grid grid-cols-1 gap-3 @xl:grid-cols-[minmax(0,1fr)_auto] @xl:items-end">
                   <label className="block min-w-0">
                     <span className="mb-1.5 block text-caption text-muted">Token de acceso (obligatorio: cada análisis consume bobcoins)</span>
                     <input type="password" autoComplete="off" value={token} onChange={(event) => setTokenDraft(event.target.value)}

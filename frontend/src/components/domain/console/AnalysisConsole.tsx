@@ -107,7 +107,7 @@ export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
         {live ? <div className="spectrum-rail h-full w-full" /> : replay.playing ? <div className="h-full bg-fg-2" style={{ width: `${replay.progress * 100}%` }} /> : null}
       </div>
 
-      <div className="grid gap-6 @3xl:grid-cols-[17.5rem_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 @3xl:grid-cols-[17.5rem_minmax(0,1fr)]">
         <div className="space-y-4">
           <StageRail model={model} states={states} selected={selected} onSelect={selectStage} panelId="stage-panel" />
           {live && <p role="status" className="sr-only">Etapa en curso: {STAGE_INFO[followed].running}</p>}

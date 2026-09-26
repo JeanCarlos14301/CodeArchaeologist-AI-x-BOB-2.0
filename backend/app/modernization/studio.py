@@ -16,7 +16,7 @@ from pathlib import Path
 from app.adapters.bob_adapter import BobAdapter, BobRunSettings
 from app.modernization import planner
 from app.modernization.catalog import targets_for
-from app.modernization.implement import DIFF_NAME, ZIP_NAME, prepare_work, run_implementation
+from app.modernization.implement import DIFF_NAME, ZIP_NAME, prepare_work, run_implementation, snapshot
 from app.modernization.models import (
     AssessRequest,
     Mapping,
@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 STATE_FILE = "state.json"
 STACK_FILE = "stack.json"
 MAX_EVENTS = 200
+RUNNING_PHASES = frozenset({"assessing", "planning", "implementing"})
+INTERRUPTED_MESSAGE = "La operación se interrumpió porque el servidor se reinició. Vuelve a lanzarla."
 
 _IO_LOCK = threading.RLock()
 _BOB_LOCK = threading.Lock()  # una sola sesión de Bob de modernización a la vez en todo el servidor
@@ -228,12 +230,14 @@ class Studio:
         self._event("implementing", "Bob empieza a implementar el plan sobre una copia del proyecto.")
 
     def _begin(self, from_phases: set[str], to: Phase) -> None:
-        state = self.state()
-        if state.phase in {"assessing", "planning", "implementing"}:
-            raise StudioBusyError("Ya hay una operación con Bob en curso para este análisis.")
-        if state.phase not in from_phases:
-            raise StudioStateError(f"No se puede pasar de «{state.phase}» a «{to}».")
-        self._update(phase=to)
+        # Comprobar y cambiar de fase en un solo paso: un doble clic o un reintento no lanza dos sesiones.
+        with _IO_LOCK:
+            state = self.state()
+            if state.phase in RUNNING_PHASES:
+                raise StudioBusyError("Ya hay una operación con Bob en curso para este análisis.")
+            if state.phase not in from_phases:
+                raise StudioStateError(f"No se puede pasar de «{state.phase}» a «{to}».")
+            self._update(phase=to)
 
     # ------------------------------------------------------------ trabajo en segundo plano
     def _guard(self, fn: Callable[[], None]) -> None:
@@ -294,16 +298,38 @@ class Studio:
             mappings_text = json.dumps([m.model_dump() for m in mappings], ensure_ascii=False)
             # El adaptador apunta a la copia; run_implementation la prepara antes de la primera sesión.
             runner = self.adapter_factory(self.work, "surgeon")
+            original = snapshot(self.source)
             result = run_implementation(
                 runner, state.plan, mappings_text, self.source, self.dir,
                 root_name=f"{_slug(self.project_name)}-modernizado",
                 on_event=lambda message, step: self._event("implementing", message, step),
                 sink_for=lambda step: self._sink("implementing", "modernization-surgeon", step.id),
             )
+            if snapshot(self.source) != original:
+                # Bob solo puede escribir en la copia (fileRegex anclado); si aun así el original cambió, no se entrega.
+                raise PlannerError("Se detectaron cambios en el código original durante la implementación; se descartó el resultado.")
             self._event("implemented", f"Migración lista: {result.files_changed} archivos cambiados.")
             self._update(phase="implemented", implementation=result)
 
         self._guard(work)
+
+
+def recover_interrupted(jobs_dir: Path) -> int:
+    """Al arrancar, marca como fallidas las operaciones que un reinicio dejó a medias (si no, quedarían bloqueadas)."""
+    recovered = 0
+    for state_file in jobs_dir.glob(f"*/modernization/{STATE_FILE}"):
+        studio = Studio(state_file.parent.parent)
+        with _IO_LOCK:
+            state = studio.state()
+            if state.phase not in RUNNING_PHASES:
+                continue
+            state.phase = "failed"
+            state.error = INTERRUPTED_MESSAGE
+            studio._save(state)
+        recovered += 1
+    if recovered:
+        logger.warning("Se recuperaron %s operaciones de modernización interrumpidas por un reinicio", recovered)
+    return recovered
 
 
 def _slug(name: str) -> str:

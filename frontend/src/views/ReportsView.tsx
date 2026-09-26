@@ -45,7 +45,7 @@ function Reports({ dossier }: { dossier: Dossier }) {
       <Section>
         <ul className="divide-y divide-line border-y border-line">
           {available.map((file) => (
-            <li key={file.name} className="grid items-center gap-x-6 gap-y-2 py-4 @2xl:grid-cols-[4rem_minmax(0,1fr)_auto]">
+            <li key={file.name} className="grid grid-cols-1 items-center gap-x-6 gap-y-2 py-4 @2xl:grid-cols-[4rem_minmax(0,1fr)_auto]">
               <span className="w-fit rounded-tick border border-line-strong px-1.5 py-0.5 font-mono text-micro text-fg-2">{file.format}</span>
               <div className="min-w-0">
                 <p className="text-body text-fg">{file.label} <span className="text-caption text-subtle">· {file.audience}</span></p>

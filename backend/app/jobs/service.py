@@ -27,6 +27,7 @@ from app.modernization.studio import default_adapter
 from app.pipeline.ingestion import (
     MAX_FILES_COUNT,
     MAX_UNCOMPRESSED_BYTES,
+    MODERNIZE_MAX_FILES,
     MAX_ZIP_COMPRESSED_BYTES,
     IngestionSecurityError,
     validate_and_extract_zip,
@@ -55,6 +56,7 @@ IMPORTED_RECORDED_AT: dict[str, str] = {
 }
 EXAMPLE_DOSSIER = FIXTURES_DIR / "dossier-example.json"
 MAX_SOURCE_LINES = 400
+MAX_SOURCE_BYTES = 2_000_000
 # `bob --version` arranca el CLI de Node: ~0.4 s en local, ~15 s en la instancia de Render.
 BOB_VERSION_TIMEOUT_S = 45
 
@@ -68,14 +70,14 @@ STAGE_LABELS: dict[str, str] = {
 }
 
 
-def _emit_zip_checks(events: EventLog, data: bytes) -> None:
+def _emit_zip_checks(events: EventLog, data: bytes, max_files: int = MAX_FILES_COUNT) -> None:
     """Controles de seguridad que el ZIP acaba de superar (todos ya validados en ingestion.py)."""
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         members = archive.infolist()
     uncompressed = sum(member.file_size for member in members)
     checks = [
         ("Tamaño comprimido", f"{len(data) / 1024:.0f} KB", f"≤ {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB"),
-        ("Entradas en el ZIP", str(len(members)), f"≤ {MAX_FILES_COUNT}"),
+        ("Entradas en el ZIP", str(len(members)), f"≤ {max_files}"),
         ("Tamaño descomprimido", f"{uncompressed / 1024:.0f} KB", f"≤ {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB (anti zip-bomb)"),
         ("Rutas", "sin «..» ni absolutas", "anti ZipSlip"),
         ("Enlaces simbólicos", "ninguno", "rechazados"),
@@ -205,8 +207,8 @@ class AuditService:
         staging = self.job_dir(job.id) / "upload-src"
         try:
             events.emit("preparing", "stage.start", "pipeline", STAGE_LABELS["preparing"])
-            validate_and_extract_zip(data, staging)
-            _emit_zip_checks(events, data)
+            validate_and_extract_zip(data, staging, max_files=MODERNIZE_MAX_FILES)
+            _emit_zip_checks(events, data, max_files=MODERNIZE_MAX_FILES)
             self._keep_source(staging, job.id)
         except IngestionSecurityError as exc:
             logger.warning("Carga de modernización %s rechazada: %s", job.id, exc)
@@ -293,6 +295,9 @@ class AuditService:
         target = resolve_inside(root, relative)
         if target is None or not target.is_file() or ".bob" in target.relative_to(root).parts:
             raise NotFoundError(f"Archivo no disponible: {relative}")
+        if target.stat().st_size > MAX_SOURCE_BYTES:
+            # Un volcado o un bundle subido por error no se carga entero en memoria en cada petición.
+            raise NotFoundError(f"El archivo es demasiado grande para el visor (máx. {MAX_SOURCE_BYTES // 1_000_000} MB): {relative}")
         lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
         start = max(start, 1)
         end = min(max(end, start), len(lines), start + MAX_SOURCE_LINES - 1)

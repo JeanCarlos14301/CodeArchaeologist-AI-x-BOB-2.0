@@ -34,7 +34,7 @@ export function StackBoard({ stack }: { stack: StackReport }) {
 
   return (
     <div>
-      <div className="grid gap-x-10 gap-y-3 @3xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-3 @3xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
         <div>
           <Eyebrow>Arquitectura detectada</Eyebrow>
           <p className="mt-1 font-display text-title text-fg">{architecture.label}</p>
@@ -53,7 +53,7 @@ export function StackBoard({ stack }: { stack: StackReport }) {
           const items = stack.technologies.filter((tech) => tech.kind === kind);
           if (!items.length) return null;
           return (
-            <div key={kind} className="grid gap-x-6 gap-y-2 border-t border-line-subtle py-3 @2xl:grid-cols-[8.5rem_minmax(0,1fr)]">
+            <div key={kind} className="grid grid-cols-1 gap-x-6 gap-y-2 border-t border-line-subtle py-3 @2xl:grid-cols-[8.5rem_minmax(0,1fr)]">
               <Eyebrow className="pt-1.5">{label}</Eyebrow>
               <ul className="flex flex-wrap gap-2">
                 {items.map((tech) => (

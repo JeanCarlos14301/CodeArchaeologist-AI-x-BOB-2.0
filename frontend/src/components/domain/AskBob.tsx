@@ -2,9 +2,46 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { ArrowUp } from "lucide-react";
 import { formatCost, formatSeconds } from "../../lib/format";
 import { useWorkspace, type AskEntry } from "../../lib/workspace";
-import type { AskContext, Claim } from "../../types";
+import type { AskContext, AskStep, Claim } from "../../types";
+import { InlineText } from "../ui/InlineText";
 import { Eyebrow } from "../ui/Layout";
 import { EvidenceRef } from "./EvidenceRef";
+import { BOB_GLYPH, BobWork, bobCounters, type BobWorkEvent } from "./BobWork";
+
+const BOOKKEEPING = new Set(["bob.turn", "bob.result", "bob.start"]);
+/** Lo que Bob HACE (lecturas, búsquedas, skills, razonamiento); sin sus turnos ni el cierre de sesión. */
+export const visibleSteps = (steps: AskStep[]): AskStep[] => steps.filter((step) => !BOOKKEEPING.has(step.kind));
+
+const asWork = (steps: AskStep[], startedAt: number): BobWorkEvent[] =>
+  visibleSteps(steps).map((step) => ({ t: startedAt + step.t, kind: step.kind, message: step.message, detail: step.detail, data: step.data }));
+
+/** Cómo llegó Bob a la respuesta: los pasos reales, plegados para no ocupar el chat. */
+function HowBobGotThere({ steps: all, startedAt }: { steps: AskStep[]; startedAt: number }) {
+  const steps = visibleSteps(all);
+  if (steps.length === 0) return null;
+  const counters = bobCounters(asWork(steps, startedAt));
+  return (
+    <details className="group rounded-inner border border-line-subtle px-3 py-2">
+      <summary className="cursor-pointer list-none text-caption text-muted marker:hidden hover:text-fg">
+        <span aria-hidden className="mr-1.5 inline-block transition-transform duration-150 group-open:rotate-90">›</span>
+        Cómo llegó Bob a esta respuesta · {steps.length} {steps.length === 1 ? "paso" : "pasos"}
+        {counters.length > 0 && <span className="text-subtle"> · {counters.map((c) => `${c.value} ${c.label}`).join(" · ")}</span>}
+      </summary>
+      <ol className="mt-2 max-h-56 space-y-1 overflow-y-auto overscroll-contain border-l border-line pl-3">
+        {steps.map((step) => {
+          const style = BOB_GLYPH[step.kind] ?? BOB_GLYPH.info;
+          return (
+            <li key={step.seq} className="grid grid-cols-[2.25rem_1.25rem_minmax(0,1fr)] text-caption">
+              <span className="font-mono text-micro text-subtle tabular-nums">{Math.round(step.t)} s</span>
+              <span aria-hidden className={style.tone}>{style.glyph}</span>
+              <span className="min-w-0 text-fg-2">{step.message}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </details>
+  );
+}
 
 const SECTIONS: { key: "facts" | "inferences" | "recommendations"; label: string; tone: string }[] = [
   { key: "facts", label: "Hechos detectados", tone: "text-verified" },
@@ -16,12 +53,7 @@ const SECTIONS: { key: "facts" | "inferences" | "recommendations"; label: string
 export function AskAnswerView({ entry }: { entry: AskEntry }) {
   const { go } = useWorkspace();
   if (entry.status === "pending") {
-    return (
-      <div role="status" className="flex items-center gap-2 text-caption text-muted">
-        <span aria-hidden className="h-2 w-2 animate-pulse rounded-pill bg-activity" />
-        Bob está leyendo el código… suele tardar entre 20 y 90 s.
-      </div>
-    );
+    return <BobWork compact title="Bob está trabajando en tu pregunta" events={asWork(entry.progress, entry.startedAt)} since={entry.startedAt} />;
   }
   if (entry.status === "error" || !entry.answer) {
     return (
@@ -35,7 +67,7 @@ export function AskAnswerView({ entry }: { entry: AskEntry }) {
   const claims = (list: Claim[]) =>
     list.map((claim, i) => (
       <li key={i} className="text-body text-pretty text-fg-2">
-        {claim.text}
+        <InlineText text={claim.text} />
         {claim.refs.length > 0 && (
           <span className="mt-1 flex flex-wrap gap-1.5">
             {claim.refs.map((ref, j) => (
@@ -50,7 +82,7 @@ export function AskAnswerView({ entry }: { entry: AskEntry }) {
 
   return (
     <div className="space-y-3" aria-live="polite">
-      <p className="text-body text-pretty text-fg">{answer.summary}</p>
+      <p className="text-body text-pretty text-fg"><InlineText text={answer.summary} /></p>
       {!answer.structured && <p className="text-caption text-warning">Bob respondió en texto libre: no se pudieron separar hechos de inferencias ni verificar citas.</p>}
       {SECTIONS.map((section) => answer[section.key].length > 0 && (
         <section key={section.key}>
@@ -62,10 +94,11 @@ export function AskAnswerView({ entry }: { entry: AskEntry }) {
         <section>
           <Eyebrow>Desconocido con el código disponible</Eyebrow>
           <ul className="mt-1.5 list-disc space-y-1 pl-4 text-caption text-muted">
-            {answer.unknowns.map((item, i) => <li key={i}>{item}</li>)}
+            {answer.unknowns.map((item, i) => <li key={i}><InlineText text={item} /></li>)}
           </ul>
         </section>
       )}
+      <HowBobGotThere steps={entry.progress} startedAt={entry.startedAt} />
       <p className="font-mono text-micro text-subtle">IBM Bob · modo ask · {formatCost(answer.bob_cost)} · {formatSeconds(answer.bob_duration_ms)}</p>
     </div>
   );

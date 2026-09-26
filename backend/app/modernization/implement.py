@@ -21,7 +21,8 @@ from typing import Any, Protocol
 
 import yaml
 
-from app.adapters.bob_adapter import CUSTOM_MODES_FILE, BobError, BobResult
+from app.adapters.bob_adapter import BobError, BobResult
+from app.adapters.bob_workspace import install_bob_assets
 from app.modernization.models import FileChange, FileCheck, Implementation, Plan, Step, StepRun
 from app.modernization.planner import PlannerError, topological_order
 
@@ -70,11 +71,11 @@ class SurgeonRunner(Protocol):
 
 
 def prepare_work(source: Path, work: Path) -> None:
-    """Copia limpia del proyecto (más los modos de Bob) donde Bob puede editar."""
+    """Copia limpia del proyecto (más los modos de Bob, anclados a esta copia) donde Bob puede editar."""
     if work.exists():
         shutil.rmtree(work)
     shutil.copytree(source, work, ignore=COPY_IGNORE)
-    shutil.copytree(CUSTOM_MODES_FILE.parent, work / ".bob")
+    install_bob_assets(work)
 
 
 def snapshot(root: Path) -> dict[str, str]:

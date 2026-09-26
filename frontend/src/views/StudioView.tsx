@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, api } from "../api";
 import { AssessmentPanel } from "../components/domain/studio/AssessmentPanel";
-import { BobWork } from "../components/domain/studio/BobWork";
+import { BobWork } from "../components/domain/BobWork";
 import { ImplementationPanel } from "../components/domain/studio/ImplementationPanel";
 import { PlanGraph } from "../components/domain/studio/PlanGraph";
 import { StackBoard } from "../components/domain/studio/StackBoard";
@@ -48,13 +48,24 @@ export function StudioView() {
   const [qa, setQa] = useState<Record<string, string>>({});
   const seeded = useRef<string | null>(null);
 
-  const refresh = useCallback(() => api.studio(jobId, token).then(setState).catch((err: Error) => setActionError(err.message)), [jobId, token]);
+  // Token vigente: si la persona cambia el token con una petición en vuelo, la respuesta vieja se descarta.
+  const currentToken = useRef(token);
+  useEffect(() => {
+    currentToken.current = token;
+  }, [token]);
+  const refresh = useCallback(() => api.studio(jobId, token)
+    .then((next) => { if (currentToken.current === token) setState(next); })
+    .catch((err: Error) => { if (currentToken.current === token) setActionError(err.message); }), [jobId, token]);
 
   useEffect(() => {
+    let cancelled = false;
     setStack(null);
     setStackError(null);
-    api.stack(jobId, token).then(setStack).catch((err: Error) => setStackError(err.message));
+    api.stack(jobId, token)
+      .then((next) => { if (!cancelled) setStack(next); })
+      .catch((err: Error) => { if (!cancelled) setStackError(err.message); });
     void refresh();
+    return () => { cancelled = true; };
   }, [jobId, token, refresh]);
 
   // Al abrir un análisis con decisiones previas, se recuperan en el tablero.

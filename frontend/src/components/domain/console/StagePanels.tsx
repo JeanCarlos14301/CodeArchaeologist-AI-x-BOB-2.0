@@ -62,7 +62,7 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
               ))}
             </ul>
           </div>
-          <div className="grid gap-5 @2xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 @2xl:grid-cols-2">
             <div>
               <Eyebrow>Carpetas principales</Eyebrow>
               <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -108,7 +108,7 @@ export function ValidationPanel({ model }: { model: ActivityModel }) {
       {checks.length === 0 ? (
         <p className="text-body text-muted">Esperando las citas de Bob…</p>
       ) : (
-        <ul aria-label="Citas comprobadas" className="grid gap-x-6 @3xl:grid-cols-2">
+        <ul aria-label="Citas comprobadas" className="grid grid-cols-1 gap-x-6 @3xl:grid-cols-2">
           {checks.map((check) => (
             <li key={check.seq} className="grid animate-enter grid-cols-[1rem_2.75rem_1fr] items-baseline gap-x-2 border-b border-line-subtle py-2 text-caption">
               <span aria-hidden className={check.status === "valid" ? "text-verified" : "text-danger"}>{check.status === "valid" ? "✓" : "✗"}</span>

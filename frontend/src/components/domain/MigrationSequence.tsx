@@ -19,7 +19,7 @@ const MARK: Record<StepState, { glyph: string; tone: string; label: string }> = 
 
 function testsState(result: MigrationResult, target: "legacy" | "modern"): StepState {
   const tests = result.tests.filter((test) => test.target === target);
-  if (tests.length === 0 || tests.every((test) => test.status === "not_run")) return "pending";
+  if (tests.every((test) => test.status === "not_run")) return "pending";  // también sin pruebas
   return tests.some((test) => test.status === "failed") ? "failed" : "passed";
 }
 
@@ -47,7 +47,7 @@ export function MigrationSequence({ result }: { result: MigrationResult }) {
       <li aria-hidden className="ml-4.5 h-4 w-px bg-line-strong" />
       <li>
         <p className="mb-2 text-caption text-subtle">02 y 03 dependen de 01 y pueden hacerse en paralelo</p>
-        <ol className="grid gap-3 @2xl:grid-cols-2">
+        <ol className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
           {branches.map((step) => <StepItem key={step.n} step={step} />)}
         </ol>
       </li>

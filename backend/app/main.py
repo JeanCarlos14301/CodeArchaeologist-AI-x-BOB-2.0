@@ -8,7 +8,7 @@ Integra:
 - Servidor de archivos estáticos para la SPA de React (frontend/dist).
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -18,7 +18,7 @@ from pathlib import Path
 import threading
 from typing import Any, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -48,6 +48,7 @@ try:
     from app.database import init_db
     from app.jobs.service import AuditService, warm_bob_version
     from app.jobs.store import JobStore
+    from app.modernization.studio import recover_interrupted
 except ImportError:
     from backend.app.adapters.bob_adapter import (
         REPO_ROOT,
@@ -64,6 +65,7 @@ except ImportError:
     from backend.app.database import init_db
     from backend.app.jobs.service import AuditService, warm_bob_version
     from backend.app.jobs.store import JobStore
+    from backend.app.modernization.studio import recover_interrupted
 
 if "app" in sys.modules and "backend.app" not in sys.modules:
     sys.modules["backend.app"] = sys.modules["app"]
@@ -75,6 +77,22 @@ logger = logging.getLogger(__name__)
 ARTIFACTS_DIR = Path(os.environ.get("ARTIFACTS_DIR", REPO_ROOT / "artifacts"))
 FRONTEND_DIST = Path(os.environ.get("FRONTEND_DIST", REPO_ROOT / "frontend" / "dist"))
 DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+
+# Cabeceras en toda respuesta (API y SPA). style-src admite estilos en línea: React fija `style` y los SVG
+# de la consola llevan su <style>; los scripts solo salen del propio origen (el build de Vite no tiene inline).
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+        "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Strict-Transport-Security": "max-age=31536000",
+}
 
 
 def _load_dotenv(path: Path = REPO_ROOT / ".env") -> None:
@@ -106,6 +124,7 @@ def create_app(
         jobs_dir.mkdir(parents=True, exist_ok=True)
         store = JobStore(artifacts_dir / "jobs.db")
         store.fail_orphans()
+        recover_interrupted(jobs_dir)  # el Estudio no queda bloqueado en «evaluando» tras un reinicio
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="audit")
         app.state.audit_service = AuditService(store, jobs_dir, executor)
         # En segundo plano: el CLI de Bob tarda ~15 s en arrancar en Render y el arranque no lo espera.
@@ -130,6 +149,13 @@ def create_app(
     if os.environ.get("ENABLE_DEV_CORS", "true").lower() == "true":
         app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
                            allow_headers=["Content-Type", "X-Live-Token"])
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        response = await call_next(request)
+        for name, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
 
     # Registro de routers principales de auditorías y diagnóstico
     app.include_router(live_router)

@@ -142,6 +142,11 @@ Nunca como fondo, en texto ni en bordes de paneles.
 - **Las vistas responden al ancho del workspace, no de la ventana:** `<main>` es `@container` y las rejillas
   internas usan variantes de contenedor (`@3xl:grid-cols-2`, `@4xl:...`). Así el layout se adapta cuando el
   panel de Bob está abierto. No uses `lg:`/`xl:` dentro de `views/`.
+- **Toda rejilla con columnas por breakpoint lleva `grid-cols-1` de base** (`grid grid-cols-1 @3xl:grid-cols-2`).
+  Sin ella, la columna implícita toma el ancho mínimo de su contenido y un bloque de código (`min-w-max`) o
+  una ruta larga empuja todo el workspace hacia el lado (pasaba en Repositorio y Riesgos con el panel abierto).
+- **Nada en vivo mueve la página.** Las listas que crecen mientras Bob trabaja (feed, `BobWork`, chat) solo
+  desplazan su propio contenedor y solo si la persona ya estaba al final; nunca `scrollIntoView`.
 - Estado navegable en la URL (hash): `#/p/<job>/<sección>?f=F-1&file=app.py&line=78&node=<id>&play=1`
   (`play=1` reproduce la sesión al abrirla; lo usa la vitrina).
 - Las vistas usan **secciones con hairline**, tablas, listas, árboles, grafos y split panes. Tarjetas solo
@@ -166,6 +171,8 @@ Primitivos en `components/ui/`:
 | `Meter` | barra 4px `bg-raised` con relleno semántico y valor tabular |
 | `Kbd` | mono 10px, borde `line-strong`, `rounded-tick` |
 | `EmptyState` / `ErrorState` | qué pasó · por qué importa · qué hacer (PRODUCT §28–29) |
+| `InlineText` | texto de Bob con su formato en línea: `` `código` `` en mono sobre `bg-code` y `**énfasis**`. Construye nodos de React, nunca HTML |
+| `ViewBoundary` | límite de errores por vista (p. ej. un fragmento del bundle que ya no existe tras un redespliegue): error accionable con «Recargar» |
 
 Dominio en `components/domain/`:
 
@@ -177,7 +184,8 @@ Dominio en `components/domain/`:
 | `RepositoryTree` | árbol con severidad, nº de hallazgos y funciones por archivo |
 | `ModuleMap` · `CallGraph` | mapa de módulos por capas (SVG) · grafo de funciones con capas de hallazgos e impacto |
 | `MigrationSequence` · `PertRange` | pasos del corte con dependencias · rango PERT como regla |
-| `AskBob` (`AskComposer`, `AskAnswerView`) | composer carbon + orbe; respuesta en hechos / inferencias / recomendaciones / desconocido |
+| `AskBob` (`AskComposer`, `AskAnswerView`) | composer carbon + orbe; mientras Bob responde, sus pasos reales en vivo (`BobWork` compacto); al terminar, hechos / inferencias / recomendaciones / desconocido y «Cómo llegó Bob a esta respuesta» plegado |
+| `BobWork` | lo que Bob hace de verdad (lecturas, búsquedas, skills, subagentes, ediciones) con cronómetro y contadores; variante `compact` para el panel. Anuncia a lectores de pantalla un resumen cada ≥5 s, nunca un evento por acción |
 
 Estudio de modernización en `components/domain/studio/` (sección **Modernización**, pestaña Estudio):
 
@@ -212,7 +220,10 @@ Reglas de la consola:
 - Nunca mostrar contenido de archivos del repositorio en el feed: solo rutas relativas, títulos y resúmenes.
 
 Shell en `components/shell/`: `AppShell`, `TopBar`, `NavRail`, `StatusBar`, `CommandPalette` (⌘K), `AIPanel` (⌘J), `BrandMark`
-(testigo de sondeo con estratos; el inferior en naranja señal).
+(testigo de sondeo con estratos; el inferior en naranja señal; también es el favicon, `public/favicon.svg`).
+La `StatusBar` muestra «Bob responde tu pregunta · N pasos · último paso» mientras Bob trabaja en el chat, en cualquier sección.
+
+Las secciones distintas de Proyectos y Resumen se cargan bajo demanda (`React.lazy` en `App.tsx`) dentro de `ViewBoundary`.
 
 ## 5. Accesibilidad
 
