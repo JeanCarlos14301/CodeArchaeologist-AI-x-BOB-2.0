@@ -16,7 +16,9 @@ Cada resultado muestra `execution_mode`: `live`, `imported` o `example`.
 
 El pipeline activo invoca Bob Shell con el modo `evidence-auditor` mediante `subprocess` con una lista de argumentos y sin `shell=True`. El contenido del repositorio se trata como datos y el workspace excluye `evaluation/`, pruebas de evaluación y credenciales. Los modos, agentes y skills disponibles viven en `.bob/`; [docs/bob-usage.md](docs/bob-usage.md) distingue las sesiones ejecutadas de los diseños no ejecutados.
 
-La vitrina pública usa la respuesta real versionada en `contracts/fixtures/bob-evidence-auditor-facturaya.json`. Abrirla no invoca Bob ni consume bobcoins. Una auditoría `live` sí requiere `BOB_API_KEY` en el servidor y `X-Live-Token` en la petición.
+La vitrina pública reproduce una sesión real grabada de Bob (`contracts/fixtures/bob-session-facturaya.json` y su actividad en `bob-events-facturaya.jsonl`): se ve cómo el orquestador planifica, delega en paralelo en 4 subagentes y entrega el expediente. Abrirla no invoca Bob ni consume bobcoins. Una auditoría `live` sí requiere `BOB_API_KEY` en el servidor y `X-Live-Token` en la petición, y su actividad se ve en vivo en la sección **Sesión de Bob**.
+
+Si Bob agota su presupuesto o el servicio corta la conexión antes de entregar el JSON, el pipeline reanuda la misma sesión con un turno de cierre (reservado dentro de `BOB_MAX_COST`) en lugar de perder el trabajo hecho.
 
 ## Arquitectura activa
 

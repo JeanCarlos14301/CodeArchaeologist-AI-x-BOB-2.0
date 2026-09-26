@@ -13,6 +13,11 @@ directiva con riesgos y esfuerzo PERT, y un primer corte de migración Strangler
 - Frontend: React + Vite + Tailwind, servido como estáticos por FastAPI.
 - Despliegue: un solo contenedor Docker.
 
+## Producto y diseño (frontend)
+- **Qué construir y por qué:** [PRODUCT.md](PRODUCT.md). **Cómo se ve:** [DESIGN.md](DESIGN.md) (fuente única de verdad visual).
+- Léelos antes de tocar `frontend/`. Usa solo tokens semánticos de `frontend/src/styles/tokens.css`; si falta uno, añádelo ahí y documéntalo en DESIGN.md.
+- Ninguna cifra en la UI sin dato del backend; nada de capacidades simuladas (PRODUCT.md §46).
+
 ## Convenciones
 - Python con type hints en todas las funciones; modelos con Pydantic v2.
 - **Nunca** concatenar entrada de usuario en comandos de shell: `subprocess` con lista de argumentos, sin `shell=True`.
