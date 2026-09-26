@@ -107,8 +107,9 @@ def test_facturaya_candidates_ranking(facturaya_dossier: Dossier) -> None:
         assert c.value >= 1.0
         assert c.risk >= 1.0
         assert c.testability in (1.0, 0.5, 0.25)
-        # score = round((valor * testability) / riesgo, 3)
-        expected_score = round((c.value * c.testability) / c.risk, 3)
+        # score = round((valor * testability * datos de negocio) / riesgo, 3)
+        business_factor = 1.0 if c.touches_business_data else 0.5
+        expected_score = round((c.value * c.testability * business_factor) / c.risk, 3)
         assert c.score == expected_score
         assert len(c.why) > 10
 
@@ -265,3 +266,14 @@ def test_migration_api_endpoint_structure(tmp_path: Path) -> None:
         assert "legacy_code" in data
         assert "modern_code" in data
         assert "facade_code" in data
+
+
+def test_first_cut_is_a_business_route_not_a_trivial_one(facturaya_dossier: Dossier) -> None:
+    """Regression: a 4-line POST /logout holding a cross-cutting CSRF finding used to win the ranking."""
+    recommendation = analyze_route_candidates(workspace=FACTURAYA_DIR, dossier=facturaya_dossier)
+
+    assert recommendation.recommended is not None
+    assert recommendation.recommended.touches_business_data
+    assert "logout" not in recommendation.recommended.rule
+    logout = next(c for c in recommendation.candidates if c.rule == "/logout")
+    assert not logout.touches_business_data and "datos de negocio" in logout.why

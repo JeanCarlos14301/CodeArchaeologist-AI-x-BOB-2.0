@@ -31,8 +31,8 @@ from app.adapters.bob_workspace import install_bob_assets
 from app.pipeline.activity import BobActivity, EventLog, inventory_events
 from app.contracts.schema_v1 import AuditorOutput, Dossier, DossierStats
 from app.pipeline.decision_metrics import calculate_decision_metrics, source_sha256
-from app.pipeline.migration_architect import run_migration_architect
-from app.pipeline.migration_ranking import analyze_route_candidates
+from app.pipeline.migration_architect import architect_settings, run_migration_architect
+from app.pipeline.migration_ranking import analyze_route_candidates, compare_with_reference
 from app.renderers.board_memo import BOARD_MEMO_FILE, render_board_memo
 from app.sandbox.reference_cut import not_run_result, run_reference_cut
 from app.validators.evidence import validate_findings
@@ -432,24 +432,33 @@ def run_evidence_audit(
         generated_at=recorded_at,
         job_id=job_id,
     )
+    # The route ranking is computed right after validation, so the live console, migration-architect
+    # and the memo all use the same recommended cut and the same PERT (the finding-based PERT is only
+    # the fallback when the repo has no Flask routes).
+    recommendation = analyze_route_candidates(workspace, dossier)
+    dossier = dossier.model_copy(update={
+        "recommendation": recommendation,
+        "first_cut_pert": recommendation.first_cut_pert or dossier.first_cut_pert,
+    })
     if events:
         _emit_validation(events, dossier)
     on_stage("migration")
     if imported_result is None:
         # Solo en corridas live: importar una respuesta grabada nunca debe invocar a Bob (ni gastar bobcoins).
-        dossier = apply_migration_architect(dossier, adapter or BobAdapter(workspace), events)
+        dossier = apply_migration_architect(dossier, adapter or BobAdapter(workspace, architect_settings()), events)
     migration = (
         run_reference_cut(source_repo, job_dir)
         if execute_reference_cut
-        else not_run_result("No se ejecuta código de repositorios subidos por usuarios.")
+        else not_run_result(
+            "No se ejecuta código de repositorios subidos por usuarios.",
+            recommendation.recommended.endpoint if recommendation.recommended else None,
+        )
     )
     if events:
         _emit_migration(events, migration)
-    recommendation = analyze_route_candidates(workspace, dossier)
     dossier = dossier.model_copy(update={
         "migration": migration,
-        "recommendation": recommendation,
-        "first_cut_pert": recommendation.first_cut_pert or dossier.first_cut_pert,
+        "recommendation": compare_with_reference(recommendation, migration.endpoint, migration.status),
     })
     (job_dir / DOSSIER_FILE).write_text(dossier.model_dump_json(indent=2), encoding="utf-8")
     render_board_memo(dossier, job_dir / BOARD_MEMO_FILE, job_id or job_dir.name)

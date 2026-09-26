@@ -100,6 +100,68 @@ def _configure(document: Document) -> None:
     styles["Subtitle"].font.color.rgb = RGBColor(0, 0, 0)
 
 
+def _recommendation_section(document: Document, dossier: Dossier) -> None:
+    """Route ranking computed by code (D3): what to migrate first, alternatives, what to avoid, waves."""
+    recommendation = dossier.recommendation
+    if recommendation is None or recommendation.recommended is None:
+        document.add_paragraph(
+            "El análisis no detectó rutas Flask candidatas, así que no hay un ranking de migración por endpoint."
+        )
+        return
+    recommended = recommendation.recommended
+    document.add_paragraph(
+        "Cada ruta se evalúa con el grafo de llamadas del código: puntaje = valor × facilidad de prueba × datos de "
+        "negocio / riesgo. El valor suma los hallazgos que el corte mitiga; el riesgo suma funciones compartidas, "
+        "tablas escritas, complejidad, líneas y dependencias circulares; una ruta que no lee ni escribe datos de "
+        "negocio pondera a la mitad. El motor es determinista; Bob no elige el corte."
+    )
+    lead = document.add_paragraph()
+    lead.add_run("Corte recomendado: ").bold = True
+    lead.add_run(f"{recommended.endpoint} ({recommended.function_name} en {recommended.file_path}). {recommended.why}")
+    document.add_paragraph(f"Cálculo: {recommended.formula}")
+    if recommendation.reference_comparison:
+        document.add_paragraph(recommendation.reference_comparison)
+
+    rows = [("Corte recomendado", recommended), *[("Alternativa", item) for item in recommendation.alternatives]]
+    if recommendation.do_not_start_here and recommendation.do_not_start_here.endpoint != recommended.endpoint:
+        rows.append(("No empezar por aquí", recommendation.do_not_start_here))
+    table = document.add_table(rows=1, cols=5)
+    for index, value in enumerate(("Papel", "Endpoint", "Valor", "Riesgo", "Puntaje")):
+        table.cell(0, index).text = value
+    for role, candidate in rows:
+        cells = table.add_row().cells
+        for index, value in enumerate((role, candidate.endpoint, f"{candidate.value:g}", f"{candidate.risk:g}", f"{candidate.score:g}")):
+            cells[index].text = value
+    _format_table(table, [1.45, 2.75, 0.8, 0.8, 0.9], margin=60, font_size=8)
+    if recommendation.do_not_start_here and recommendation.do_not_start_here.endpoint != recommended.endpoint:
+        document.add_paragraph(f"No empezar por {recommendation.do_not_start_here.endpoint}: {recommendation.do_not_start_here.why}")
+
+    if recommendation.waves:
+        _add_heading(document, "Hoja de ruta por olas", level=2)
+        waves = document.add_table(rows=1, cols=3)
+        for index, value in enumerate(("Ola", "Endpoints", "Esfuerzo PERT")):
+            waves.cell(0, index).text = value
+        for wave in recommendation.waves:
+            cells = waves.add_row().cells
+            cells[0].text = wave.name
+            cells[1].text = ", ".join(candidate.endpoint for candidate in wave.candidates) or "Sin rutas"
+            cells[2].text = (
+                f"{wave.pert.expected_days:.2f} d ({wave.pert.optimistic_days:.1f} a {wave.pert.pessimistic_days:.1f})"
+                if wave.pert else "No aplica"
+            )
+        _format_table(waves, [2.1, 3.3, 1.5], margin=60, font_size=8)
+
+    if dossier.migration_options:
+        _add_heading(document, "Lectura cualitativa de Bob", level=2)
+        document.add_paragraph(
+            "Bob (modo migration-architect) redactó una opción por candidato sobre estos mismos datos. "
+            "El código comprobó que describe rutas del ranking, que recomienda el corte del motor y que no trae cifras."
+        )
+        for option in dossier.migration_options:
+            marker = " (recomendada)" if option.recommended else ""
+            document.add_paragraph(f"{option.name}{marker}: {option.endpoint or ''}. {option.pattern}.", style="List Bullet")
+
+
 def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
     """Crea el memo trazable; no acepta cifras fuera del expediente."""
     document = Document()
@@ -124,11 +186,17 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
     validated = dossier.stats.findings_validated
     reported = dossier.stats.findings_reported
     ratio = dossier.stats.evidence_valid_ratio * 100
+    recommended = dossier.recommendation.recommended if dossier.recommendation else None
     opening = document.add_paragraph()
     opening.add_run("Decisión solicitada. ").bold = True
+    decision = (
+        f"Autorizar el primer corte de migración sobre {recommended.endpoint} ({recommended.function_name} en "
+        f"{recommended.file_path}), la ruta con mejor relación valor/riesgo calculada sobre el código. "
+        if recommended
+        else "Autorizar la corrección prioritaria del hallazgo de mayor riesgo medido; no se detectaron rutas migrables. "
+    )
     opening.add_run(
-        f"Autorizar la preparación del primer corte sobre el hallazgo de mayor riesgo medido. "
-        f"La auditoría validó {validated} de {reported} hallazgos y {ratio:.1f} por ciento de sus referencias de evidencia. "
+        f"{decision}La auditoría validó {validated} de {reported} hallazgos y {ratio:.1f} por ciento de sus referencias de evidencia. "
         "Este memorando usa solo cifras presentes en el expediente y cálculos deterministas; no incorpora narrativa numérica de Bob."
     )
 
@@ -180,8 +248,11 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
             cells[index].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
     _format_table(risk_table, [0.65, 1.15, 1.1, 1.35, 1.0], margin=55, font_size=8)
 
-    effort_heading = _add_heading(document, "3 Alcance y estimación del primer corte")
-    effort_heading.paragraph_format.page_break_before = True  # type: ignore[attr-defined]
+    recommendation_heading = _add_heading(document, "3 Recomendación de migración")
+    recommendation_heading.paragraph_format.page_break_before = True  # type: ignore[attr-defined]
+    _recommendation_section(document, dossier)
+
+    _add_heading(document, "4 Alcance y estimación del primer corte")
     if dossier.first_cut_pert:
         pert = dossier.first_cut_pert
         inputs = document.add_table(rows=2, cols=4)
@@ -211,9 +282,11 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
         for assumption in pert.assumptions:
             document.add_paragraph(assumption, style="List Bullet")
     else:
-        document.add_paragraph("No fue posible estimar un primer corte porque no hubo hallazgos validados.")
+        document.add_paragraph(
+            "No fue posible estimar un primer corte: no se detectaron rutas migrables ni hallazgos validados con alcance medible."
+        )
 
-    _add_heading(document, "4 Evidencia prioritaria")
+    _add_heading(document, "5 Evidencia prioritaria")
     for finding in ordered_findings[:6]:
         metric = risk_by_id.get(finding.id)
         paragraph = document.add_paragraph()
@@ -229,7 +302,7 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
                 style="List Bullet",
             )
 
-    _add_heading(document, "5 Resultado del primer corte")
+    _add_heading(document, "6 Resultado del primer corte")
     if dossier.migration is None:
         document.add_paragraph("El expediente no contiene un resultado de migración.")
     elif dossier.migration.status == "not_run":
@@ -250,7 +323,7 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
             cells[2].text = test.status
         _format_table(test_table, [1.1, 4.5, 1.3], margin=70, font_size=8)
 
-    _add_heading(document, "6 Trazabilidad y límites")
+    _add_heading(document, "7 Trazabilidad y límites")
     document.add_paragraph(
         "Cada hallazgo incluido conserva archivo, líneas y fragmento literal. El hash identifica el contenido analizado. "
         "Los puntajes de riesgo provienen del grafo estático y el esfuerzo proviene de los cuatro insumos mostrados. "

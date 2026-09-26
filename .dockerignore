@@ -23,7 +23,5 @@ backend/artifacts
 # la verdad de referencia nunca debe estar al alcance de Bob (AGENTS.md).
 evaluation
 backend/tests
-bob-report
 bob-sessions
 docs
-scripts

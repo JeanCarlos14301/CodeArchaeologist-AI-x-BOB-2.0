@@ -1,6 +1,6 @@
 ---
 name: Tarea
-about: Tarea del plan de la hackatón (docs/tasks.md)
+about: Tarea del plan de la hackatón (docs/archivo/planificacion/tasks.md)
 title: "[ID] "
 labels: ""
 assignees: ""

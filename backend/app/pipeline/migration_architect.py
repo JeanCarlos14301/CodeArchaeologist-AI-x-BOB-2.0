@@ -1,15 +1,18 @@
-"""Etapa migration-architect: propone 3 opciones de migración basadas en el ranking de riesgo.
+"""Etapa migration-architect: Bob redacta 3 opciones de migración sobre el ranking de RUTAS.
 
-Invoca el modo `migration-architect` de Bob pasando como DATOS el ranking ordenado
-(finding_id, título, score) y el esquema de salida esperado.  No incluye código fuente
-del repositorio auditado ni métricas numéricas de días, riesgo o radio; esos valores
-los calcula el código determinista (decision_metrics.py) y se leen del Dossier.
+El motor determinista (migration_ranking.py) ya eligió el primer corte por relación valor/riesgo (D3).
+Bob recibe como DATOS los mejores candidatos (endpoint, justificación medida y hallazgos que mitiga)
+y redacta una opción por candidato: nombre, patrón, ventajas y riesgos cualitativos. No recibe código
+fuente ni produce cifras: días, riesgo y puntajes los calcula el código.
 
-Garantías:
-- Validador determinista rechaza finding_ids inventados, cifras en pros/cons, más de
-  una opción recomendada, y una recomendada que no sea la de mayor score del ranking.
-- Fallback: si Bob falla o la respuesta se rechaza, migration_options queda vacío y
-  se registra el motivo. Nunca se rellena con plantillas.
+Garantías del validador:
+- Una opción por candidato, con el `endpoint` exacto de ese candidato y sin repetir.
+- `finding_ids` solo puede citar hallazgos que ese candidato mitiga según el motor.
+- Ninguna cifra, porcentaje ni estimación en palabras dentro de pros/cons.
+- Exactamente una opción recomendada y debe ser el corte que eligió el motor: Bob explica la
+  decisión, no la contradice.
+- Fallback: si Bob falla o la respuesta se rechaza, migration_options queda vacío y se registra
+  el motivo. Nunca se rellena con plantillas.
 """
 
 import json
@@ -19,12 +22,18 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.adapters.bob_adapter import BobAdapter, BobError
-from app.contracts.schema_v1 import Dossier, MigrationOption, RiskMetric
+from app.adapters.bob_adapter import BobAdapter, BobError, BobRunSettings
+from app.contracts.schema_v1 import Dossier, MigrationOption, RouteCandidate
 
 logger = logging.getLogger(__name__)
 
 ARCHITECT_MODE = "migration-architect"
+MAX_OPTIONS = 3
+
+# The architect only writes qualitative text over data it receives: a short, cheap session is enough.
+ARCHITECT_MAX_TURNS = 6
+ARCHITECT_MAX_COST = 1.0
+ARCHITECT_TIMEOUT_S = 240
 
 # Detecta cualquier número (entero o decimal) o símbolo de porcentaje en un string.
 _NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)?\b|%")
@@ -34,20 +43,21 @@ _WORD_ESTIMATE_RE = re.compile(
     r"(?:d[ií]as?|semanas?|meses|horas?|sprints?)\b",
     re.IGNORECASE,
 )
-EXPECTED_OPTIONS = 3
 
-ARCHITECT_PROMPT_TEMPLATE = """Eres el migration-architect. Propones exactamente 3 opciones de migración para el
-repositorio analizado, basándote ÚNICAMENTE en el ranking de riesgo que se te entrega como datos.
+ARCHITECT_PROMPT_TEMPLATE = """Eres el migration-architect. El motor determinista de CodeArchaeologist ya ordenó las rutas
+del repositorio por relación valor/riesgo para una migración Strangler Fig. Redactas UNA opción por
+cada candidato de la lista, explicando cualitativamente por qué convendría (o no) empezar por él.
 
-DATOS DE ENTRADA (ranking de hallazgos ordenados por score descendente):
-{ranking_json}
+CANDIDATOS (datos, ordenados por el motor; el primero es el corte recomendado):
+{candidates_json}
 
 REGLAS ABSOLUTAS
-- finding_ids de cada opción deben ser un subconjunto de los IDs del ranking anterior.
-- pros y cons deben ser texto cualitativo. PROHIBIDO incluir números, porcentajes,
-  estimaciones de días, semanas o meses, porcentajes de riesgo ni cifras de ningún tipo.
-- Exactamente UNA opción debe tener recommended=true: la que ataque el hallazgo de mayor score.
-- No inventes hallazgos, archivos ni métricas. No menciones código del repositorio.
+- Devuelve exactamente {count} opciones, una por candidato, con su `endpoint` copiado literalmente.
+- `finding_ids` solo puede contener IDs de `findings_mitigated` de ESE candidato (puede ir vacío).
+- Exactamente UNA opción con recommended=true: la del endpoint {recommended_endpoint}.
+- pros y cons son texto cualitativo. PROHIBIDO incluir números, porcentajes, códigos numéricos,
+  estimaciones de días, semanas o meses ni cifras de ningún tipo.
+- No inventes rutas, hallazgos, archivos ni métricas. No leas ni cites código: trabaja con estos datos.
 - Redacta name, pattern, pros y cons en español.
 
 FORMATO DE SALIDA
@@ -59,25 +69,49 @@ que cumpla este esquema:
 _FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
-def _build_prompt(ranking: list[RiskMetric], findings_by_id: dict[str, str]) -> str:
-    ranking_data = [
+def architect_settings() -> BobRunSettings:
+    """Bounded settings for the architect: few turns, low cost, no subagents or MCP."""
+    base = BobRunSettings.from_env()
+    return base.model_copy(update={
+        "max_turns": ARCHITECT_MAX_TURNS,
+        "max_cost": min(base.max_cost, ARCHITECT_MAX_COST),
+        "timeout_s": min(base.timeout_s, ARCHITECT_TIMEOUT_S),
+        "disable_subagents": True,
+        "disable_mcp": True,
+    })
+
+
+def top_candidates(dossier: Dossier) -> list[RouteCandidate]:
+    """The engine's recommended cut first, then its alternatives (at most MAX_OPTIONS)."""
+    recommendation = dossier.recommendation
+    if recommendation is None or recommendation.recommended is None:
+        return []
+    return [recommendation.recommended, *recommendation.alternatives][:MAX_OPTIONS]
+
+
+def _build_prompt(candidates: list[RouteCandidate], titles: dict[str, str]) -> str:
+    data = [
         {
-            "finding_id": item.finding_id,
-            "title": findings_by_id.get(item.finding_id, ""),
-            "score": item.score,
+            "endpoint": candidate.endpoint,
+            "why": candidate.why,
+            "testability": candidate.testability,
+            "tables_written": candidate.tables_written,
+            "findings_mitigated": [{"id": fid, "title": titles.get(fid, "")} for fid in candidate.findings_mitigated],
         }
-        for item in ranking
+        for candidate in candidates
     ]
     schema = {
         "migration_options": {
             "type": "array",
             "items": MigrationOption.model_json_schema(),
-            "minItems": 3,
-            "maxItems": 3,
+            "minItems": len(candidates),
+            "maxItems": len(candidates),
         }
     }
     return ARCHITECT_PROMPT_TEMPLATE.format(
-        ranking_json=json.dumps(ranking_data, ensure_ascii=False, indent=2),
+        candidates_json=json.dumps(data, ensure_ascii=False, indent=2),
+        count=len(candidates),
+        recommended_endpoint=candidates[0].endpoint,
         schema_json=json.dumps(schema, ensure_ascii=False, indent=2),
     )
 
@@ -94,56 +128,59 @@ def _extract_options(message: str) -> list[dict[str, Any]]:
     raise ValueError("El JSON no tiene la clave 'migration_options'.")
 
 
-def _validate_options(
-    options: list[dict[str, Any]],
-    valid_ids: set[str],
-    top_id: str,
-) -> list[MigrationOption]:
+def _validate_options(options: list[dict[str, Any]], candidates: list[RouteCandidate]) -> list[MigrationOption]:
     """Valida las opciones con reglas deterministas; lanza ValueError con motivo si alguna falla."""
     parsed: list[MigrationOption] = []
     for raw in options:
         try:
-            opt = MigrationOption.model_validate(raw)
+            parsed.append(MigrationOption.model_validate(raw))
         except ValidationError as exc:
             raise ValueError(f"Opción inválida según el esquema: {exc}") from exc
-        parsed.append(opt)
 
-    if len(parsed) != EXPECTED_OPTIONS:
-        raise ValueError(f"Se esperaban exactamente {EXPECTED_OPTIONS} opciones; llegaron {len(parsed)}.")
+    expected = len(candidates)
+    if len(parsed) != expected:
+        raise ValueError(f"Se esperaban exactamente {expected} opciones; llegaron {len(parsed)}.")
     if len({opt.id for opt in parsed}) != len(parsed):
         raise ValueError("Las opciones repiten su identificador.")
 
-    # 1. finding_ids deben pertenecer al ranking
+    # 1. Cada opción corresponde a un candidato distinto del motor
+    by_endpoint = {candidate.endpoint: candidate for candidate in candidates}
+    seen: set[str] = set()
     for opt in parsed:
-        unknown = set(opt.finding_ids) - valid_ids
+        if opt.endpoint not in by_endpoint:
+            raise ValueError(f"La opción {opt.id!r} usa un endpoint que no está en el ranking: {opt.endpoint!r}")
+        if opt.endpoint in seen:
+            raise ValueError(f"Dos opciones describen el mismo endpoint {opt.endpoint!r}.")
+        seen.add(opt.endpoint)
+
+    # 2. Solo hallazgos que ese candidato mitiga
+    for opt in parsed:
+        allowed = set(by_endpoint[opt.endpoint].findings_mitigated)
+        unknown = set(opt.finding_ids) - allowed
         if unknown:
             raise ValueError(
-                f"La opción {opt.id!r} referencia finding_ids que no están en el ranking: {sorted(unknown)}"
+                f"La opción {opt.id!r} cita hallazgos que {opt.endpoint} no mitiga: {sorted(unknown)}"
             )
 
-    # 2. Prohibición de números en pros/cons
+    # 3. Prohibición de números en pros/cons
     for opt in parsed:
         for text in [*opt.pros, *opt.cons]:
             if _NUMBER_RE.search(text) or _WORD_ESTIMATE_RE.search(text):
-                raise ValueError(
-                    f"La opción {opt.id!r} contiene cifras o porcentajes en pros/cons: {text!r}"
-                )
+                raise ValueError(f"La opción {opt.id!r} contiene cifras o porcentajes en pros/cons: {text!r}")
 
-    # 3. Exactamente una recomendada
+    # 4. Exactamente una recomendada, y es el corte que eligió el motor
     recommended = [opt for opt in parsed if opt.recommended]
     if len(recommended) != 1:
+        raise ValueError(f"Debe haber exactamente una opción recomendada; se encontraron {len(recommended)}.")
+    if recommended[0].endpoint != candidates[0].endpoint:
         raise ValueError(
-            f"Debe haber exactamente una opción recomendada; se encontraron {len(recommended)}."
+            f"La opción recomendada ({recommended[0].endpoint!r}) no es el corte que eligió el motor "
+            f"({candidates[0].endpoint!r})."
         )
 
-    # 4. La recomendada debe ser la del hallazgo de mayor score
-    rec = recommended[0]
-    if top_id not in rec.finding_ids:
-        raise ValueError(
-            f"La opción recomendada {rec.id!r} no incluye el hallazgo de mayor score ({top_id!r})."
-        )
-
-    return parsed
+    # Mismo orden que el ranking del motor
+    order = {candidate.endpoint: index for index, candidate in enumerate(candidates)}
+    return sorted(parsed, key=lambda opt: order[opt.endpoint or ""])
 
 
 def run_migration_architect(dossier: Dossier, adapter: BobAdapter) -> tuple[list[MigrationOption], str]:
@@ -153,16 +190,12 @@ def run_migration_architect(dossier: Dossier, adapter: BobAdapter) -> tuple[list
         (options, reason): si la etapa tiene éxito, reason es ""; si falla, options es [] y reason
         describe el motivo (para registrar, no para mostrar al usuario como error fatal).
     """
-    if not dossier.risk_matrix:
-        return [], "El risk_matrix está vacío; no hay ranking para el arquitecto."
+    candidates = top_candidates(dossier)
+    if not candidates:
+        return [], "No hay rutas candidatas en el ranking; no hay nada que proponer al arquitecto."
 
-    findings_by_id = {f.id: f.title for f in dossier.findings}
-    ranking_sorted = sorted(dossier.risk_matrix, key=lambda r: (r.score, r.finding_id), reverse=True)
-    valid_ids = {r.finding_id for r in ranking_sorted}
-    # Mismo criterio de desempate que decision_metrics.calculate_decision_metrics para el primer corte.
-    top_id = max(dossier.risk_matrix, key=lambda r: (r.score, r.severity_weight, r.finding_id)).finding_id
-
-    prompt = _build_prompt(ranking_sorted, findings_by_id)
+    titles = {finding.id: finding.title for finding in dossier.findings}
+    prompt = _build_prompt(candidates, titles)
     try:
         result = adapter.run(ARCHITECT_MODE, prompt)
     except BobError as exc:
@@ -171,8 +204,7 @@ def run_migration_architect(dossier: Dossier, adapter: BobAdapter) -> tuple[list
         return [], reason
 
     try:
-        raw_options = _extract_options(result.last_message)
-        options = _validate_options(raw_options, valid_ids, top_id)
+        options = _validate_options(_extract_options(result.last_message), candidates)
     except (ValueError, json.JSONDecodeError) as exc:
         reason = f"Respuesta de migration-architect rechazada: {exc}"
         logger.warning(reason)

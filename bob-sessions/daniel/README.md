@@ -1,11 +1,9 @@
-# Daniel's IBM Bob 2.0 Session Summaries
+# Capturas de Daniel
 
-This folder contains verified screenshots of IBM Bob 2.0 live executions conducted by Daniel for the deterministic migration ranking engine and real-time streaming pipeline.
+- `test1.png`, `test2.png`: ejecuciones de la suite de pruebas del backend (`pytest backend/tests`) en VS Code.
+- `test3.png`: la batería de pruebas de seguridad contra la API local (`backend/tests/dast_runner.py`, 25/25).
 
-## Captures Overview
+Muestran el trabajo de backend, pero **no** son un resumen de sesión de IBM Bob.
 
-- **`test1.png`**: Live execution of the `evidence-auditor` mode verifying structured findings output, session timing, and real task ID without subagent overhead.
-- **`test2.png`**: Live execution of the `migration-architect` mode validating the Strangler Fig architectural pattern recognition.
-- **`test3.png`**: Live real-time event streaming (`stream-json`) capturing asynchronous tool usage, message events, and raw session recording.
-
-All sessions were executed using Bob Shell 2.0.5 under strictly bounded token limits (`max_turns=1`, `max_cost=0.5`).
+**Pendiente:** añadir una captura del *Task Summary* de una sesión de Bob desde la cuenta de Daniel. Pasos en
+[../README.md](../README.md#cómo-tomar-la-captura-2-minutos).

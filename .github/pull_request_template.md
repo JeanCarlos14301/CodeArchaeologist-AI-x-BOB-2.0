@@ -2,7 +2,7 @@
 <!-- Resumen breve del cambio. -->
 
 ## Tarea
-<!-- ID de docs/tasks.md, ej. D-02. Cierra el issue con "Closes #N". -->
+<!-- ID de la tarea (ver docs/archivo/planificacion/tasks.md), ej. D-02. Cierra el issue con "Closes #N". -->
 
 ## Cómo se probó
 <!-- Comandos, pruebas o pasos manuales. Indica el execution_mode usado si aplica. -->

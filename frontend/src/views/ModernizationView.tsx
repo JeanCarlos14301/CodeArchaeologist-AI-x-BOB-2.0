@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MessageSquareText } from "lucide-react";
 import { CodeViewer, toLines } from "../components/domain/CodeViewer";
 import { MigrationOptions } from "../components/domain/MigrationOptions";
+import { MigrationRecommendationView } from "../components/domain/MigrationRecommendation";
 import { MigrationSequence } from "../components/domain/MigrationSequence";
 import { PertRange } from "../components/domain/PertRange";
 import { Button } from "../components/ui/Button";
@@ -22,7 +23,8 @@ export function ModernizationView() {
 /** Estudio (cualquier proyecto) y, si hubo auditoría, el primer corte y las opciones que salieron de ella. */
 function ModernizationTabs() {
   const { dossier } = useWorkspace();
-  const [tab, setTab] = useState<Tab>("studio");
+  // An audit with a route ranking opens on its recommendation; projects without one open the Studio.
+  const [tab, setTab] = useState<Tab>(() => (dossier?.recommendation?.recommended ? "cut" : "studio"));
   if (dossier && tab === "cut") {
     return (
       <>
@@ -50,7 +52,7 @@ function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }
       label="Vista de modernización"
       value={tab}
       onChange={onChange}
-      options={[{ value: "studio", label: "Estudio" }, { value: "cut", label: "Primer corte de la auditoría" }]}
+      options={[{ value: "studio", label: "Estudio" }, { value: "cut", label: "Recomendación y primer corte" }]}
     />
   );
 }
@@ -58,29 +60,43 @@ function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }
 function Modernization({ dossier }: { dossier: Dossier }) {
   const { seedComposer, go } = useWorkspace();
   const options = dossier.migration_options ?? [];
-  const hasMigration = !!dossier.migration;
+  const recommended = dossier.recommendation?.recommended ?? null;
+  // Only a cut that really ran (passed or failed) has code and tests to show.
+  const hasMigration = !!dossier.migration && dossier.migration.status !== "not_run";
+  const title = hasMigration && dossier.migration
+    ? `Primer corte probado: ${dossier.migration.endpoint}`
+    : recommended ? `Corte recomendado: ${recommended.endpoint}` : "Plan de modernización";
 
   return (
     <div className="px-6 py-6 @3xl:px-10">
       <ScreenHeader
         eyebrow="Modernización · ¿Cómo migrar con seguridad?"
-        title={dossier.migration ? `Primer corte: ${dossier.migration.endpoint}` : "Plan de modernización"}
+        title={title}
         description="Strangler Fig: se extrae un endpoint cada vez detrás de una fachada, con pruebas que fijan el comportamiento del legado y deben pasar igual en el código nuevo."
         actions={<Button icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer("¿Qué debería migrar después del primer corte y en qué orden? Justifica con el código.")}>Preguntar a Bob el siguiente corte</Button>}
       />
-      <Section eyebrow="Opciones" title="Cómo podría migrarse">
+      <Section eyebrow="Recomendación" title="Qué migrar primero">
+        {dossier.recommendation && recommended ? (
+          <MigrationRecommendationView recommendation={dossier.recommendation} findings={dossier.findings} onOpenFinding={(id) => go("risks", { finding: id })} />
+        ) : (
+          <EmptyState title="No se detectaron rutas Flask candidatas.">
+            El ranking de migración evalúa cada ruta del código; sin rutas no hay un primer corte por endpoint que recomendar.
+          </EmptyState>
+        )}
+      </Section>
+      <Section eyebrow="Opciones" title="Lectura cualitativa de Bob">
         {options.length > 0 ? (
           <>
             <MigrationOptions options={options} findings={dossier.findings} onOpenFinding={(id) => go("risks", { finding: id })} />
             <p className="mt-3 text-caption text-subtle">
-              Propuestas de Bob sobre el ranking de riesgo. El código comprobó que cada hallazgo citado existe y que no traen cifras:
-              los días y el riesgo salen del ranking y de la estimación PERT, no de Bob.
+              Bob redacta una opción por cada ruta del ranking. El código comprobó que describe rutas reales del ranking, que la
+              recomendada es el corte que eligió el motor y que no trae cifras: los días y el riesgo salen del código, no de Bob.
             </p>
           </>
         ) : (
-          <EmptyState title="Este análisis no incluye opciones de migración.">
-            Bob las propone solo en análisis live y se descartan si su respuesta cita hallazgos que no existen o trae cifras.
-            En análisis importados no se le consulta.
+          <EmptyState title="Este análisis no incluye la lectura de Bob.">
+            Bob la redacta solo en análisis live y se descarta si describe rutas que no están en el ranking, recomienda otro corte
+            o trae cifras. En análisis importados no se le consulta.
           </EmptyState>
         )}
       </Section>
@@ -93,7 +109,7 @@ function Modernization({ dossier }: { dossier: Dossier }) {
         </Section>
       )}
       {dossier.first_cut_pert && (
-        <Section eyebrow="Esfuerzo" title="Estimación PERT del primer corte">
+        <Section eyebrow="Esfuerzo" title={recommended ? "Estimación PERT del corte recomendado" : "Estimación PERT del primer corte"}>
           <div className="grid grid-cols-1 gap-x-12 gap-y-6 @4xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <PertRange pert={dossier.first_cut_pert} />
             <div>

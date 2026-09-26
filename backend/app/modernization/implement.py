@@ -5,12 +5,16 @@
   qué archivos cambiaron y cuáles quedaron fuera de lo planeado.
 - Al final solo se comprueba la sintaxis de lo cambiado (compile/JSON/YAML/TOML): el código generado NUNCA se ejecuta.
 - Se entrega un ZIP con el proyecto migrado y el diff completo.
+- Topes por implementación (ajustables por entorno): MODERNIZE_MAX_STEPS pasos y MODERNIZE_TOTAL_MAX_COST
+  bobcoins. El presupuesto se revisa antes de cada paso, así que el gasto total nunca supera ese tope más
+  el tope de un solo paso (MODERNIZE_STEP_MAX_COST). Los pasos que no caben quedan `skipped` con el motivo.
 """
 
 import difflib
 import hashlib
 import json
 import logging
+import os
 import shutil
 import time
 import tomllib
@@ -35,6 +39,21 @@ COPY_IGNORE = shutil.ignore_patterns(".git", "node_modules", "__pycache__", ".ve
 _EXCLUDED_IN_OUTPUT = {".bob", ".git"}
 MAX_DIFF_BYTES = 2_000_000
 MAX_TEXT_BYTES = 1_000_000
+DEFAULT_TOTAL_MAX_COST = 6.0
+DEFAULT_MAX_STEPS = 8
+
+
+def implementation_limits() -> tuple[float, int]:
+    """(total bobcoin budget, max steps) for one implementation, read from the environment."""
+    try:
+        total = float(os.environ.get("MODERNIZE_TOTAL_MAX_COST", DEFAULT_TOTAL_MAX_COST))
+    except ValueError:
+        total = DEFAULT_TOTAL_MAX_COST
+    try:
+        steps = int(os.environ.get("MODERNIZE_MAX_STEPS", DEFAULT_MAX_STEPS))
+    except ValueError:
+        steps = DEFAULT_MAX_STEPS
+    return max(total, 0.0), max(steps, 1)
 
 STEP_PROMPT = """Eres el cirujano de modernización de CodeArchaeologist. Ejecutas UN paso de un plan de migración
 editando archivos del workspace actual, que es una copia del proyecto.
@@ -117,18 +136,37 @@ def run_steps(
     work: Path,
     on_event: Callable[[str, str | None], None],
     sink_for: Callable[[Step], Callable[[dict[str, Any]], None]] | None = None,
+    max_total_cost: float | None = None,
+    max_steps: int | None = None,
 ) -> tuple[list[StepRun], float | None]:
+    env_total, env_steps = implementation_limits()
+    max_total_cost = env_total if max_total_cost is None else max_total_cost
+    max_steps = env_steps if max_steps is None else max_steps
     by_id = {step.id: step for step in plan.steps}
     planned_paths = {change.path for step in plan.steps for change in step.files}
     runs: list[StepRun] = []
     done_notes: list[str] = []
     total_cost = 0.0
     failed = False
+    executed = 0
+    limit_reported = False
     for step_id in topological_order(plan):
         step = by_id[step_id]
         if failed:
             runs.append(StepRun(step_id=step_id, status="skipped", note="Se omitió porque un paso anterior falló."))
             continue
+        limit_note = None
+        if executed >= max_steps:
+            limit_note = f"Se omitió: cada implementación ejecuta como máximo {max_steps} pasos."
+        elif total_cost >= max_total_cost:
+            limit_note = f"Se omitió para no superar el presupuesto de {max_total_cost:g} bobcoins de esta implementación."
+        if limit_note:
+            runs.append(StepRun(step_id=step_id, status="skipped", note=limit_note))
+            if not limit_reported:
+                on_event(limit_note, step.id)
+                limit_reported = True
+            continue
+        executed += 1
         on_event(f"Paso {step.id}: {step.title}", step.id)
         before = snapshot(work)
         prompt = STEP_PROMPT.format(

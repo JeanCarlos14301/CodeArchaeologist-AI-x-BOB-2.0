@@ -108,13 +108,13 @@ class BobLogTail(threading.Thread):
             while True:
                 line = handle.readline()
                 if line:
-                    self._handle(line)
+                    self._handle_line(line)
                     continue
                 if self._stop_event.is_set():
                     break
                 self._stop_event.wait(LOG_POLL_S)
 
-    def _handle(self, line: str) -> None:
+    def _handle_line(self, line: str) -> None:  # not `_handle`: threading.Thread owns that name (Python 3.13+)
         try:
             record = json.loads(line)
             if not str(record.get("module", "")).endswith("json-renderer"):

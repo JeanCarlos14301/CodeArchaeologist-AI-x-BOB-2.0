@@ -126,6 +126,9 @@ class AuditService:
         self.store = store
         self.artifacts_dir = artifacts_dir
         self.executor = executor
+        # One showcase job per sample for the life of the process: the public, token-free showcase
+        # must not let every click (or a bot) queue a new pytest run next to the live audits.
+        self._showcase_jobs: dict[str, str] = {}
 
     def job_dir(self, job_id: str) -> Path:
         return self.artifacts_dir / job_id
@@ -134,10 +137,24 @@ class AuditService:
         if sample not in SAMPLES:
             raise NotFoundError(f"Muestra desconocida: {sample}")
         with self._start_lock:  # comprobar y crear de forma atómica: nunca dos auditorías live a la vez
+            if execution_mode == "imported":
+                reusable = self._reusable_showcase(sample)
+                if reusable is not None:
+                    return reusable
             if execution_mode == "live" and self.store.has_active("live"):
                 raise BusyError("Ya hay una auditoría live en curso; espera a que termine.")
             job = self.store.create(sample, execution_mode)
+            if execution_mode == "imported":
+                self._showcase_jobs[sample] = job.id
         self.executor.submit(self._execute, job)
+        return job
+
+    def _reusable_showcase(self, sample: str) -> Job | None:
+        """The current showcase job for a sample, unless it never started, vanished or failed."""
+        job_id = self._showcase_jobs.get(sample)
+        job = self.store.get(job_id) if job_id else None
+        if job is None or job.status == "failed":
+            return None
         return job
 
     def events(self, job_id: str) -> EventLog:

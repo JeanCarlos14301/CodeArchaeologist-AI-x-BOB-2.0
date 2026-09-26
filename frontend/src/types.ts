@@ -56,17 +56,63 @@ export interface Dossier {
     finding_id: string; severity_weight: number; origin_functions: number;
     impacted_callers: number; score: number; formula: string;
   }[];
-  first_cut_pert: {
-    affected_routes: number; affected_functions: number; affected_lines: number; affected_complexity: number;
-    optimistic_days: number; most_likely_days: number; pessimistic_days: number;
-    expected_days: number; variance: number; formula: string; assumptions: string[];
-  } | null;
+  first_cut_pert: PertEstimate | null;
   migration: MigrationResult | null;
-  /** Propuestas de Bob (migration-architect) validadas por código; vacío si no corrió o se rechazó. */
+  /** Propuestas de Bob (migration-architect) sobre el ranking de rutas, validadas por código; vacío si no corrió o se rechazó. */
   migration_options?: {
-    id: string; name: string; pattern: string; finding_ids: string[];
+    id: string; name: string; pattern: string; endpoint?: string | null; finding_ids: string[];
     pros: string[]; cons: string[]; recommended: boolean;
   }[];
+  /** Ranking determinista de rutas (backend/app/pipeline/migration_ranking.py): qué migrar primero y en qué olas. */
+  recommendation?: MigrationRecommendation | null;
+}
+
+export interface PertEstimate {
+  affected_routes: number; affected_functions: number; affected_lines: number; affected_complexity: number;
+  optimistic_days: number; most_likely_days: number; pessimistic_days: number;
+  expected_days: number; variance: number; formula: string; assumptions: string[];
+}
+
+export interface RouteCandidate {
+  endpoint: string;
+  http_methods: string[];
+  rule: string;
+  function_name: string;
+  file_path: string;
+  line_start: number;
+  line_end: number;
+  value: number;
+  risk: number;
+  testability: number;
+  score: number;
+  formula: string;
+  findings_mitigated: string[];
+  shared_functions: number;
+  tables_written: string[];
+  complexity: number;
+  lines: number;
+  in_circular_dependency: boolean;
+  /** Absent in dossiers produced before the business-data factor existed. */
+  touches_business_data?: boolean;
+  why: string;
+}
+
+export interface MigrationWave {
+  wave_number: number;
+  name: string;
+  description: string;
+  candidates: RouteCandidate[];
+  pert: PertEstimate | null;
+}
+
+export interface MigrationRecommendation {
+  recommended: RouteCandidate | null;
+  alternatives: RouteCandidate[];
+  do_not_start_here: RouteCandidate | null;
+  candidates: RouteCandidate[];
+  waves: MigrationWave[];
+  first_cut_pert: PertEstimate | null;
+  reference_comparison: string | null;
 }
 
 export interface MigrationTestResult {
