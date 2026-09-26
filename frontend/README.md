@@ -21,10 +21,13 @@ npm run build   # genera dist/, que FastAPI sirve en http://127.0.0.1:8000
 
 Tipos en `src/types.ts`, espejo de `backend/app/contracts/schema_v1.py`.
 
-## Motores del backend y mapa neuronal
-- Al arrancar detecta `GET /api/jobs` (motor de 11 etapas de Daniel). Si responde, usa ese motor: demo, holdout y ZIP reales,
-  línea de tiempo con las etapas y mensajes del pipeline, expediente `DossierResult`, arquitectura/PERT, migración, pruebas y descargas.
-- Si `/api/jobs` está apagado (`ENABLE_JOBS_API=false`, despliegue público) cae al motor `/api/audits`; sin backend, modo demostración con fixtures.
-- **Mapa neuronal** (`/api/jobs/{id}/graph`, `backend/app/api/graph.py`): funciones reales (AST) y sus llamadas, con las marcas de
-  hallazgos, radio de explosión y corte de migración. Las capas se encienden según la etapa (3 valida, 5 radio, 8 corte).
-- `/api/jobs/{id}/source` sirve fragmentos del sandbox para el visor de evidencia.
+## Solo datos reales
+La app no trae fixtures ni modo ejemplo. Flujo: subir un ZIP + token (siempre obligatorio) -> `POST /api/audits/upload` ->
+extracción segura -> Bob real (`evidence-auditor`) -> validación determinista de evidencia -> expediente.
+- **Token:** cabecera `X-Live-Token` = `LIVE_AUDIT_TOKEN`. Sin esa variable el servidor rechaza cargas (503).
+- **Mapa neuronal** (`/api/audits/{id}/graph`): funciones y llamadas medidas con AST; marca la función que contiene cada evidencia y
+  sus llamadores (impacto). Se enciende según la etapa (3 valida, 4 expediente).
+- **Arquitectura** (`/api/audits/{id}/architecture`): módulos, dependencias, rutas, complejidad y SQL medidos sobre el código.
+- **Descargas:** `dossier.json` y `bob-result.json` reales.
+- Migración Strangler Fig, plan PERT y memo DOCX no se muestran: el pipeline de `/api/jobs` los genera con plantillas fijas para
+  FacturaYa, no con Bob. Volverán cuando existan con datos reales.

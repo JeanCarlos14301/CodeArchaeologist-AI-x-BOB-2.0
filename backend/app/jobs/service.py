@@ -17,6 +17,7 @@ from app.adapters.bob_adapter import CUSTOM_MODES_FILE, REPO_ROOT, BobRunSetting
 from app.contracts.schema_v1 import Dossier
 from app.jobs.store import ExecutionMode, Job, JobStore
 from app.pipeline.evidence_audit import DOSSIER_FILE, AuditError, run_evidence_audit
+from app.pipeline.ingestion import IngestionSecurityError, validate_and_extract_zip
 from app.validators.evidence import resolve_inside
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,36 @@ class AuditService:
             self.store.update(job.id, status="failed", stage="failed",
                               error="Error interno inesperado; revisa los logs del servidor.")
             return
+        self.store.update(job.id, status="done", stage="done")
+
+    def start_upload(self, filename: str, data: bytes) -> Job:
+        """Audita en vivo (Bob real) un repositorio subido como ZIP. Nunca ejecuta su código."""
+        if self.store.has_active("live"):
+            raise BusyError("Ya hay una auditoría live en curso; espera a que termine.")
+        job = self.store.create(f"upload:{filename}", "live")
+        self.executor.submit(self._execute_upload, job, data)
+        return job
+
+    def _execute_upload(self, job: Job, data: bytes) -> None:
+        self.store.update(job.id, status="running", stage="preparing")
+        source = self.job_dir(job.id) / "upload-src"
+        try:
+            validate_and_extract_zip(data, source)
+            entries = list(source.iterdir())
+            # Muchos ZIP traen una única carpeta raíz: el repositorio es esa carpeta.
+            repo = entries[0] if len(entries) == 1 and entries[0].is_dir() else source
+            run_evidence_audit(repo, self.job_dir(job.id), on_stage=lambda stage: self.store.update(job.id, stage=stage))
+        except (AuditError, IngestionSecurityError) as exc:
+            logger.warning("Auditoría %s falló: %s", job.id, exc)
+            self.store.update(job.id, status="failed", stage="failed", error=str(exc))
+            return
+        except Exception:  # noqa: BLE001 - el worker nunca debe morir en silencio
+            logger.exception("Error inesperado en la auditoría %s", job.id)
+            self.store.update(job.id, status="failed", stage="failed",
+                              error="Error interno inesperado; revisa los logs del servidor.")
+            return
+        finally:
+            shutil.rmtree(source, ignore_errors=True)
         self.store.update(job.id, status="done", stage="done")
 
     def _materialize_example(self, job: Job) -> None:

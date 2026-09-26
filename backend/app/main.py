@@ -38,6 +38,7 @@ try:
     from app.api.artifacts import router as artifacts_router
     from app.api.graph import router as graph_router
     from app.api.jobs import router as jobs_router
+    from app.api.live import router as live_router
     from app.api.migrate import router as migrate_router
     from app.api.routes import router as felipe_routes_router
     from app.database import init_db
@@ -53,6 +54,7 @@ except ImportError:
     from backend.app.api.artifacts import router as artifacts_router
     from backend.app.api.graph import router as graph_router
     from backend.app.api.jobs import router as jobs_router
+    from backend.app.api.live import router as live_router
     from backend.app.api.migrate import router as migrate_router
     from backend.app.api.routes import router as felipe_routes_router
     from backend.app.database import init_db
@@ -130,6 +132,7 @@ def create_app(
         app.include_router(graph_router)
 
     # Registro de router de auditorías de Felipe / Frontend
+    app.include_router(live_router)
     app.include_router(felipe_routes_router)
 
     @app.get("/health", tags=["health"])

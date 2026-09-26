@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, jobsApi } from "../api";
+import { ApiError, api } from "../api";
 import { NeuralGraph, type Layers } from "../components/NeuralGraph";
 import { Timeline } from "../components/Timeline";
 import { Button, Card, EmptyState, ErrorState, Loading, PageHeader, SeverityBadge } from "../components/ui";
@@ -7,10 +7,8 @@ import type { FlowJob, GraphData, Severity } from "../types";
 
 const POLL_MS = 2000;
 const REPLAY_MS = 1400;
-const TOTAL_STAGES = 11;
-
-/** Etapa a partir de la cual el pipeline deja cada capa (worker.py: 3 valida, 5 radio, 8 corte). */
-const LAYER_FROM = { findings: 3, blast: 5, migration: 8 } as const;
+/** Etapa (1 preparar, 2 Bob, 3 validar, 4 expediente) desde la que existe cada capa. */
+const LAYER_FROM = { findings: 3, blast: 4 } as const;
 
 const toSeverity = (value: string): Severity => value.toLowerCase() as Severity;
 
@@ -22,7 +20,6 @@ interface Props {
 
 export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
   const jobId = flow?.id ?? null;
-  const engineOk = flow?.engine === "jobs";
   const running = flow?.status === "queued" || flow?.status === "running";
 
   const [graph, setGraph] = useState<GraphData | null>(null);
@@ -37,11 +34,11 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
 
   // Carga el grafo real; mientras el job corre se refresca para ver aparecer nodos y marcas.
   useEffect(() => {
-    if (!jobId || !engineOk) return;
+    if (!jobId) return;
     let cancelled = false;
     let timer: number | undefined;
     const load = () => {
-      jobsApi
+      api
         .graph(jobId)
         .then((data) => {
           if (cancelled) return;
@@ -66,7 +63,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [jobId, engineOk, running, tick]);
+  }, [jobId, running, tick]);
 
   useEffect(() => () => window.clearInterval(replayTimer.current), []);
   useEffect(() => {
@@ -75,12 +72,12 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
     window.clearInterval(replayTimer.current);
   }, [jobId]);
 
+  const totalStages = flow?.stages.length ?? 0;
   const stage = viewStage ?? flow?.current_stage ?? 0;
   const layers: Layers = {
     structure: stage >= 1,
     findings: stage >= LAYER_FROM.findings,
     blast: stage >= LAYER_FROM.blast,
-    migration: stage >= LAYER_FROM.migration,
   };
 
   const startReplay = () => {
@@ -91,7 +88,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
     setViewStage(next);
     replayTimer.current = window.setInterval(() => {
       next += 1;
-      if (next > TOTAL_STAGES) {
+      if (next > totalStages) {
         window.clearInterval(replayTimer.current);
         setReplaying(false);
         setViewStage(null);
@@ -119,19 +116,15 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
       callees: graph.edges.filter((e) => e.source === node.id).map((e) => name(e.target)).filter((n) => !!n),
       marks: graph.findings.filter((m) => m.node === node.id),
       blast: graph.blast_radius.filter((b) => b.origin_nodes.includes(node.id) || b.impacted_nodes.includes(node.id)),
-      migrated: graph.migration_cut?.legacy_node === node.id,
-      modern: graph.migration_cut?.modern_nodes.includes(node.id) ?? false,
     };
   }, [graph, node]);
 
-  if (!flow || !engineOk) {
+  if (!flow) {
     return (
       <>
         <PageHeader title="Mapa neuronal" />
-        <EmptyState icon="✦" title={flow ? "Este análisis no tiene grafo" : "Aún no hay un análisis"} action={<Button onClick={onGoHome}>Ir a Inicio</Button>}>
-          {flow
-            ? "El mapa se construye con el motor /api/jobs, que analiza el código real del repositorio. Este análisis se ejecutó sin ese motor."
-            : "Lanza un análisis para ver qué funciones toca cada etapa del pipeline."}
+        <EmptyState icon="✦" title="Aún no hay un análisis" action={<Button onClick={onGoHome}>Ir a Inicio</Button>}>
+          Sube un repositorio para ver qué funciones toca cada hallazgo.
         </EmptyState>
       </>
     );
@@ -151,7 +144,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
     <>
       <PageHeader
         title="Mapa neuronal del código"
-        subtitle="Cada nodo es una función real del repositorio y cada arista una llamada. Las capas se encienden con la etapa del pipeline que las produce."
+        subtitle="Cada nodo es una función real del repositorio y cada arista una llamada. Los hallazgos y su impacto aparecen cuando el pipeline los valida."
         right={
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={startReplay} disabled={replaying || !graph}>
@@ -177,13 +170,11 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
           {graph && graph.nodes.length > 0 && (
             <>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted" aria-label="Leyenda">
-                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-accent" />Función legada</span>
-                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-ok" />Función moderna</span>
+                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-accent" />Función</span>
                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-[var(--sev-high)]" />Hallazgo (color = severidad)</span>
                 <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-bad/50" />Origen del impacto</span>
-                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-warn/50" />Afectada por radio de explosión</span>
-                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border border-dashed border-ok" />Ruta migrada</span>
-                <span className="ml-auto font-mono">{graph.nodes.length} funciones · {graph.edges.length} llamadas · vista: etapa {stage || "—"}/{TOTAL_STAGES}</span>
+                <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-warn/50" />Llama a la función afectada (impacto)</span>
+                <span className="ml-auto font-mono">{graph.nodes.length} funciones · {graph.edges.length} llamadas · vista: etapa {stage || "—"}/{totalStages}</span>
               </div>
 
               <NeuralGraph graph={graph} layers={layers} selectedId={selected} focusFindingId={focusFinding} onSelect={setSelected} />
@@ -223,8 +214,6 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
                         <p className="font-mono text-xs text-muted">{node.file}:{node.line_start}–{node.line_end}</p>
                         {node.route && <p className="mt-1 text-xs"><span className="rounded bg-accent/10 px-1.5 py-0.5 font-mono text-accent">{node.route.methods.join(",")} {node.route.rule}</span></p>}
                       </div>
-                      {nodeInfo.migrated && <p className="rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">Ruta migrada en el corte Strangler ({graph.migration_cut?.endpoint}); +{graph.migration_cut?.diff_added} / −{graph.migration_cut?.diff_removed} líneas en el parche.</p>}
-                      {nodeInfo.modern && <p className="rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">Código moderno generado en la etapa 8.</p>}
                       {nodeInfo.marks.length > 0 && (
                         <ul className="space-y-1">
                           {nodeInfo.marks.map((mark) => (
@@ -238,7 +227,7 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
                           ))}
                         </ul>
                       )}
-                      {nodeInfo.blast.length > 0 && <p className="text-xs text-muted">Radio de explosión: {nodeInfo.blast.map((b) => `${b.finding_id} (${b.score})`).join(", ")}</p>}
+                      {nodeInfo.blast.length > 0 && <p className="text-xs text-muted">Impacto: {nodeInfo.blast.map((b) => `${b.finding_id} (${b.impacted_nodes.length} llamadores)`).join(", ")}</p>}
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
                           <p className="mb-1 text-muted">Lo llaman ({nodeInfo.callers.length})</p>
@@ -254,11 +243,6 @@ export function NeuralView({ flow, onGoHome, onOpenFinding }: Props) {
                 </Card>
               </div>
 
-              {graph.blast_radius.some((b) => b.unresolved_symbols.length > 0) && layers.blast && (
-                <p className="text-xs text-muted">
-                  Nota: {graph.blast_radius.reduce((total, b) => total + b.unresolved_symbols.length, 0)} símbolos del radio de explosión reportados por el pipeline no corresponden a funciones existentes en el repositorio y no se dibujan.
-                </p>
-              )}
               <p className="text-xs text-muted">{graph.notes}</p>
             </>
           )}
