@@ -59,13 +59,19 @@ function useThrottled(text: string): string {
 const isRead = (event: BobWorkEvent) => event.kind === "bob.tool" && ["read_file", "list_files"].includes(String(event.data.tool));
 const isSearch = (event: BobWorkEvent) => event.kind === "bob.tool" && ["search_files", "grep", "codebase_search", "glob"].includes(String(event.data.tool));
 
-/** Contadores de lo que Bob hizo (medidos sobre sus eventos reales). */
+const plural = (value: number, one: string, many: string) => (value === 1 ? one : many);
+
+/** Contadores de lo que Bob hizo (medidos sobre sus eventos reales), con la etiqueta en singular o plural. */
 export function bobCounters(events: BobWorkEvent[]): { label: string; value: number }[] {
+  const reads = events.filter(isRead).length;
+  const searches = events.filter(isSearch).length;
+  const edits = events.filter((event) => event.kind === "bob.edit").length;
+  const agents = events.filter((event) => event.kind === "bob.subagent.start").length;
   return [
-    { label: "lecturas", value: events.filter(isRead).length },
-    { label: "búsquedas", value: events.filter(isSearch).length },
-    { label: "ediciones", value: events.filter((event) => event.kind === "bob.edit").length },
-    { label: "subagentes", value: events.filter((event) => event.kind === "bob.subagent.start").length },
+    { label: plural(reads, "lectura", "lecturas"), value: reads },
+    { label: plural(searches, "búsqueda", "búsquedas"), value: searches },
+    { label: plural(edits, "edición", "ediciones"), value: edits },
+    { label: plural(agents, "subagente", "subagentes"), value: agents },
   ].filter((counter) => counter.value > 0);
 }
 
