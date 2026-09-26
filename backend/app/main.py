@@ -37,8 +37,11 @@ try:
         determine_operational_mode,
         get_bob_api_key,
         is_bob_cli_available,
+        terminate_active_sessions,
     )
     from app.api.artifacts import router as artifacts_router
+    from app.api.activity import router as activity_router
+    from app.api.assistant import router as assistant_router
     from app.api.graph import router as graph_router
     from app.api.jobs import router as jobs_router
     from app.api.live import router as live_router
@@ -53,8 +56,11 @@ except ImportError:
         determine_operational_mode,
         get_bob_api_key,
         is_bob_cli_available,
+        terminate_active_sessions,
     )
     from backend.app.api.artifacts import router as artifacts_router
+    from backend.app.api.activity import router as activity_router
+    from backend.app.api.assistant import router as assistant_router
     from backend.app.api.graph import router as graph_router
     from backend.app.api.jobs import router as jobs_router
     from backend.app.api.live import router as live_router
@@ -110,6 +116,9 @@ def create_app(
 
         yield
 
+        stopped = terminate_active_sessions()
+        if stopped:
+            logger.warning("Se terminaron %s sesiones de Bob en curso al apagar el servidor", stopped)
         executor.shutdown(wait=False, cancel_futures=True)
 
     app = FastAPI(
@@ -138,6 +147,8 @@ def create_app(
 
     # Registro de router de auditorías de Felipe / Frontend
     app.include_router(live_router)
+    app.include_router(assistant_router)
+    app.include_router(activity_router)
     app.include_router(felipe_routes_router)
 
     @app.get("/health", tags=["health"])

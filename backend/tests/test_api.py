@@ -8,6 +8,7 @@ import pytest
 from docx import Document
 from fastapi.testclient import TestClient
 
+from app.jobs.service import IMPORTED_RECORDED_AT
 from app.main import create_app
 
 POLL_TIMEOUT_S = 60
@@ -57,7 +58,7 @@ def test_audit_completes_and_serves_dossier(client: TestClient, mode: str) -> No
     assert dossier["stats"]["findings_validated"] >= 6
     assert client.get("/api/audits").json()[0]["id"] == body["job"]["id"]
     if mode == "imported":
-        assert dossier["generated_at"] == "2026-09-25T13:50:00-05:00"
+        assert dossier["generated_at"] == IMPORTED_RECORDED_AT["facturaya-v1"]
         assert dossier["job_id"] == body["job"]["id"]
         assert len(dossier["source_sha256"]) == 64
         assert dossier["risk_matrix"] and dossier["first_cut_pert"]
@@ -104,9 +105,12 @@ def test_invalid_sample_name_is_422(client: TestClient) -> None:
     assert client.post("/api/audits", json={"sample": "../etc", "execution_mode": "example"}).status_code == 422
 
 
-def test_second_live_audit_is_rejected_while_one_is_active(client: TestClient) -> None:
+def test_second_live_audit_is_rejected_while_one_is_active(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Token explícito: la prueba no depende del LIVE_AUDIT_TOKEN que tenga el .env de quien la ejecuta.
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "token-de-prueba")
     client.app.state.audit_service.store.create("facturaya-v1", "live")
-    response = client.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"})
+    response = client.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"},
+                           headers={"X-Live-Token": "token-de-prueba"})
     assert response.status_code == 409
 
 
