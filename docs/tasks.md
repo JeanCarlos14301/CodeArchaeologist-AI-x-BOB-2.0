@@ -35,15 +35,15 @@ Hitos (se asignan por la hora final de la ventana):
 | F-14 | Felipe | H20–H28 | Telemetría FastMCP: conectores DuckDB / GitHub | Enriquecimiento operativo activo |
 | F-15 | Felipe | continuo | Captura de resumen de sesión de Bob (cuenta propia) | Imagen en bob-sessions/felipe/ |
 | D-01 | Daniel | H0–H3 | Modelos Pydantic + schema v1 + 2 fixtures | [COMPLETADO] Generado y validado en backend/app/models.py y contracts/ |
-| D-02 | Daniel | H2–H6 | API de jobs, SQLite, worker, eventos | [COMPLETADO] Base jobs.db WAL, worker determinista y endpoints REST /api/jobs |
+| D-02 | Daniel | H2–H6 | API de jobs, SQLite, worker, eventos | [DEPRECADO Y REMOVIDO] Motor /api/jobs eliminado en favor de pipeline unificado /api/audits. |
 | D-03 | Daniel | H3–H6 | Ingesta segura ZIP + extractores | [COMPLETADO] Anti-ZipSlip, límites 5MB/20MB/300 files y AST/Radon/SQL extractor |
 | D-04 | Daniel | H5–H8 | BobAdapter con timeout y modos | [COMPLETADO] Subprocess seguro shell=False y modos live/imported/example |
 | D-05 | Daniel | H6–H8 | DOCX mínimo | [COMPLETADO] Renderizado ejecutivo corporativo descargable |
-| D-06 | Daniel | H8–H16 | Validador, radio de impacto, riesgo, PERT | [ACTUALIZADO] Riesgo por severidad y llamadores; PERT del primer corte con insumos y supuestos visibles. |
-| D-07 | Daniel | H12–H22 | Sandbox pytest + endpoint /migrate | [COMPLETADO] 13 tests legacy PASS, corte FastAPI modern/ y BOLA fixed 404 |
+| D-06 | Daniel | H8–H16 | Validador, radio de impacto, riesgo, PERT | [COMPLETADO] Ranking determinista A, PERT por olas y corte con aviso heurístico en docs/migration-engine.md |
+| D-07 | Daniel | H12–H22 | Sandbox pytest + endpoint /migrate | [COMPLETADO] 10 candidatos ordenados, 3 olas Strangler Fig y endpoint GET /api/audits/{id}/migration |
 | D-08 | Daniel | H16–H24 | DOCX completo + HTML autónomo | [COMPLETADO] DOCX 7 secciones en Word + HTML con Mermaid interactivo |
 | D-09 | Daniel | H24–H30 | PPTX, descarga .diff, manejo de fallos | [COMPLETADO] PPTX 6 diapositivas 16:9 + migration.diff en /api/jobs/{id}/artifacts |
-| D-10 | Daniel | continuo | CLI de auditoría, tests y sesión Bob | [COMPLETADO] cli_audit.py funcional de 11 etapas y 14 tests automatizados |
+| D-10 | Daniel | continuo | CLI de auditoría, tests y sesión Bob | [COMPLETADO] 209 tests pytest, SAST 0 issues, DAST 25/25 checks y tests live Bob aprobados |
 | E-01 | Edgar | H0–H3 | Vite + React + Tailwind | Build servido por FastAPI |
 | E-02 | Edgar | H3–H8 | Entrada y línea de tiempo con fixture | Recorrido completo |
 | E-03 | Edgar | H6–H8 | Conectar API real | Bala trazadora visible |
