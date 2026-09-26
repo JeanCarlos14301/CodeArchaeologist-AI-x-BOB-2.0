@@ -34,15 +34,16 @@ from app.pipeline.migration_ranking import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FACTURAYA_DIR = REPO_ROOT / "samples" / "facturaya-v1"
-PRELOADED_DOSSIER = REPO_ROOT / "artifacts" / "jobs" / "5df5e0e951de" / "dossier.json"
+FIXTURE_DOSSIER = REPO_ROOT / "contracts" / "fixtures" / "dossier-example.json"
 
 
 @pytest.fixture
 def facturaya_dossier() -> Dossier:
-    """Carga el dossier de referencia de FacturaYa si existe, o un dossier sintético."""
-    if PRELOADED_DOSSIER.is_file():
-        data = json.loads(PRELOADED_DOSSIER.read_text(encoding="utf-8"))
+    """Carga el dossier de referencia de FacturaYa si existe, o un dossier sintético completo."""
+    if FIXTURE_DOSSIER.is_file():
+        data = json.loads(FIXTURE_DOSSIER.read_text(encoding="utf-8"))
         return Dossier.model_validate(data)
+    from app.contracts.schema_v1 import DossierStats
     findings = [
         Finding(
             id="F-1",
@@ -68,9 +69,19 @@ def facturaya_dossier() -> Dossier:
         ),
     ]
     return Dossier(
+        execution_mode="example",
+        repo_name="facturaya-v1",
+        generated_at="2026-09-26T12:00:00Z",
         job_id="test-job",
-        sample="facturaya-v1",
         findings=findings,
+        evidence_checks=[],
+        stats=DossierStats(
+            findings_reported=len(findings),
+            findings_validated=len(findings),
+            evidence_total=len(findings),
+            evidence_valid=len(findings),
+            evidence_valid_ratio=1.0,
+        ),
     )
 
 

@@ -187,7 +187,7 @@ class BobRunSettings(BaseModel):
     max_cost: float = Field(default=DEFAULT_MAX_COST, gt=0)
     disable_mcp: bool = True
     disable_subagents: bool = False
-    accept_license: bool = False
+    accept_license: bool = True
 
     @classmethod
     def from_env(cls) -> "BobRunSettings":
