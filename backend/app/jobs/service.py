@@ -22,6 +22,8 @@ from app.contracts.schema_v1 import Dossier
 from app.jobs.store import ExecutionMode, Job, JobStore
 from app.pipeline.activity import EVENTS_FILE, EventLog, redact_paths
 from app.pipeline.evidence_audit import DOSSIER_FILE, AuditError, run_evidence_audit
+from app.modernization.implement import COPY_IGNORE
+from app.modernization.studio import default_adapter
 from app.pipeline.ingestion import (
     MAX_FILES_COUNT,
     MAX_UNCOMPRESSED_BYTES,
@@ -183,14 +185,52 @@ class AuditService:
             return
         self.store.update(job.id, status="done", stage="done")
 
-    def start_upload(self, filename: str, data: bytes) -> Job:
-        """Audita en vivo (Bob real) un repositorio subido como ZIP. Nunca ejecuta su código."""
+    def start_upload(self, filename: str, data: bytes, purpose: str = "audit") -> Job:
+        """Sube un repositorio como ZIP. `audit`: auditoría en vivo con Bob. `modernization`: solo lo prepara
+        (sin auditoría ni bobcoins) para el Estudio de modernización, con cualquier stack. Nunca ejecuta su código."""
+        if purpose == "modernization":
+            job = self.store.create(f"modernize:{filename}", "live")
+            self.executor.submit(self._execute_modernize_upload, job, data)
+            return job
         with self._start_lock:
             if self.store.has_active("live"):
                 raise BusyError("Ya hay una auditoría live en curso; espera a que termine.")
             job = self.store.create(f"upload:{filename}", "live")
         self.executor.submit(self._execute_upload, job, data)
         return job
+
+    def _execute_modernize_upload(self, job: Job, data: bytes) -> None:
+        self.store.update(job.id, status="running", stage="preparing")
+        events = self.events(job.id)
+        staging = self.job_dir(job.id) / "upload-src"
+        try:
+            events.emit("preparing", "stage.start", "pipeline", STAGE_LABELS["preparing"])
+            validate_and_extract_zip(data, staging)
+            _emit_zip_checks(events, data)
+            self._keep_source(staging, job.id)
+        except IngestionSecurityError as exc:
+            logger.warning("Carga de modernización %s rechazada: %s", job.id, exc)
+            self._fail(job, events, str(exc))
+            return
+        except Exception:  # noqa: BLE001
+            logger.exception("Error inesperado preparando %s", job.id)
+            self._fail(job, events, "Error interno inesperado; revisa los logs del servidor.")
+            return
+        finally:
+            shutil.rmtree(staging, ignore_errors=True)
+        events.emit("preparing", "inventory", "python", "Proyecto preparado para modernizar (sin auditoría de evidencia)")
+        self.store.update(job.id, status="done", stage="done")
+
+    def _keep_source(self, staging: Path, job_id: str) -> Path:
+        """Guarda una copia íntegra (sin dependencias ni .git) del código subido: base del Estudio de modernización."""
+        entries = list(staging.iterdir())
+        repo = entries[0] if len(entries) == 1 and entries[0].is_dir() else staging
+        target = self.job_dir(job_id) / "source"
+        shutil.copytree(repo, target, ignore=COPY_IGNORE, dirs_exist_ok=True)
+        return repo
+
+    def modernize_adapter_factory(self, work: Path, kind: str):
+        return default_adapter(work, kind)
 
     def _execute_upload(self, job: Job, data: bytes) -> None:
         self.store.update(job.id, status="running", stage="preparing")
@@ -200,9 +240,8 @@ class AuditService:
             events.emit("preparing", "stage.start", "pipeline", STAGE_LABELS["preparing"])
             validate_and_extract_zip(data, source)
             _emit_zip_checks(events, data)
-            entries = list(source.iterdir())
             # Muchos ZIP traen una única carpeta raíz: el repositorio es esa carpeta.
-            repo = entries[0] if len(entries) == 1 and entries[0].is_dir() else source
+            repo = self._keep_source(source, job.id)
             run_evidence_audit(
                 repo,
                 self.job_dir(job.id),

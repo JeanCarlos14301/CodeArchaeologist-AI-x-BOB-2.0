@@ -32,7 +32,7 @@ def require_upload_token(token: str | None) -> None:
 
 def is_private(job: Job) -> bool:
     """Solo los ZIP subidos por visitantes contienen código privado."""
-    return job.sample.startswith("upload:")
+    return job.sample.startswith(("upload:", "modernize:"))
 
 
 def require_job_access(job: Job, token: str | None) -> None:

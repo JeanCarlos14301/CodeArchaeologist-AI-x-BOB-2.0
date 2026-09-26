@@ -11,9 +11,9 @@ Nada de esto usa datos de ejemplo:
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.access import require_job_access, require_upload_token
@@ -57,6 +57,7 @@ async def upload_audit(
     service: Service,
     zip_file: Annotated[UploadFile, File()],
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
+    purpose: Annotated[Literal["audit", "modernization"], Form()] = "audit",
 ) -> Job:
     require_upload_token(x_live_token)
     data = await zip_file.read(MAX_ZIP_COMPRESSED_BYTES + 1)
@@ -65,7 +66,7 @@ async def upload_audit(
     if not data.startswith(b"PK"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo no es un ZIP válido.")
     try:
-        return service.start_upload(_safe_name(zip_file.filename), data)
+        return service.start_upload(_safe_name(zip_file.filename), data, purpose)
     except BusyError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
