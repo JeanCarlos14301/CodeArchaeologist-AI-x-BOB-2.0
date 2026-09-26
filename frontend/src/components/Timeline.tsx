@@ -35,7 +35,7 @@ export function Timeline({ job, onSelectStage, selectedStage }: { job: FlowJob; 
           const Row = clickable ? "button" : "div";
           return (
             <li key={stage.id} aria-current={stage.state === "running" ? "step" : undefined} className="relative">
-              {index < job.stages.length - 1 && <span aria-hidden className={`absolute left-[15px] top-8 h-[calc(100%-8px)] w-px ${stage.state === "done" ? "bg-ok/50" : "bg-line"}`} />}
+              {index < job.stages.length - 1 && <span aria-hidden className={`absolute left-3.75 top-8 h-[calc(100%-8px)] w-px ${stage.state === "done" ? "bg-ok/50" : "bg-line"}`} />}
               <Row
                 {...(clickable ? { type: "button" as const, onClick: () => onSelectStage(stage.number) } : {})}
                 className={`flex w-full items-start gap-3 rounded-lg px-1.5 py-1.5 text-left transition ${selectedStage === stage.number ? "bg-accent/10" : clickable ? "hover:bg-surface-2" : ""}`}

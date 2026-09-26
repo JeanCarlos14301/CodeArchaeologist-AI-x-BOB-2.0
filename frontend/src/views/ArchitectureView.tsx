@@ -95,7 +95,7 @@ export function ArchitectureView({ jobId, theme, onGoHome }: { jobId: string | n
         <>
           <h2 className="mb-3 mt-8 text-sm font-semibold">Plan y esfuerzo PERT</h2>
           <Card className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-160 text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-3 font-medium">Fase</th>

@@ -190,7 +190,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-line bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 max-w-375 items-center gap-3 px-4">
           <button type="button" onClick={() => go("home")} className="flex items-center gap-2 font-semibold tracking-tight">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent font-mono text-sm text-accent-fg" aria-hidden>CA</span>
             <span className="hidden sm:inline">CodeArchaeologist</span>
@@ -212,7 +212,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-6 lg:flex-row lg:gap-8">
+      <div className="mx-auto flex max-w-375 flex-col gap-4 px-4 py-6 lg:flex-row lg:gap-8">
         <nav aria-label="Secciones" className="lg:sticky lg:top-20 lg:w-52 lg:shrink-0 lg:self-start">
           <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {NAV.map((item) => (
