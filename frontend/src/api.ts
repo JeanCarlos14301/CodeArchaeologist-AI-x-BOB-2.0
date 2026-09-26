@@ -1,4 +1,4 @@
-import type { ActivityPage, ArchitectureData, AskAnswer, AskContext, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
+import type { ActivityPage, ArchitectureData, AssessRequest, StackReport, StudioState, AskAnswer, AskContext, AuditDetail, BobStatus, GraphData, Job, MigrationViewData, SourceExcerpt } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -56,10 +56,28 @@ export const api = {
     body: JSON.stringify({ sample: "facturaya-v1", execution_mode: "imported" }),
   }),
   /** Sube el ZIP y lanza la auditoría real con Bob. El token es obligatorio. */
-  upload: (file: File, token: string) => {
+  upload: (file: File, token: string, purpose: "audit" | "modernization" = "audit") => {
     const form = new FormData();
     form.set("zip_file", file);
+    form.set("purpose", purpose);
     return request<Job>("/api/audits/upload", { method: "POST", body: form, headers: { "X-Live-Token": token } });
+  },
+  stack: (id: string, token?: string) => request<StackReport>(`/api/audits/${enc(id)}/modernization/stack`, { headers: auth(token) }),
+  studio: (id: string, token?: string) => request<StudioState>(`/api/audits/${enc(id)}/modernization`, { headers: auth(token) }),
+  studioAssess: (id: string, body: AssessRequest, token: string) =>
+    request<StudioState>(`/api/audits/${enc(id)}/modernization/assess`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Live-Token": token }, body: JSON.stringify(body),
+    }),
+  studioPlan: (id: string, token: string) =>
+    request<StudioState>(`/api/audits/${enc(id)}/modernization/plan`, { method: "POST", headers: { "X-Live-Token": token } }),
+  studioImplement: (id: string, token: string) =>
+    request<StudioState>(`/api/audits/${enc(id)}/modernization/implement`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Live-Token": token }, body: JSON.stringify({ confirm: true }),
+    }),
+  studioDownload: async (id: string, name: "modernized.zip" | "migration.diff", token?: string) => {
+    const response = await fetch(`/api/audits/${enc(id)}/modernization/download/${name}`, { headers: auth(token) });
+    if (!response.ok) throw await readError(response);
+    return response.blob();
   },
   /** Pregunta contextual a IBM Bob (modo ask, solo lectura). Siempre exige token: gasta bobcoins. */
   ask: (id: string, question: string, context: AskContext, token: string) =>

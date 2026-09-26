@@ -11,10 +11,12 @@ import { useWorkspace } from "../lib/workspace";
 
 const MAX_ZIP_MB = 5; // backend/app/pipeline/ingestion.py: MAX_ZIP_COMPRESSED_BYTES
 type Source = "zip" | "github" | "local";
+type Purpose = "audit" | "modernization";
 
 export function ProjectsView() {
   const { jobs, bob, offline, notice, dismissNotice, startUpload, openShowcase, navigate } = useWorkspace();
   const [source, setSource] = useState<Source>("zip");
+  const [purpose, setPurpose] = useState<Purpose>("audit");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [token, setTokenDraft] = useState("");
@@ -24,7 +26,8 @@ export function ProjectsView() {
 
   const active = jobs.find((job) => isActive(job)) ?? null;
   const bobReady = bob ? bob.installed && bob.api_key_configured : false;
-  const canStart = !offline && bobReady && !active && !!file && token.trim().length > 0 && !submitting;
+  const modernizeOnly = purpose === "modernization";
+  const canStart = !offline && (modernizeOnly || (bobReady && !active)) && !!file && token.trim().length > 0 && !submitting;
   const blockedBy = offline ? "El backend no responde." : !bob ? "Consultando IBM Bob…" : !bobReady ? "IBM Bob no está listo en el servidor." : active ? "Ya hay un análisis en curso." : null;
 
   const pick = (candidate: File | undefined) => {
@@ -44,7 +47,7 @@ export function ProjectsView() {
   const start = async () => {
     if (!file || !canStart) return;
     setSubmitting(true);
-    await startUpload(file, token.trim());
+    await startUpload(file, token.trim(), purpose);
     setSubmitting(false);
   };
 
@@ -87,6 +90,23 @@ export function ProjectsView() {
 
             {source === "zip" ? (
               <div className="mt-5 space-y-4">
+                <div>
+                  <span className="mb-1.5 block text-caption text-muted">Qué quieres hacer</span>
+                  <Segmented<Purpose>
+                    label="Qué hacer con el repositorio"
+                    value={purpose}
+                    onChange={setPurpose}
+                    options={[
+                      { value: "audit", label: "Auditoría con evidencia" },
+                      { value: "modernization", label: "Solo modernización", hint: "Cualquier lenguaje o framework; no audita ni gasta bobcoins al subir" },
+                    ]}
+                  />
+                  <p className="mt-2 text-caption text-pretty text-subtle">
+                    {modernizeOnly
+                      ? "Cualquier lenguaje, framework, monolito o microservicios. Mide tu stack y te deja elegir a dónde migrar; Bob solo trabaja cuando tú lo pides."
+                      : "Auditoría de Python 3 + Flask + SQLite con hallazgos verificados contra el código, arquitectura, riesgos y primer corte."}
+                  </p>
+                </div>
                 <div
                   onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
                   onDragLeave={() => setDragging(false)}
@@ -113,12 +133,12 @@ export function ProjectsView() {
                       className="h-9 w-full rounded-pill border border-line bg-control px-4 font-mono text-caption text-fg focus:border-focus focus:outline-none" />
                   </label>
                   <Button variant="primary" disabled={!canStart} onClick={() => void start()} icon={<ArrowRight size={14} aria-hidden />}>
-                    {submitting ? "Enviando repositorio…" : "Iniciar análisis del repositorio"}
+                    {submitting ? "Enviando repositorio…" : modernizeOnly ? "Abrir en el Estudio de modernización" : "Iniciar análisis del repositorio"}
                   </Button>
                 </div>
                 <p className="text-caption text-subtle">
-                  Python 3 + Flask + SQLite · hasta {MAX_ZIP_MB} MB · el código se analiza de forma estática y nunca se ejecuta.
-                  {blockedBy && <span className="text-warning"> {blockedBy}</span>}
+                  {modernizeOnly ? "Cualquier stack" : "Python 3 + Flask + SQLite"} · hasta {MAX_ZIP_MB} MB · el código se analiza de forma estática y nunca se ejecuta.
+                  {blockedBy && !modernizeOnly && <span className="text-warning"> {blockedBy}</span>}
                 </p>
               </div>
             ) : (

@@ -343,5 +343,7 @@ class BobActivity:
         elif name in ("search_files", "grep", "codebase_search"):
             query = _clip(str(params.get("regex") or params.get("query") or params.get("pattern") or ""), 120)
             self._emit(raw, "bob.tool", f"Buscó «{query}»" + (f" en {path}" if path else ""), data={"tool": name, "target": query})
+        elif name in ("write_to_file", "apply_diff", "insert_content", "search_and_replace", "edit_file", "edit"):
+            self._emit(raw, "bob.edit", f"Escribió {path}" if name == "write_to_file" else f"Editó {path}", data={"tool": name, "target": path})
         else:
             self._emit(raw, "bob.tool", f"Usó {name}", data={"tool": name, "target": path})

@@ -7,7 +7,7 @@ import { EmptyState, ErrorState, Loading } from "../components/ui/States";
 
 /** Estados comunes de un análisis antes de mostrar una vista: privado, error, en curso, fallido. */
 export function JobGate({ children }: { children: (dossier: Dossier) => ReactNode }) {
-  const { flow, dossier, accessDenied, jobError, offline, setToken, navigate } = useWorkspace();
+  const { flow, dossier, accessDenied, jobError, offline, setToken, navigate, go } = useWorkspace();
 
   if (offline && !flow) {
     return <Frame><ErrorState title="No hay conexión con el backend." message="GET /api/audits no respondió." hint="Arranca el servidor (uvicorn app.main:app) y recarga la página." /></Frame>;
@@ -21,6 +21,18 @@ export function JobGate({ children }: { children: (dossier: Dossier) => ReactNod
     );
   }
   if (!flow) return <Frame><Loading label="Cargando análisis…" /></Frame>;
+  if (flow.status === "done" && !dossier) {
+    return (
+      <Frame>
+        <EmptyState
+          title="Este proyecto se subió solo para modernizar."
+          action={<Button variant="secondary" onClick={() => go("modernization")}>Ir al Estudio de modernización</Button>}
+        >
+          No se auditó con evidencia, así que no hay hallazgos, riesgos ni expediente. El stack, la evaluación y el plan de migración están en Modernización.
+        </EmptyState>
+      </Frame>
+    );
+  }
   if (flow.status !== "done" || !dossier) {
     // Mientras corre (o si falló), cualquier sección muestra la sesión en vivo con su actividad real.
     return (
@@ -56,4 +68,22 @@ function TokenPrompt({ onSubmit }: { onSubmit: (token: string) => void }) {
       </form>
     </EmptyState>
   );
+}
+
+/** Igual que JobGate pero sin exigir expediente: el Estudio de modernización funciona con cualquier proyecto subido. */
+export function StudioGate({ children }: { children: () => ReactNode }) {
+  const { flow, accessDenied, jobError, offline, setToken, navigate } = useWorkspace();
+  if (offline && !flow) return <Frame><ErrorState title="No hay conexión con el backend." message="GET /api/audits no respondió." hint="Arranca el servidor (uvicorn app.main:app) y recarga la página." /></Frame>;
+  if (accessDenied) return <Frame><TokenPrompt onSubmit={setToken} /></Frame>;
+  if (jobError) return <Frame><ErrorState title="No se pudo abrir este análisis." message={jobError} onRetry={() => navigate({ jobId: null })} retryLabel="Volver a Proyectos" /></Frame>;
+  if (!flow) return <Frame><Loading label="Cargando proyecto…" /></Frame>;
+  if (flow.status !== "done") {
+    return (
+      <Frame>
+        <AnalysisConsole autoplay={false} />
+        {flow.status === "failed" && <div className="mt-6"><Button variant="secondary" onClick={() => navigate({ jobId: null })}>Volver a Proyectos para reintentar</Button></div>}
+      </Frame>
+    );
+  }
+  return <>{children()}</>;
 }

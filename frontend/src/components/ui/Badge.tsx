@@ -57,9 +57,9 @@ const DOT: Record<Tone, string> = {
 
 export function StatusDot({ tone, label }: { tone: Tone; label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex min-w-0 items-center gap-1.5">
       <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-pill ${DOT[tone]}`} />
-      {label && <span>{label}</span>}
+      {label && <span className="truncate" title={label}>{label}</span>}
     </span>
   );
 }

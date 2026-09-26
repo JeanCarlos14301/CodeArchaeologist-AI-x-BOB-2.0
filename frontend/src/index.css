@@ -38,3 +38,10 @@
     font-family: var(--font-mono);
   }
 }
+
+/* Texto que llega de Bob o del código (rutas, secretos, identificadores largos) nunca ensancha el layout. */
+#workspace,
+aside[aria-label="Asistente IBM Bob"],
+footer {
+  overflow-wrap: anywhere;
+}

@@ -76,7 +76,7 @@ const MAX_QUESTION = 800;
 
 /** Composer de preguntas: shell carbon + orbe naranja (referencia "Hero Prompt Composer"). */
 export function AskComposer({ context, disabledReason }: { context: AskContext; disabledReason: string | null }) {
-  const { ask, askHistory, token, setToken, composerSeed } = useWorkspace();
+  const { ask, askHistory, token, setToken, composerSeed, clearComposerSeed } = useWorkspace();
   const [text, setText] = useState("");
   const [draftToken, setDraftToken] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
@@ -86,7 +86,9 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
     if (!composerSeed) return;
     setText(composerSeed.text);
     area.current?.focus();
-  }, [composerSeed]);
+    // La semilla se consume: si el panel se vuelve a montar tras la respuesta, no reaparece la pregunta anterior.
+    clearComposerSeed();
+  }, [composerSeed, clearComposerSeed]);
 
   const question = text.trim();
   const blocked = disabledReason ?? (pending ? "Bob está respondiendo la pregunta anterior." : null);

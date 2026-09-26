@@ -46,6 +46,8 @@ Solo `evidence-auditor` se invoca desde el código (`backend/app/pipeline/eviden
 | `blast-radius-guard` | Blast Radius Guard | `read` | Simulación estática pre-PR de radio de explosión y fallas en cascada. | No |
 | `code-skeptic` | Code Skeptic | `read` | Tribunal adversarial para estresar y validar propuestas técnicas. | No |
 | `git-archaeologist` | Git Archaeologist | `read, command` | Minería forense de repositorios git con PyDriller. | No |
+| `modernization-planner` | Modernization Planner | `read` | Estudio de modernización: viabilidad, sacrificios y plan por pasos para cualquier stack. | Sí (`backend/app/modernization/planner.py`); sin corrida live registrada |
+| `modernization-surgeon` | Modernization Surgeon | `read, edit` (sin `execute`) | Estudio de modernización: ejecuta un paso del plan sobre una copia del proyecto. | Sí (`backend/app/modernization/implement.py`); sin corrida live registrada |
 
 ## Invocación desde Python
 

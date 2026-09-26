@@ -47,7 +47,7 @@ interface WorkspaceValue {
   jobError: string | null;
   notice: string | null;
   dismissNotice: () => void;
-  startUpload: (file: File, token: string) => Promise<void>;
+  startUpload: (file: File, token: string, purpose?: "audit" | "modernization") => Promise<void>;
   openShowcase: () => Promise<void>;
   resource: <K extends ResourceKind>(kind: K) => ResourceState<Resources[K]>;
   requestResource: (kind: ResourceKind) => void;
@@ -63,6 +63,7 @@ interface WorkspaceValue {
   ask: (question: string, context: AskContext) => Promise<void>;
   composerSeed: { text: string; nonce: number } | null;
   seedComposer: (text: string) => void;
+  clearComposerSeed: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -76,7 +77,8 @@ export function useWorkspace(): WorkspaceValue {
 /** Suscribe una vista a un recurso del análisis actual y lo pide si aún no está cargado. */
 export function useResource<K extends ResourceKind>(kind: K): ResourceState<Resources[K]> & { retry: () => void } {
   const { resource, requestResource, flow } = useWorkspace();
-  const done = flow?.status === "done";
+  // Los proyectos subidos solo para modernizar no tienen auditoría: no hay arquitectura ni grafo que pedir.
+  const done = flow?.status === "done" && flow.purpose !== "modernization";
   useEffect(() => {
     if (done) requestResource(kind);
   }, [done, kind, requestResource]);
@@ -258,13 +260,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const openJob = useCallback((id: string, section: Section = "overview", play = false) => navigate({ jobId: id, section, play }), [navigate]);
 
-  const startUpload = useCallback(async (file: File, uploadToken: string) => {
+  const startUpload = useCallback(async (file: File, uploadToken: string, purpose: "audit" | "modernization" = "audit") => {
     setNotice(null);
     setToken(uploadToken);
     try {
-      const job = await api.upload(file, uploadToken);
+      const job = await api.upload(file, uploadToken, purpose);
       refreshJobs();
-      openJob(job.id, "session");
+      openJob(job.id, purpose === "modernization" ? "modernization" : "session");
     } catch (err) {
       fail(err as Error);
     }
@@ -308,6 +310,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [jobId, token]);
 
+  const clearComposerSeed = useCallback(() => setComposerSeed(null), []);
   const seedComposer = useCallback((text: string) => {
     setAiOpen(true);
     setComposerSeed({ text, nonce: Date.now() });
@@ -316,7 +319,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceValue = {
     route, navigate, go, token, setToken, bob, offline, jobs, flow, dossier, accessDenied, jobError,
     notice, dismissNotice: () => setNotice(null), startUpload, openShowcase, resource, requestResource,
-    aiOpen, setAiOpen, paletteOpen, setPaletteOpen, aiContext, askHistory, ask, composerSeed, seedComposer,
+    aiOpen, setAiOpen, paletteOpen, setPaletteOpen, aiContext, askHistory, ask, composerSeed, seedComposer, clearComposerSeed,
     activity, activityReady,
   };
 

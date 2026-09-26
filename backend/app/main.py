@@ -43,6 +43,7 @@ try:
     from app.api.activity import router as activity_router
     from app.api.assistant import router as assistant_router
     from app.api.live import router as live_router
+    from app.api.modernization import router as modernization_router
     from app.api.routes import router as felipe_routes_router
     from app.database import init_db
     from app.jobs.service import AuditService, warm_bob_version
@@ -58,6 +59,7 @@ except ImportError:
     from backend.app.api.activity import router as activity_router
     from backend.app.api.assistant import router as assistant_router
     from backend.app.api.live import router as live_router
+    from backend.app.api.modernization import router as modernization_router
     from backend.app.api.routes import router as felipe_routes_router
     from backend.app.database import init_db
     from backend.app.jobs.service import AuditService, warm_bob_version
@@ -131,6 +133,7 @@ def create_app(
 
     # Registro de routers principales de auditorías y diagnóstico
     app.include_router(live_router)
+    app.include_router(modernization_router)
     app.include_router(assistant_router)
     app.include_router(activity_router)
     app.include_router(felipe_routes_router)
