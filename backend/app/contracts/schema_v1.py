@@ -157,6 +157,52 @@ class MigrationOption(BaseModel):
     recommended: bool = Field(description="True solo para la opción recomendada; exactamente una debe serlo.")
 
 
+class RouteCandidate(BaseModel):
+    """Candidato de ruta Flask para migración Strangler Fig (evaluación determinista A)."""
+
+    endpoint: str = Field(description="Método y regla, p. ej. 'GET /invoices/{id}'.")
+    http_methods: list[str]
+    rule: str
+    function_name: str
+    file_path: str
+    line_start: int
+    line_end: int
+    value: float = Field(ge=1.0)
+    risk: float = Field(gt=0.0)
+    testability: float = Field(ge=0.0, le=1.0)
+    score: float = Field(ge=0.0)
+    formula: str
+    findings_mitigated: list[str] = Field(default_factory=list)
+    shared_functions: int = 0
+    tables_written: list[str] = Field(default_factory=list)
+    complexity: int = 0
+    lines: int = 0
+    in_circular_dependency: bool = False
+    why: str = ""
+
+
+class MigrationWave(BaseModel):
+    """Ola en la hoja de ruta Strangler Fig con su propio PERT calculado."""
+
+    wave_number: int = Field(ge=1)
+    name: str
+    description: str
+    candidates: list[RouteCandidate] = Field(default_factory=list)
+    pert: PertEstimate | None = None
+
+
+class MigrationRecommendation(BaseModel):
+    """Recomendación determinista completa de migración por corte y por olas."""
+
+    recommended: RouteCandidate | None = None
+    alternatives: list[RouteCandidate] = Field(default_factory=list)
+    do_not_start_here: RouteCandidate | None = None
+    candidates: list[RouteCandidate] = Field(default_factory=list)
+    waves: list[MigrationWave] = Field(default_factory=list)
+    first_cut_pert: PertEstimate | None = None
+    reference_comparison: str | None = None
+
+
 class Dossier(BaseModel):
     """Expediente técnico validado: salida de las etapas 2 y 3."""
 
@@ -175,3 +221,5 @@ class Dossier(BaseModel):
     first_cut_pert: PertEstimate | None = None
     migration: MigrationResult | None = None
     migration_options: list[MigrationOption] = Field(default_factory=list)
+    recommendation: MigrationRecommendation | None = None
+

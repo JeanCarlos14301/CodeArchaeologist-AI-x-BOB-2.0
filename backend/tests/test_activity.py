@@ -131,6 +131,10 @@ def test_event_log_cursor_and_sequence(tmp_path: Path) -> None:
 
 FAKE_BOB = r'''#!{python}
 import json, os, sys, time
+if hasattr(sys.stdin, "reconfigure"):
+    sys.stdin.reconfigure(encoding="utf-8")
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 args = sys.argv[1:]
 prompt = sys.stdin.read()
 scenario = os.environ.get("FAKE_BOB_SCENARIO", "ok")
@@ -177,9 +181,16 @@ out({{"type": "result", "status": "success", "stats": {{"task_id": "t1", "durati
 
 @pytest.fixture
 def fake_bob(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    script = tmp_path / "bob"
-    script.write_text(FAKE_BOB.format(python=sys.executable, findings=FINDINGS_JSON))
-    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    if sys.platform == "win32":
+        py_script = tmp_path / "fake_bob.py"
+        py_script.write_text(FAKE_BOB.format(python=sys.executable, findings=FINDINGS_JSON), encoding="utf-8")
+        cmd_script = tmp_path / "bob.cmd"
+        cmd_script.write_text(f'@"{sys.executable}" "{py_script}" %*\n', encoding="utf-8")
+        script = cmd_script
+    else:
+        script = tmp_path / "bob"
+        script.write_text(FAKE_BOB.format(python=sys.executable, findings=FINDINGS_JSON))
+        script.chmod(script.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("BOB_API_KEY", "test-key")
     return script
 
