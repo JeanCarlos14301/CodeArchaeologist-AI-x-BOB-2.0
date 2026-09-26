@@ -118,7 +118,8 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
   useEffect(() => {
     if (!composerSeed) return;
     setText(composerSeed.text);
-    area.current?.focus();
+    // preventScroll: the browser would otherwise scroll every ancestor (up to the page) to show the textarea.
+    area.current?.focus({ preventScroll: true });
     // La semilla se consume: si el panel se vuelve a montar tras la respuesta, no reaparece la pregunta anterior.
     clearComposerSeed();
   }, [composerSeed, clearComposerSeed]);

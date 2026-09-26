@@ -10,7 +10,8 @@ import { isActive } from "../lib/flow";
 import { useWorkspace } from "../lib/workspace";
 
 const MAX_ZIP_MB = 5; // backend/app/pipeline/ingestion.py: MAX_ZIP_COMPRESSED_BYTES
-type Source = "zip" | "github" | "local";
+// "showcase" opens the recorded FacturaYa audit; GitHub and local folders are not offered until they work.
+type Source = "zip" | "showcase";
 type Purpose = "audit" | "modernization";
 
 export function ProjectsView() {
@@ -83,8 +84,7 @@ export function ProjectsView() {
               onChange={setSource}
               options={[
                 { value: "zip", label: "Subir ZIP" },
-                { value: "github", label: "GitHub", hint: "Requiere integración OAuth; aún no disponible" },
-                { value: "local", label: "Carpeta local", hint: "Requiere un agente local; aún no disponible" },
+                { value: "showcase", label: "FacturaYa · ya generado", hint: "Auditoría real de IBM Bob grabada; no gasta bobcoins" },
               ]}
             />
 
@@ -104,7 +104,7 @@ export function ProjectsView() {
                   <p className="mt-2 text-caption text-pretty text-subtle">
                     {modernizeOnly
                       ? "Cualquier lenguaje, framework, monolito o microservicios. Mide tu stack y te deja elegir a dónde migrar; Bob solo trabaja cuando tú lo pides."
-                      : "Auditoría de Python 3 + Flask + SQLite con hallazgos verificados contra el código, arquitectura, riesgos y primer corte."}
+                      : "Hallazgos verificados contra el código, arquitectura, riesgos y plan de migración."}
                   </p>
                 </div>
                 <div
@@ -137,19 +137,23 @@ export function ProjectsView() {
                   </Button>
                 </div>
                 <p className="text-caption text-subtle">
-                  {modernizeOnly ? "Cualquier stack" : "Python 3 + Flask + SQLite"} · hasta {MAX_ZIP_MB} MB · el código se analiza de forma estática y nunca se ejecuta.
+                  Hasta {MAX_ZIP_MB} MB · el código se analiza de forma estática y nunca se ejecuta.
                   {blockedBy && !modernizeOnly && <span className="text-warning"> {blockedBy}</span>}
                 </p>
               </div>
             ) : (
-              <div className="mt-5 rounded-panel border border-dashed border-line-strong px-5 py-6">
-                <p className="text-body text-fg">{source === "github" ? "Conexión con GitHub" : "Proyecto local"} · aún no disponible</p>
-                <p className="mt-1 text-body text-pretty text-muted">
-                  {source === "github"
-                    ? "Necesita autorización OAuth y permisos de lectura por repositorio. Mientras tanto, descarga el repositorio como ZIP desde GitHub y súbelo."
-                    : "Un navegador no puede leer tu disco de forma segura. Comprime la carpeta del proyecto en un ZIP y súbela."}
+              <div className="mt-5 rounded-panel border border-line-strong bg-surface px-5 py-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-body text-fg">facturaya-v1</p>
+                  <ModeBadge mode="imported" />
+                </div>
+                <p className="mt-2 max-w-xl text-body text-pretty text-muted">
+                  Análisis ya generado de un sistema de facturación heredado: respuesta real de IBM Bob grabada, evidencia
+                  verificada contra el código y primer corte de migración probado. Abrirlo no consume bobcoins ni pide token.
                 </p>
-                <Button size="sm" variant="secondary" className="mt-4" onClick={() => setSource("zip")}>Subir un ZIP en su lugar</Button>
+                <Button variant="primary" className="mt-4" disabled={offline} onClick={() => void openShowcase()} icon={<ArrowRight size={14} aria-hidden />}>
+                  Abrir el análisis de FacturaYa
+                </Button>
               </div>
             )}
           </Section>
@@ -160,15 +164,6 @@ export function ProjectsView() {
               <Button size="sm" variant="secondary" className="mt-4" onClick={() => navigate({ jobId: active.id, section: "session" })}>Ver la sesión en vivo</Button>
             </Section>
           )}
-
-          <Section eyebrow="Sin gastar bobcoins" title="Auditoría real de FacturaYa">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="max-w-lg text-body text-pretty text-muted">
-                Recorre un análisis completo de un sistema de facturación Flask + SQLite: respuesta real de IBM Bob grabada, evidencia verificada y primer corte de migración probado.
-              </p>
-              <Button variant="secondary" disabled={offline} onClick={() => void openShowcase()}>Abrir auditoría de FacturaYa</Button>
-            </div>
-          </Section>
         </div>
 
         <aside className="space-y-0">

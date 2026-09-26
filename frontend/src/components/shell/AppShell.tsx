@@ -50,13 +50,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const drawerOpen = !desktop && (navOpen || aiOpen);
 
   return (
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
+    // overflow-clip (not hidden): a clipped box is not a scroll container, so focus() or
+    // scrollIntoView() deep inside a panel can never scroll the whole shell off screen.
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-clip bg-canvas">
       <a href="#workspace" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-pill focus:bg-overlay focus:px-3 focus:py-1.5 focus:text-caption">
         Saltar al contenido
       </a>
       <TopBar onOpenNav={() => setNavOpen(true)} />
 
-      <div inert={drawerOpen} className={`grid min-h-0 grid-cols-[minmax(0,1fr)] ${showAiDocked ? "lg:grid-cols-[224px_minmax(0,1fr)_360px]" : "lg:grid-cols-[224px_minmax(0,1fr)]"}`}>
+      <div inert={drawerOpen} className={`grid min-h-0 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)] ${showAiDocked ? "lg:grid-cols-[224px_minmax(0,1fr)_360px]" : "lg:grid-cols-[224px_minmax(0,1fr)]"}`}>
         <div className="hidden min-h-0 overflow-y-auto border-r border-line bg-surface lg:block">
           <NavRail />
         </div>
@@ -66,7 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
 
         {showAiDocked && (
-          <div className="min-h-0 border-l border-line">
+          <div className="min-h-0 overflow-hidden border-l border-line">
             <AIPanel onClose={() => setAiOpen(false)} />
           </div>
         )}
