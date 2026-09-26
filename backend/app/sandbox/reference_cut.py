@@ -59,12 +59,13 @@ def _convert(report: object, target: str) -> list[MigrationTestResult]:
     ) for test in report.test_cases]
 
 
-def not_run_result(reason: str) -> MigrationResult:
+def not_run_result(reason: str, endpoint: str | None = None) -> MigrationResult:
+    """No cut was executed. `endpoint` is the engine's recommended cut, never a hardcoded sample route."""
     return MigrationResult(
         status="not_run",
         reason=reason,
-        implementation_origin="Implementación de referencia del equipo; no generada por Bob.",
-        endpoint="GET /invoices/{id}",
+        implementation_origin="No se ejecutó ningún corte: el código subido por usuarios nunca se ejecuta.",
+        endpoint=endpoint or "Sin corte recomendado",
     )
 
 

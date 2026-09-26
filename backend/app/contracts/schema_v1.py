@@ -138,8 +138,9 @@ class MigrationResult(BaseModel):
 class MigrationOption(BaseModel):
     """Opción de migración propuesta por el arquitecto (etapa migration-architect).
 
+    Cada opción describe una ruta candidata del ranking determinista (migration_ranking.py).
     No contiene cifras numéricas de días, riesgo ni radio: esos valores los calcula
-    el código determinista (decision_metrics.py) y se leen del Dossier.
+    el código determinista y se leen del Dossier.
     Los pros y cons son texto cualitativo sin porcentajes ni estimaciones.
     """
 
@@ -148,9 +149,14 @@ class MigrationOption(BaseModel):
     id: str = Field(pattern=r"^OPT-\d+$", description="Identificador secuencial, p.ej. OPT-1.")
     name: str = Field(min_length=3, max_length=120)
     pattern: str = Field(min_length=3, max_length=120, description="Patrón de migración, p.ej. Strangler Fig.")
+    endpoint: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Endpoint del candidato del ranking que describe esta opción, copiado literalmente.",
+    )
     finding_ids: list[str] = Field(
-        min_length=1,
-        description="IDs de hallazgos del ranking que justifican esta opción (deben existir en risk_matrix).",
+        default_factory=list,
+        description="IDs de hallazgos que mitiga ese candidato según el motor (puede ir vacío).",
     )
     pros: list[str] = Field(min_length=1)
     cons: list[str] = Field(min_length=1)
@@ -178,6 +184,10 @@ class RouteCandidate(BaseModel):
     complexity: int = 0
     lines: int = 0
     in_circular_dependency: bool = False
+    touches_business_data: bool = Field(
+        default=True,
+        description="Su alcance lee o escribe alguna tabla; si no, su puntaje pondera a la mitad (D3: visible para negocio).",
+    )
     why: str = ""
 
 

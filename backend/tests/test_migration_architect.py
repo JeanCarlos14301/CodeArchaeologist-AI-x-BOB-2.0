@@ -1,14 +1,12 @@
-"""Tests deterministas para la etapa migration-architect.
+"""Tests deterministas para la etapa migration-architect (opciones sobre el ranking de rutas).
 
 No invocan Bob live: usan un stub de BobAdapter que devuelve respuestas fijas.
-Cubren: respuesta válida, finding_id inventado, cifra en pros/cons,
-dos opciones recomendadas, y JSON inválido.
+Cubren: respuesta válida, endpoint o hallazgo inventado, cifras en pros/cons, recomendación
+distinta del corte del motor, JSON inválido, fallo de Bob, ranking vacío y topes de la sesión.
 """
 
 import json
 from unittest.mock import MagicMock
-
-import pytest
 
 from app.adapters.bob_adapter import BobExecutionError, BobResult, BobStats
 from app.contracts.schema_v1 import (
@@ -16,14 +14,18 @@ from app.contracts.schema_v1 import (
     DossierStats,
     Evidence,
     Finding,
-    MigrationOption,
-    RiskMetric,
+    MigrationRecommendation,
+    RouteCandidate,
 )
 from app.pipeline.migration_architect import (
-    _extract_options,
-    _validate_options,
+    ARCHITECT_MAX_COST,
+    architect_settings,
     run_migration_architect,
 )
+
+RECOMMENDED = "GET /invoices/<int:invoice_id>"
+ALT_1 = "GET /customers"
+ALT_2 = "GET /reports/monthly"
 
 
 # ---------------------------------------------------------------------------
@@ -46,217 +48,199 @@ def _stub_adapter(last_message: str, fail: bool = False) -> MagicMock:
     return adapter
 
 
-def _dossier_with_risk(scores: list[tuple[str, int, str]]) -> Dossier:
-    """Crea un Dossier mínimo con los hallazgos y risk_matrix dados.
+def _candidate(endpoint: str, score: float, findings: list[str]) -> RouteCandidate:
+    method, rule = endpoint.split(" ", 1)
+    return RouteCandidate(
+        endpoint=endpoint, http_methods=[method], rule=rule, function_name=rule.strip("/").replace("/", "_") or "index",
+        file_path="app.py", line_start=1, line_end=10, value=1.0 + len(findings), risk=2.0, testability=1.0,
+        score=score, formula="calculada", findings_mitigated=findings, why="Responde JSON puro con contrato formal.",
+    )
 
-    scores: lista de (finding_id, score, severity)
-    """
+
+def _dossier(with_routes: bool = True) -> Dossier:
     findings = [
         Finding(
             id=fid,
             title=f"Hallazgo {fid}",
             category="security",
             subcategory="test",
-            severity=sev,
+            severity="high",
             observed_or_inferred="observed",
             evidence=[Evidence(path="app.py", line_start=1, line_end=2, snippet="x = 1")],
             explanation="Descripción de prueba suficientemente larga.",
             recommendation="Corregir.",
         )
-        for fid, _score, sev in scores
+        for fid in ("F-1", "F-2", "F-3")
     ]
-    risk_matrix = [
-        RiskMetric(
-            finding_id=fid,
-            severity_weight={"critical": 4, "high": 3, "medium": 2, "low": 1}[sev],
-            origin_functions=1,
-            impacted_callers=score - {"critical": 4, "high": 3, "medium": 2, "low": 1}[sev],
-            score=score,
-            formula=f"{score}",
+    recommendation = None
+    if with_routes:
+        recommended = _candidate(RECOMMENDED, 2.0, ["F-2"])
+        alternatives = [_candidate(ALT_1, 1.0, []), _candidate(ALT_2, 0.5, ["F-3"])]
+        recommendation = MigrationRecommendation(
+            recommended=recommended, alternatives=alternatives, candidates=[recommended, *alternatives],
         )
-        for fid, score, sev in scores
-    ]
     return Dossier(
-        execution_mode="imported",
+        execution_mode="live",
         repo_name="repo-test",
         generated_at="2026-01-01T00:00:00+00:00",
         findings=findings,
         evidence_checks=[],
         stats=DossierStats(
-            findings_reported=len(findings),
-            findings_validated=len(findings),
-            evidence_total=len(findings),
-            evidence_valid=len(findings),
-            evidence_valid_ratio=1.0,
+            findings_reported=3, findings_validated=3, evidence_total=3, evidence_valid=3, evidence_valid_ratio=1.0,
         ),
-        risk_matrix=risk_matrix,
+        recommendation=recommendation,
     )
 
 
-def _valid_response(top_id: str, other_ids: list[str]) -> str:
-    """Construye una respuesta JSON válida que pasa todos los validadores."""
-    all_ids = [top_id, *other_ids]
-    options = [
+def _valid_payload() -> dict:
+    """Respuesta que pasa todos los validadores: una opción por candidato, la recomendada es la del motor."""
+    return {"migration_options": [
         {
-            "id": "OPT-1",
-            "name": "Strangler Fig incremental por endpoint",
-            "pattern": "Strangler Fig",
-            "finding_ids": [top_id],
-            "pros": ["Bajo riesgo operativo", "Rollback sencillo sin tiempo de inactividad"],
-            "cons": ["Requiere mantener fachada temporal", "Coexistencia transitoria de dos stacks"],
-            "recommended": True,
+            "id": "OPT-1", "name": "Extraer primero el detalle de factura", "pattern": "Strangler Fig",
+            "endpoint": RECOMMENDED, "finding_ids": ["F-2"],
+            "pros": ["Contrato JSON fácil de fijar con pruebas", "Rollback sencillo detrás de la fachada"],
+            "cons": ["Exige mantener la fachada temporal"], "recommended": True,
         },
         {
-            "id": "OPT-2",
-            "name": "Reescritura completa del módulo crítico",
-            "pattern": "Big Bang parcial",
-            "finding_ids": [all_ids[1]] if len(all_ids) > 1 else [top_id],
-            "pros": ["Elimina deuda técnica de raíz"],
-            "cons": ["Alto riesgo de regresión", "Periodo largo sin entregas"],
-            "recommended": False,
+            "id": "OPT-2", "name": "Empezar por el listado de clientes", "pattern": "Strangler Fig",
+            "endpoint": ALT_1, "finding_ids": [],
+            "pros": ["Ruta de solo lectura"], "cons": ["Aporta poco valor de negocio al inicio"], "recommended": False,
         },
         {
-            "id": "OPT-3",
-            "name": "Extracción del núcleo transaccional",
-            "pattern": "Core Domain Extraction",
-            "finding_ids": [all_ids[-1]],
-            "pros": ["Ataca directamente la complejidad del dominio"],
-            "cons": ["Dependencias circulares dificultan el corte inicial"],
-            "recommended": False,
+            "id": "OPT-3", "name": "Empezar por el reporte mensual", "pattern": "Strangler Fig",
+            "endpoint": ALT_2, "finding_ids": ["F-3"],
+            "pros": ["Aísla una regla de descuento"], "cons": ["Depende de consultas agregadas"], "recommended": False,
         },
-    ]
-    return json.dumps({"migration_options": options})
+    ]}
+
+
+def _run(payload: dict | str, dossier: Dossier | None = None) -> tuple[list, str]:
+    message = payload if isinstance(payload, str) else json.dumps(payload)
+    return run_migration_architect(dossier or _dossier(), _stub_adapter(message))
 
 
 # ---------------------------------------------------------------------------
 # Casos de prueba
 # ---------------------------------------------------------------------------
 
-def test_valid_response_returns_three_options() -> None:
-    """Respuesta bien formada: se devuelven exactamente 3 opciones y la primera es la recomendada."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    response = _valid_response("F-1", ["F-2", "F-3"])
-    adapter = _stub_adapter(response)
-
-    options, reason = run_migration_architect(dossier, adapter)
+def test_valid_response_returns_one_option_per_candidate_in_ranking_order() -> None:
+    options, reason = _run(_valid_payload())
 
     assert reason == ""
-    assert len(options) == 3
-    recommended = [opt for opt in options if opt.recommended]
-    assert len(recommended) == 1
-    assert "F-1" in recommended[0].finding_ids
+    assert [option.endpoint for option in options] == [RECOMMENDED, ALT_1, ALT_2]
+    assert [option.recommended for option in options] == [True, False, False]
 
 
-def test_invented_finding_id_is_rejected() -> None:
-    """finding_id inexistente en el ranking produce rechazo con motivo."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    # OPT-1 referencia F-99 que no existe en el ranking
-    options_data = json.loads(_valid_response("F-1", ["F-2", "F-3"]))
-    options_data["migration_options"][0]["finding_ids"] = ["F-99"]
-    adapter = _stub_adapter(json.dumps(options_data))
+def test_prompt_carries_the_route_ranking_not_the_finding_ranking() -> None:
+    adapter = _stub_adapter(json.dumps(_valid_payload()))
+    run_migration_architect(_dossier(), adapter)
 
-    options, reason = run_migration_architect(dossier, adapter)
+    prompt = adapter.run.call_args.args[1]
+    assert RECOMMENDED in prompt and ALT_1 in prompt and ALT_2 in prompt
+    assert "risk_matrix" not in prompt
 
-    assert options == []
-    assert "F-99" in reason
+
+def test_endpoint_not_in_ranking_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"][1]["endpoint"] = "GET /inventada"
+
+    options, reason = _run(payload)
+
+    assert options == [] and "/inventada" in reason
+
+
+def test_duplicated_endpoint_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"][2]["endpoint"] = ALT_1
+
+    options, reason = _run(payload)
+
+    assert options == [] and "mismo endpoint" in reason
+
+
+def test_finding_not_mitigated_by_that_candidate_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"][1]["finding_ids"] = ["F-1"]  # GET /customers no mitiga F-1
+
+    options, reason = _run(payload)
+
+    assert options == [] and "F-1" in reason
 
 
 def test_number_in_pros_is_rejected() -> None:
-    """Cifra numérica en pros produce rechazo."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    options_data = json.loads(_valid_response("F-1", ["F-2", "F-3"]))
-    # Introduce un número prohibido
-    options_data["migration_options"][0]["pros"][0] = "Reduce riesgo en un 80%"
-    adapter = _stub_adapter(json.dumps(options_data))
+    payload = _valid_payload()
+    payload["migration_options"][0]["pros"][0] = "Reduce riesgo en un 80%"
 
-    options, reason = run_migration_architect(dossier, adapter)
-
-    assert options == []
-    assert "cifras" in reason or "pros" in reason or "porcentajes" in reason
-
-
-def test_two_recommended_is_rejected() -> None:
-    """Dos opciones recomendadas produce rechazo."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    options_data = json.loads(_valid_response("F-1", ["F-2", "F-3"]))
-    options_data["migration_options"][1]["recommended"] = True  # segunda también recomendada
-    adapter = _stub_adapter(json.dumps(options_data))
-
-    options, reason = run_migration_architect(dossier, adapter)
-
-    assert options == []
-    assert "recomendada" in reason
-
-
-def test_invalid_json_is_rejected() -> None:
-    """Respuesta que no es JSON válido produce fallback vacío."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    adapter = _stub_adapter("Esto no es JSON en absoluto.")
-
-    options, reason = run_migration_architect(dossier, adapter)
-
-    assert options == []
-    assert reason != ""
-
-
-def test_bob_failure_produces_empty_fallback() -> None:
-    """Si Bob lanza BobExecutionError, migration_options queda vacío y se registra motivo."""
-    dossier = _dossier_with_risk([("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")])
-    adapter = _stub_adapter("", fail=True)
-
-    options, reason = run_migration_architect(dossier, adapter)
-
-    assert options == []
-    assert "migration-architect" in reason
-
-
-def test_empty_risk_matrix_short_circuits() -> None:
-    """Sin risk_matrix no se llama a Bob y migration_options queda vacío."""
-    dossier = _dossier_with_risk([])
-    adapter = _stub_adapter("")
-
-    options, reason = run_migration_architect(dossier, adapter)
-
-    adapter.run.assert_not_called()
-    assert options == []
-    assert reason != ""
-
-
-# ---------------------------------------------------------------------------
-# Reglas añadidas en la revisión y contrato con el pipeline
-# ---------------------------------------------------------------------------
-
-def _three_ids() -> list[tuple[str, int, str]]:
-    return [("F-1", 12, "critical"), ("F-2", 6, "high"), ("F-3", 3, "medium")]
-
-
-def test_wrong_option_count_is_rejected() -> None:
-    dossier = _dossier_with_risk(_three_ids())
-    payload = json.loads(_valid_response("F-1", ["F-2", "F-3"]))
-    payload["migration_options"] = payload["migration_options"][:2]
-
-    options, reason = run_migration_architect(dossier, _stub_adapter(json.dumps(payload)))
-
-    assert options == [] and "exactamente 3" in reason
-
-
-def test_estimate_written_in_words_is_rejected() -> None:
-    dossier = _dossier_with_risk(_three_ids())
-    payload = json.loads(_valid_response("F-1", ["F-2", "F-3"]))
-    payload["migration_options"][0]["pros"] = ["Se entrega en dos semanas"]
-
-    options, reason = run_migration_architect(dossier, _stub_adapter(json.dumps(payload)))
+    options, reason = _run(payload)
 
     assert options == [] and "cifras" in reason
 
 
-def test_tie_break_matches_decision_metrics() -> None:
-    """Con el mismo score gana la mayor severidad, igual que el primer corte que calcula el código."""
-    dossier = _dossier_with_risk([("F-1", 8, "high"), ("F-2", 8, "critical"), ("F-3", 1, "low")])
-    # F-2 gana por severidad aunque F-1 tenga el id más bajo; la recomendada debe atacarlo.
-    ok = json.loads(_valid_response("F-2", ["F-1", "F-3"]))
-    options, reason = run_migration_architect(dossier, _stub_adapter(json.dumps(ok)))
-    assert reason == "" and len(options) == 3
+def test_estimate_written_in_words_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"][0]["pros"] = ["Se entrega en dos semanas"]
+
+    options, reason = _run(payload)
+
+    assert options == [] and "cifras" in reason
+
+
+def test_two_recommended_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"][1]["recommended"] = True
+
+    options, reason = _run(payload)
+
+    assert options == [] and "recomendada" in reason
+
+
+def test_recommending_other_than_the_engine_cut_is_rejected() -> None:
+    """Bob explica el corte del motor (D3); no puede recomendar otro."""
+    payload = _valid_payload()
+    payload["migration_options"][0]["recommended"] = False
+    payload["migration_options"][2]["recommended"] = True
+
+    options, reason = _run(payload)
+
+    assert options == [] and "no es el corte que eligió el motor" in reason
+
+
+def test_wrong_option_count_is_rejected() -> None:
+    payload = _valid_payload()
+    payload["migration_options"] = payload["migration_options"][:2]
+
+    options, reason = _run(payload)
+
+    assert options == [] and "exactamente 3" in reason
+
+
+def test_invalid_json_is_rejected() -> None:
+    options, reason = _run("Esto no es JSON en absoluto.")
+
+    assert options == [] and reason != ""
+
+
+def test_bob_failure_produces_empty_fallback() -> None:
+    options, reason = run_migration_architect(_dossier(), _stub_adapter("", fail=True))
+
+    assert options == [] and "migration-architect" in reason
+
+
+def test_no_route_candidates_short_circuits_without_calling_bob() -> None:
+    adapter = _stub_adapter("")
+
+    options, reason = run_migration_architect(_dossier(with_routes=False), adapter)
+
+    adapter.run.assert_not_called()
+    assert options == [] and reason != ""
+
+
+def test_architect_session_is_bounded() -> None:
+    settings = architect_settings()
+
+    assert settings.max_cost <= ARCHITECT_MAX_COST
+    assert settings.disable_subagents and settings.disable_mcp
+    assert settings.max_turns <= 6
 
 
 def test_imported_audit_never_calls_bob_and_still_completes(tmp_path) -> None:
@@ -280,3 +264,6 @@ def test_imported_audit_never_calls_bob_and_still_completes(tmp_path) -> None:
     adapter.run.assert_not_called()
     assert dossier.migration_options == []
     assert stages == ["preparing", "auditing", "validating", "migration"]
+    # La recomendación y su PERT se calculan igual en modo importado.
+    assert dossier.recommendation is not None and dossier.recommendation.recommended is not None
+    assert dossier.first_cut_pert == dossier.recommendation.first_cut_pert

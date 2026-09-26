@@ -82,7 +82,9 @@ function Overview({ dossier }: { dossier: Dossier }) {
       </Section>
 
       <div className="grid grid-cols-1 gap-x-12 @3xl:grid-cols-2">
-        <Section eyebrow="Primer corte" title={dossier.migration ? `Migrar ${dossier.migration.endpoint}` : "Estimación del primer corte"}>
+        <Section eyebrow="Primer corte" title={dossier.recommendation?.recommended
+          ? `Migrar primero ${dossier.recommendation.recommended.endpoint}`
+          : dossier.migration && dossier.migration.status !== "not_run" ? `Migrar ${dossier.migration.endpoint}` : "Estimación del primer corte"}>
           {dossier.first_cut_pert ? (
             <>
               <PertRange pert={dossier.first_cut_pert} />

@@ -88,6 +88,7 @@ def test_surgeon_can_only_write_inside_its_own_copy(tmp_path: Path) -> None:
         assert not pattern.search(outside), outside
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Creating symlinks needs admin rights on Windows; runs in Linux CI.")
 def test_rendered_regex_accepts_the_path_bob_is_given_and_its_real_path(tmp_path: Path) -> None:
     real = tmp_path / "real"
     (real / "src").mkdir(parents=True)
@@ -126,6 +127,7 @@ print(json.dumps({{"type": "result", "status": "success", "stats": {{"task_id": 
 '''
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="The fake `bob` is a POSIX script Windows cannot execute; runs in Linux CI.")
 def test_run_stream_feeds_large_prompts_without_blocking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = tmp_path / "bob"
     fake.write_text(FAKE_BOB.format(python=sys.executable), encoding="utf-8")
