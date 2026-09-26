@@ -52,7 +52,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     // overflow-clip (not hidden): a clipped box is not a scroll container, so focus() or
     // scrollIntoView() deep inside a panel can never scroll the whole shell off screen.
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-clip bg-canvas">
+    // relative: absolutely positioned descendants (sr-only live regions, evidence labels) take the
+    // shell as containing block, so they are clipped here instead of growing the document height.
+    <div className="relative grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-clip bg-canvas">
       <a href="#workspace" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-pill focus:bg-overlay focus:px-3 focus:py-1.5 focus:text-caption">
         Saltar al contenido
       </a>
@@ -63,12 +65,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NavRail />
         </div>
 
-        <main id="workspace" tabIndex={-1} className="@container min-h-0 overflow-y-auto focus:outline-none">
+        <main id="workspace" tabIndex={-1} className="@container relative min-h-0 overflow-y-auto focus:outline-none">
           {children}
         </main>
 
         {showAiDocked && (
-          <div className="min-h-0 overflow-hidden border-l border-line">
+          <div className="relative min-h-0 overflow-hidden border-l border-line">
             <AIPanel onClose={() => setAiOpen(false)} />
           </div>
         )}

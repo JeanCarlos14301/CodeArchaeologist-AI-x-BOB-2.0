@@ -65,7 +65,7 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
         : null;
 
   return (
-    <aside aria-label="Asistente IBM Bob" className="flex h-full flex-col bg-surface">
+    <aside aria-label="Asistente IBM Bob" className="relative flex h-full flex-col overflow-hidden bg-surface">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
         <span aria-hidden className="h-2 w-2 rounded-pill bg-fg-2" />
         <h2 className="font-display text-body text-fg">Bob</h2>
@@ -75,7 +75,7 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
         </IconButton>
       </header>
 
-      <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
+      <div ref={scroller} onScroll={onScroll} className="relative min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
         <section aria-label="Contexto actual" className="rounded-inner border border-line px-3 py-2.5">
           <Eyebrow>Contexto · {KIND_LABEL[aiContext.kind]}</Eyebrow>
           <p className="mt-1 text-body text-pretty text-fg">{aiContext.label ?? (route.jobId ? "Este repositorio" : "Ningún proyecto abierto")}</p>

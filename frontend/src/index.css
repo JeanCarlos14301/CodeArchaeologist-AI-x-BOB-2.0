@@ -8,6 +8,13 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* The app shell owns every scroll area; the document itself never scrolls (no black band below the shell). */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     background: var(--ca-void);
     color: var(--ca-white);

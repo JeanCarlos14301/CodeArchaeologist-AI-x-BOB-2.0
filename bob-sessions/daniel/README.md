@@ -5,5 +5,5 @@
 
 Muestran el trabajo de backend, pero **no** son un resumen de sesión de IBM Bob.
 
-**Pendiente:** añadir una captura del *Task Summary* de una sesión de Bob desde la cuenta de Daniel. Pasos en
-[../README.md](../README.md#cómo-tomar-la-captura-2-minutos).
+**Pendiente:** añadir una captura del *Task Summary* de una sesión de Bob (modo `blast-radius-guard`) desde la cuenta de Daniel. Comando en
+[../README.md](../README.md#qué-captura-toma-cada-integrante).
