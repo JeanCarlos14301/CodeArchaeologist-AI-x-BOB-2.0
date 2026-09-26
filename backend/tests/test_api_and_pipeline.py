@@ -46,7 +46,9 @@ def test_job_lifecycle_and_synchronous_pipeline():
 
     # 3. Esperar que el pipeline asíncrono termine en background
     # En Windows y CI compartido, Word/pytest pueden tardar más de 25 s sin que el worker falle.
-    max_wait = 60
+    # Stage 7 runs the real FacturaYa suite in a subprocess with its own 60 s timeout,
+    # after ~20 s of earlier stages on a slow machine; 60 s total was not enough.
+    max_wait = 150
     start_time = time.time()
     comp_data = {}
     while time.time() - start_time < max_wait:

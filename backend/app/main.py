@@ -24,9 +24,12 @@ from fastapi.staticfiles import StaticFiles
 import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-_backend_path = str(REPO_ROOT / "backend")
-if _backend_path not in sys.path:
-    sys.path.insert(0, _backend_path)
+# The backend mixes `app.*` imports (rooted at backend/) and `backend.app.*` imports (rooted at
+# the repo root), so both roots must be importable however uvicorn is launched
+# (`uvicorn` script, `python -m uvicorn`, from the repo root or from backend/).
+for _import_root in (str(REPO_ROOT / "backend"), str(REPO_ROOT)):
+    if _import_root not in sys.path:
+        sys.path.insert(0, _import_root)
 
 try:
     from app.adapters.bob_adapter import (
