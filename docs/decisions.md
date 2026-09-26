@@ -31,6 +31,7 @@
 | D27 | La API pública es `/api/audits`; el motor histórico `/api/jobs` permanece apagado y no se documenta como capacidad entregada. |
 | D28 | Todo lo que se publica sobre un análisis (feed de actividad, error del job) se trata como público: las rutas absolutas del servidor se reducen a su nombre final y los fallos de Bob llegan con un motivo genérico y accionable; stderr y el detalle quedan solo en el log del servidor. |
 | D29 | El registro de actividad tiene tope (5 000 eventos por análisis; por encima solo se escriben los eventos de etapa y cierre) y el arranque de auditorías live es atómico (comprobar y crear bajo un candado): nunca dos sesiones de Bob a la vez. |
+| D30 | El ranking de rutas y roadmap por olas es determinista: score = (valor × facilidad) / riesgo; PERT por ola y corte con aviso heurístico explícito ("Estimación heurística, no calibrada"); el motor legado /api/jobs se elimina por completo. Ver `docs/migration-engine.md`. |
 
 ## Respuestas del kickoff (J-01)
 1. **Alcance técnico**: El núcleo arranca con Flask + SQLite a FastAPI, extensible inmediatamente a NestJS y microservicios mediante el catálogo de agentes especializados.

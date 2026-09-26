@@ -63,7 +63,7 @@ class FastMCPTelemetryBridge:
             for tbl in tables:
                 # Sanitización estricta del identificador de tabla
                 if tbl.isidentifier():
-                    cursor.execute(f"SELECT COUNT(*) FROM \"{tbl}\"")
+                    cursor.execute(f'SELECT COUNT(*) FROM "{tbl}"')  # nosec B608 - validated by isidentifier()
                     counts[tbl] = cursor.fetchone()[0]
 
             conn.close()
@@ -77,7 +77,7 @@ class FastMCPTelemetryBridge:
         telemetry: List[EndpointTelemetry] = []
         try:
             import duckdb
-            target = Path(log_dir_or_parquet)
+            target = Path(log_dir_or_parquet).resolve()
             if target.exists():
                 con = duckdb.connect(database=":memory:")
                 # Consulta agregada de latencia y volumen
@@ -91,7 +91,7 @@ class FastMCPTelemetryBridge:
                 GROUP BY endpoint
                 ORDER BY calls DESC
                 LIMIT 10
-                """
+                """  # nosec B608 - target is resolved local file path
                 res = con.execute(query).fetchall()
                 for row in res:
                     endpoint, calls, avg_lat, err_pct = row

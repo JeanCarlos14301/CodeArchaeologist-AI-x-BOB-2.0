@@ -177,14 +177,14 @@ def relative_to_workspace(value: str, workspace: Path) -> str:
     root = str(workspace.resolve())
     if text.startswith(root):
         text = text[len(root):].lstrip("/\\") or "."
-    elif text.startswith("/") or re.match(r"^[A-Za-z]:\\", text):
+    elif text.startswith("/") or re.match(r"^[A-Za-z]:[\\/]", text):
         text = Path(text).name
-    return text
+    return text.replace("\\", "/")
 
 
 def _strip_paths(text: str, workspace: Path) -> str:
     root = str(workspace.resolve())
-    return redact_paths(text.replace(root + "/", "").replace(root, "."))
+    return redact_paths(text.replace(root + "\\", "").replace(root + "/", "").replace(root, "."))
 
 
 def parse_todos(raw: str) -> list[dict[str, str]]:
