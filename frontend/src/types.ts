@@ -62,6 +62,11 @@ export interface Dossier {
     expected_days: number; variance: number; formula: string; assumptions: string[];
   } | null;
   migration: MigrationResult | null;
+  /** Propuestas de Bob (migration-architect) validadas por código; vacío si no corrió o se rechazó. */
+  migration_options?: {
+    id: string; name: string; pattern: string; finding_ids: string[];
+    pros: string[]; cons: string[]; recommended: boolean;
+  }[];
 }
 
 export interface MigrationTestResult {
