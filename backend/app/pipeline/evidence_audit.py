@@ -50,12 +50,17 @@ REGLAS
   cálculos monetarios, funciones demasiado grandes, acoplamiento y ausencia de pruebas.
 - Redacta title, explanation y recommendation en español.
 - Numera los hallazgos F-1, F-2, ... Reporta entre 5 y 15 hallazgos, los más relevantes.
+- Si el repositorio no usa Flask o SQLite, audita igualmente el código Python que exista.
+- Si no encuentras hallazgos con evidencia verificable, o no puedes completar la auditoría,
+  responde igualmente con el JSON y `"findings": []`. Nunca expliques en prosa.
 
 FORMATO DE SALIDA
 Tu mensaje final debe ser ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin
 markdown) que cumpla este JSON Schema:
 {schema}
 """
+# Characters of Bob's final message quoted in the error when it isn't JSON.
+_MESSAGE_EXCERPT_CHARS = 300
 
 
 class AuditError(RuntimeError):
@@ -75,6 +80,18 @@ def prepare_workspace(source_repo: Path, job_dir: Path) -> Path:
     return workspace
 
 
+def ensure_python_code(workspace: Path) -> None:
+    """Rejects repos with no Python source before spending bobcoins (D10: Python 3 only)."""
+    has_python = any(
+        ".bob" not in path.relative_to(workspace).parts for path in workspace.rglob("*.py")
+    )
+    if not has_python:
+        raise AuditError(
+            "El repositorio no contiene archivos Python (.py). CodeArchaeologist analiza "
+            "sistemas Python 3 (Flask + SQLite); no se invocó a Bob ni se gastaron bobcoins."
+        )
+
+
 def build_audit_prompt() -> str:
     schema = json.dumps(AuditorOutput.model_json_schema(), separators=(",", ":"))
     return AUDIT_PROMPT.format(schema=schema)
@@ -92,11 +109,23 @@ def extract_json(message: str) -> dict:
         raise AuditError(f"JSON inválido en la respuesta de Bob: {exc}") from exc
 
 
+def _describe_reply(result: BobResult) -> str:
+    """Short, single-line summary of Bob's final message for error reports."""
+    text = " ".join(result.last_message.split())
+    if not text:
+        return f"Bob terminó (status {result.status!r}) sin mensaje final."
+    excerpt = text[:_MESSAGE_EXCERPT_CHARS] + ("…" if len(text) > _MESSAGE_EXCERPT_CHARS else "")
+    return f"Bob terminó (status {result.status!r}) y respondió: «{excerpt}»"
+
+
 def parse_auditor_output(result: BobResult) -> AuditorOutput:
     try:
         return AuditorOutput.model_validate(extract_json(result.last_message))
     except ValidationError as exc:
         raise AuditError(f"La salida de Bob no cumple el esquema v1: {exc}") from exc
+    except AuditError as exc:
+        # Keep the reason visible in the UI; the full reply is in bob-result.json.
+        raise AuditError(f"{exc} {_describe_reply(result)} Respuesta completa en bob-result.json.") from exc
 
 
 def save_bob_result(result: BobResult, job_dir: Path) -> Path:
@@ -169,6 +198,7 @@ def run_evidence_audit(
         # La descarga conserva la respuesta que alimentó exactamente esta importación.
         save_bob_result(result, job_dir)
     else:
+        ensure_python_code(workspace)
         bob = adapter or BobAdapter(workspace)
         try:
             result = bob.run(AUDITOR_MODE, build_audit_prompt())

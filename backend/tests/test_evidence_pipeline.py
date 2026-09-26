@@ -171,3 +171,50 @@ def test_imported_real_bob_output_validates_against_demo(tmp_path: Path) -> None
 def test_example_dossier_fixture_matches_contract() -> None:
     dossier = Dossier.model_validate_json((FIXTURES / "dossier-example.json").read_text(encoding="utf-8"))
     assert dossier.execution_mode == "example"
+
+
+class _ReplyAdapter:
+    """Fake Bob that returns a fixed final message and counts invocations."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        self.calls = 0
+
+    def run(self, mode: str, prompt: str) -> BobResult:
+        self.calls += 1
+        return BobResult(
+            mode=mode, status="success", last_message=self.message,
+            stats=BobStats(task_id="t", duration_ms=5, session_costs=0.1), execution_mode="live",
+        )
+
+
+def test_repo_without_python_is_rejected_before_calling_bob(tmp_path: Path) -> None:
+    source = tmp_path / "js-repo"
+    source.mkdir()
+    (source / "index.js").write_text("console.log('hola')\n")
+    bob = _ReplyAdapter('{"findings": []}')
+
+    with pytest.raises(AuditError, match="no contiene archivos Python"):
+        run_evidence_audit(source, tmp_path / "job", adapter=bob)
+
+    assert bob.calls == 0, "no bobcoins should be spent on an unsupported repo"
+
+
+def test_prose_reply_reports_what_bob_said(repo: Path, tmp_path: Path) -> None:
+    bob = _ReplyAdapter("No puedo auditar este repositorio porque no usa Flask.")
+
+    with pytest.raises(AuditError) as error:
+        run_evidence_audit(repo, tmp_path / "job", adapter=bob)
+
+    message = str(error.value)
+    assert "no contiene JSON" in message
+    assert "no usa Flask" in message
+    assert (tmp_path / "job" / "bob-result.json").is_file(), "raw reply must be kept for diagnosis"
+
+
+def test_empty_findings_produce_a_valid_dossier_and_memo(repo: Path, tmp_path: Path) -> None:
+    dossier = run_evidence_audit(repo, tmp_path / "job", adapter=_ReplyAdapter('{"findings": []}'))
+
+    assert dossier.findings == []
+    assert dossier.stats.findings_reported == 0
+    assert (tmp_path / "job" / "dossier.json").is_file()
