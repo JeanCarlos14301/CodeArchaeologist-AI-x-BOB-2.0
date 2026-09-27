@@ -518,3 +518,32 @@ def test_concurrent_requests_start_a_single_bob_operation(tmp_path: Path, monkey
     for thread in threads:
         thread.join()
     assert sorted(outcomes) == ["busy", "busy", "busy", "started"]
+
+
+def test_completion_criteria_are_not_invented_figures(stack) -> None:
+    """Regression: "pytest ... passes 100% against the existing server" was rejected as an invented figure."""
+    steps = _plan()["steps"]
+    steps[0]["validation"] = "pytest tests/test_characterization.py -v pasa al 100% contra el servidor Flask existente."
+    assert validate_plan(_plan(steps=steps), SAMPLE).steps[0].validation.endswith("existente.")
+    steps[0]["validation"] = "La cobertura de las rutas migradas debe ser al menos 80% antes del corte."
+    assert validate_plan(_plan(steps=steps), SAMPLE)
+
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    ok = _assessment(summary="La suite de caracterización debe pasar al 100% antes de migrar cada ruta.")
+    assert validate_assessment(ok, request, stack, SAMPLE)
+
+
+def test_invented_percentages_and_estimates_are_still_rejected(stack) -> None:
+    steps = _plan()["steps"]
+    steps[0]["changes"] = "Sustituir Flask por FastAPI, lo que reduce el tiempo de respuesta un 40% en promedio."
+    with pytest.raises(PlannerError, match="figures"):
+        validate_plan(_plan(steps=steps), SAMPLE)
+    steps = _plan()["steps"]
+    steps[0]["validation"] = "Revisar el resultado durante dos semanas antes de continuar."
+    with pytest.raises(PlannerError, match="figures"):
+        validate_plan(_plan(steps=steps), SAMPLE)
+    request = AssessRequest(mode="chosen", mappings=[Mapping(from_id="flask", to_id="fastapi")])
+    with pytest.raises(PlannerError, match="figures"):
+        validate_assessment(_assessment(summary="Mejora el rendimiento 40 % sin esfuerzo."), request, stack, SAMPLE)
+    with pytest.raises(PlannerError, match="figures"):
+        validate_assessment(_assessment(summary="Sube la latencia hasta 1000% en los peores casos."), request, stack, SAMPLE)
