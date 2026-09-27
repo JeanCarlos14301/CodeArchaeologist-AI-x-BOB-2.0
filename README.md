@@ -201,10 +201,10 @@ When `LIVE_AUDIT_TOKEN` is set, every operation that calls Bob and every read of
 
 ## Team
 
-- **Jean Carlos Reyes:** Product Owner, DevOps and pitch
-- **Felipe:** IBM Bob integration
-- **Daniel:** backend, deterministic metrics and exporters
-- **Edgar:** frontend and UX
+- **Jean Carlos Reyes:** 
+- **Nelson Felipe Gonzalez:** 
+- **Daniel Esteban Alarcón:**
+- **Edgar Leonardo Patiño:**
 
 ## License
 
