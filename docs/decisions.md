@@ -20,7 +20,7 @@
 | D16 | **Discarded, not implemented** (see D38). Original proposal: forensic git and AST mining, integrating PyDriller (churn hotspots vs. bugs) and Tree-sitter/AST for structural cartography and ER diagrams in Mermaid. |
 | D17 | **Discarded, not implemented** (see D38). Original proposal: FastMCP external telemetry injection, a connector to DuckDB, read-only SQLite and GitHub to enrich static findings with production traffic and failure metrics. |
 | D18 | Adopted the [official IBM Hackathon template](https://github.com/watsonxhackathon/ibm-hackathon-template): `.bobignore`, the security patterns in `.gitignore` and `SECURITY.md` are neither modified nor removed. |
-| D19 | Rules update (2026-09-25): submission video ≤ 3:00 (previously ≤ 4:00), with ≥ 90 s of mandatory live demo; see `docs/submission/video-script.md`. |
+| D19 | Rules update (2026-09-25): submission video ≤ 3:00 (previously ≤ 4:00), with ≥ 90 s of mandatory live demo; see `docs/submission/README.md`. |
 | D20 | Rules update (2026-09-25): the repo must include screenshots of each team member's Bob session summary, in `bob-sessions/<person>/`; see `SECURITY.md` on how to take them without exposing credentials. |
 | D21 | Rules update (2026-09-25): the submission form adds "Long Description" and "IBM Bob Usage Statement", both capped at 500 words; see `docs/submission/README.md`. |
 | D22 | Audits that come from a ZIP are private: they never show up in the public listing. In locked mode (D40), the listing and every derived read require `X-Live-Token`; registered samples stay public. |

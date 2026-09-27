@@ -1,6 +1,6 @@
 # Render Blueprint (J-03). Render builds the Dockerfile and redeploys on every push to main,
 # only when the CI workflow (.github/workflows/ci.yml) passes. Steps: docs/deploy.md.
-# How the app is published for the judges (API key, access and caps): docs/submission/public-app.md.
+# How the app is published (API key, access and caps): docs/deploy.md.
 services:
   - type: web
     name: codearchaeologist

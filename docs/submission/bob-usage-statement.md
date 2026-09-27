@@ -41,8 +41,8 @@ The public deployment also has a daily bobcoin guard.
 - We recorded the real session used by the public showcase: four parallel subagents, 12 findings, 14 of 14
   valid evidence citations, 1.15 bobcoins, and 165 seconds.
 
-Available per-member task-summary screenshots are tracked in `bob-sessions/`, with missing evidence called out
-in its checklist so the submission cannot claim work that has not been documented.
+Every team member ran Bob from their own account with a mode from this repository (`evidence-auditor`,
+`migration-architect`, `blast-radius-guard`, `code-skeptic` and others); the screenshots are in `bob-sessions/`.
 
 **Execution honesty.** Every result says whether it comes from a `live` session or a real recorded session
 (`imported`). The public showcase replays the recording at no cost. Live features are also open to judges
