@@ -8,7 +8,7 @@ const MARK: Record<string, { glyph: string; tone: string }> = {
   pending: { glyph: "○", tone: "text-subtle" },
 };
 
-/** Progreso por etapas reales, sin porcentajes inventados (PRODUCT.md §27). */
+/** Progress by real stages, with no invented percentages (PRODUCT.md §27). */
 export function AnalysisStatus({ flow }: { flow: FlowJob }) {
   const running = flow.status === "running" || flow.status === "queued";
   return (
@@ -40,9 +40,9 @@ export function AnalysisStatus({ flow }: { flow: FlowJob }) {
       </ol>
       {flow.status === "failed" && (
         <div role="alert" className="mt-4 rounded-inner border border-danger/40 bg-danger/5 px-4 py-3">
-          <p className="text-body text-fg">El análisis no pudo completarse.</p>
-          <p className="mt-1 font-mono text-caption text-fg-2">{flow.error ?? "Error sin detalle."}</p>
-          <p className="mt-2 text-caption text-muted">Revisa que el ZIP sea un repositorio Python + Flask + SQLite de menos de 5 MB e inténtalo de nuevo.</p>
+          <p className="text-body text-fg">The analysis could not be completed.</p>
+          <p className="mt-1 font-mono text-caption text-fg-2">{flow.error ?? "Error with no detail."}</p>
+          <p className="mt-2 text-caption text-muted">Check that the ZIP is a Python + Flask + SQLite repository under 5 MB and try again.</p>
         </div>
       )}
     </div>

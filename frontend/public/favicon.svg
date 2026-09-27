@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-  <!-- Marca de CodeArchaeologist (BrandMark.tsx): testigo de sondeo con estratos; el inferior en naranja señal. -->
+  <!-- CodeArchaeologist mark (BrandMark.tsx): a layered core sample with a signal-orange base. -->
   <defs><clipPath id="c"><rect x="5.5" y="1.5" width="9" height="17" rx="4.5"/></clipPath></defs>
   <g clip-path="url(#c)">
     <rect x="5.5" y="1.5" width="9" height="17" fill="#000000"/>

@@ -1,17 +1,17 @@
-"""Mide un expediente (`dossier.json`) contra la verdad de referencia `expected-findings.json`.
+"""Scores a dossier (`dossier.json`) against the ground truth `expected-findings.json`.
 
-Reglas (las únicas que definen "acierto"; no hay comparación a mano):
-- Solo cuentan los hallazgos VALIDADOS (`findings`); los `rejected_findings` no cuentan.
-- Un esperado con `expected_detection: true` es un ACIERTO si algún hallazgo validado tiene una
-  evidencia en el mismo archivo cuyo rango de líneas se solapa con alguna evidencia del esperado.
-- Un control con `expected_detection: false` es un FALSO POSITIVO si algún hallazgo validado solapa.
-- Un esperado que solo aparece entre los rechazados se informa como "rechazado por el validador".
+Rules (the only ones that define a "hit"; there is no manual comparison):
+- Only VALIDATED findings (`findings`) count; `rejected_findings` do not.
+- An expected finding with `expected_detection: true` is a HIT if some validated finding has a
+  piece of evidence in the same file whose line range overlaps any evidence of the expected one.
+- A control with `expected_detection: false` is a FALSE POSITIVE if some validated finding overlaps it.
+- An expected finding that only shows up among the rejected ones is reported as "rejected by the validator".
 
-Uso:
+Usage:
     python evaluation/score.py <dossier.json> [--expected evaluation/expected-findings.json]
 
-Código de salida: 0 si se detectan todos los esperados y no hay falsos positivos; 1 en otro caso.
-Solo usa la biblioteca estándar.
+Exit code: 0 if every expected finding is detected and there are no false positives; 1 otherwise.
+Standard library only.
 """
 
 import argparse
@@ -38,13 +38,13 @@ class ExpectedResult:
     def outcome(self) -> str:
         if self.should_detect:
             if self.matched_by:
-                return "acierto"
-            return "rechazado por el validador" if self.rejected_by else "no detectado"
-        return "falso positivo" if self.matched_by else "control limpio"
+                return "hit"
+            return "rejected by the validator" if self.rejected_by else "not detected"
+        return "false positive" if self.matched_by else "clean control"
 
     @property
     def ok(self) -> bool:
-        return self.outcome in {"acierto", "control limpio"}
+        return self.outcome in {"hit", "clean control"}
 
 
 @dataclass
@@ -85,7 +85,7 @@ def _touching(reference: list[Range], findings: list[dict[str, Any]]) -> list[st
 
 
 def score(dossier: dict[str, Any], expected: dict[str, Any]) -> Score:
-    """Compara un expediente con la verdad de referencia."""
+    """Compares a dossier with the ground truth."""
     validated = dossier.get("findings", [])
     rejected = dossier.get("rejected_findings", [])
     results = []
@@ -102,17 +102,17 @@ def score(dossier: dict[str, Any], expected: dict[str, Any]) -> Score:
 
 
 def format_report(result: Score) -> str:
-    lines = [f"Recall sobre hallazgos validados: {result.hits}/{len(result.expected)}"]
+    lines = [f"Recall on validated findings: {result.hits}/{len(result.expected)}"]
     for item in result.results:
         by = item.matched_by or item.rejected_by
         detail = f" ← {', '.join(by)}" if by else ""
         lines.append(f"  {'✔' if item.ok else '✘'} {item.id} {item.outcome}{detail} — {item.title}")
-    lines.append(f"Falsos positivos sobre controles: {len(result.false_positives)}")
+    lines.append(f"False positives on controls: {len(result.false_positives)}")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Puntúa un dossier.json contra expected-findings.json.")
+    parser = argparse.ArgumentParser(description="Scores a dossier.json against expected-findings.json.")
     parser.add_argument("dossier", type=Path)
     parser.add_argument("--expected", type=Path, default=DEFAULT_EXPECTED)
     args = parser.parse_args(argv)
@@ -123,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     if "findings" not in dossier:
-        print("ERROR: el archivo no parece un dossier.json (falta `findings`).", file=sys.stderr)
+        print("ERROR: the file does not look like a dossier.json (`findings` is missing).", file=sys.stderr)
         return 2
     result = score(dossier, expected)
     print(format_report(result))

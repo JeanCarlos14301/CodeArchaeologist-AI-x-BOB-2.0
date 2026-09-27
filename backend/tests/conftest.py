@@ -1,6 +1,6 @@
-"""Las pruebas ejercitan los modos example/imported, apagados por defecto en producción.
+"""The tests exercise the example/imported modes, which are off by default in production.
 
-Se activan al importar (no solo por fixture) porque algunos módulos de prueba crean `app` al importarse.
+They are enabled at import time (not only through a fixture) because some test modules create `app` on import.
 """
 
 import os

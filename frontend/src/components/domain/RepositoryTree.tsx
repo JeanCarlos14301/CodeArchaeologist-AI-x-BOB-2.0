@@ -9,10 +9,10 @@ interface Props {
   onSelect: (path: string) => void;
 }
 
-/** Árbol del repositorio integrado con el análisis: severidad, hallazgos y funciones por archivo. */
+/** Repository tree joined with the analysis: severity, findings and functions per file. */
 export function RepositoryTree({ root, selected, onSelect }: Props) {
   return (
-    <ul aria-label="Archivos del repositorio analizado" className="py-1 font-mono text-caption">
+    <ul aria-label="Files of the analyzed repository" className="py-1 font-mono text-caption">
       {root.children.map((node) => (
         <TreeItem key={node.path} node={node} depth={0} selected={selected} onSelect={onSelect} />
       ))}
@@ -53,7 +53,7 @@ function TreeItem({ node, depth, selected, onSelect }: { node: TreeNode; depth: 
         aria-current={isSelected ? "true" : undefined}
         onClick={() => onSelect(node.path)}
         style={indent}
-        aria-label={`${node.path}${file.findings.length ? `, ${file.findings.length} hallazgos, peor severidad ${severity?.label}` : ""}, ${file.functions} funciones`}
+        aria-label={`${node.path}${file.findings.length ? `, ${file.findings.length} findings, worst severity ${severity?.label}` : ""}, ${file.functions} functions`}
         className={`relative flex h-7 w-full items-center gap-1.5 pr-3 text-left transition-[background-color] duration-150 hover:bg-raised ${isSelected ? "bg-raised text-fg" : "text-fg-2"}`}
       >
         {isSelected && <span aria-hidden className="absolute inset-y-1 left-0 w-0.5 rounded-pill bg-accent-hover" />}
@@ -61,9 +61,9 @@ function TreeItem({ node, depth, selected, onSelect }: { node: TreeNode; depth: 
         <FileCode2 size={13} aria-hidden className="shrink-0 text-subtle" />
         <span className="truncate">{node.name}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
-          {file.functions > 0 && <span className="text-subtle tabular-nums" title={`${file.functions} funciones`}>{file.functions}ƒ</span>}
+          {file.functions > 0 && <span className="text-subtle tabular-nums" title={`${file.functions} functions`}>{file.functions}ƒ</span>}
           {severity && (
-            <span className={`${severity.text} tabular-nums`} title={`${file.findings.length} hallazgos · ${severity.label}`}>
+            <span className={`${severity.text} tabular-nums`} title={`${file.findings.length} findings · ${severity.label}`}>
               <span aria-hidden>{severity.glyph}</span> {file.findings.length}
             </span>
           )}

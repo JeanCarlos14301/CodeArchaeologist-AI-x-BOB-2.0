@@ -6,8 +6,8 @@ import { WorkspaceProvider, useWorkspace } from "./lib/workspace";
 import { OverviewView } from "./views/OverviewView";
 import { ProjectsView } from "./views/ProjectsView";
 
-// Proyectos y Resumen van en el bundle inicial; el resto se descarga al abrir su sección
-// (el Estudio arrastra los iconos de tecnologías y la Arquitectura, los grafos).
+// Projects and Overview ship in the initial bundle; the rest downloads when its section opens
+// (the Studio pulls in the technology icons and Architecture pulls in the graphs).
 const SessionView = lazy(() => import("./views/SessionView").then((m) => ({ default: m.SessionView })));
 const ArchitectureView = lazy(() => import("./views/ArchitectureView").then((m) => ({ default: m.ArchitectureView })));
 const RepositoryView = lazy(() => import("./views/RepositoryView").then((m) => ({ default: m.RepositoryView })));
@@ -39,12 +39,12 @@ function CurrentView() {
   }
 }
 
-/** Remonta la vista al cambiar de análisis para que su estado local (pestañas, filtros) no se arrastre. */
+/** Remounts the view when the analysis changes so its local state (tabs, filters) does not carry over. */
 function KeyedView() {
   const { route } = useWorkspace();
   return (
     <ViewBoundary key={`${route.jobId ?? "projects"}:${route.section}`}>
-      <Suspense fallback={<div className="px-6 py-6 @3xl:px-10"><Loading label="Cargando la sección…" /></div>}>
+      <Suspense fallback={<div className="px-6 py-6 @3xl:px-10"><Loading label="Loading the section…" /></div>}>
         <CurrentView key={route.jobId ?? "projects"} />
       </Suspense>
     </ViewBoundary>

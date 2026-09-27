@@ -24,13 +24,13 @@ interface Props {
   model: ActivityModel;
   now: number;
   settled: boolean;
-  /** Solo en vivo: anuncia a lectores de pantalla un resumen del feed (nunca durante una reproducción). */
+  /** Live only: announces a feed summary to screen readers (never during a replay). */
   announce: boolean;
 }
 
 const ANNOUNCE_EVERY_MS = 4000;
 
-/** Resumen del feed para lectores de pantalla: como mucho uno cada 4 s, nunca un anuncio por acción. */
+/** Feed summary for screen readers: at most one every 4 s, never one announcement per action. */
 function useFeedAnnouncement(feed: FeedItem[], enabled: boolean): string {
   const [message, setMessage] = useState("");
   const announced = useRef(feed.length);
@@ -48,14 +48,14 @@ function useFeedAnnouncement(feed: FeedItem[], enabled: boolean): string {
       if (fresh <= 0) return;
       announced.current = feed.length;
       lastAt.current = Date.now();
-      setMessage(`${fresh} ${fresh === 1 ? "acción nueva" : "acciones nuevas"} de Bob. Última: ${feed[feed.length - 1].title}`);
+      setMessage(`${fresh} new Bob ${fresh === 1 ? "action" : "actions"}. Latest: ${feed[feed.length - 1].title}`);
     }, wait);
     return () => window.clearTimeout(timer);
   }, [feed, enabled]);
   return message;
 }
 
-/** Etapa 2: cómo razona Bob — plan, delegación en subagentes y cada acción que toma. */
+/** Stage 2: how Bob reasons — plan, delegation to subagents and every action it takes. */
 export function AgentsPanel({ model, now, settled, announce }: Props) {
   const bob = model.bob;
   const feed = useMemo(() => compactFeed(bob.feed), [bob.feed]);
@@ -70,13 +70,13 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
   }, [feed.length]);
 
   const stats = [
-    { label: "Turnos del orquestador", value: bob.turns || "—" },
-    { label: "Lecturas y búsquedas", value: bob.tools || "—" },
-    { label: "Subagentes", value: bob.agents.length ? `${bob.agents.length - running}/${bob.agents.length} terminados` : "—" },
+    { label: "Orchestrator turns", value: bob.turns || "—" },
+    { label: "Reads and searches", value: bob.tools || "—" },
+    { label: "Subagents", value: bob.agents.length ? `${bob.agents.length - running}/${bob.agents.length} finished` : "—" },
     {
-      label: bob.result?.cost != null ? "Coste de la sesión" : "Coste reportado",
+      label: bob.result?.cost != null ? "Session cost" : "Reported cost",
       value: bob.result?.cost != null ? `${bob.result.cost.toFixed(2)} bc` : subagentCost ? `≥ ${subagentCost.toFixed(2)} bc` : "—",
-      hint: bob.maxCost != null ? `tope ${bob.maxCost} bc` : undefined,
+      hint: bob.maxCost != null ? `cap ${bob.maxCost} bc` : undefined,
     },
   ];
 
@@ -84,7 +84,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
     <div className="space-y-6">
       {bob.recorded && (
         <p className="rounded-inner border border-line px-3 py-2 text-caption text-muted">
-          Sesión real de IBM Bob grabada y reproducida con su ritmo original (acelerado). No consume bobcoins.
+          A real IBM Bob session, recorded and replayed at its original pace (sped up). It spends no bobcoins.
         </p>
       )}
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 @2xl:grid-cols-4">
@@ -99,7 +99,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
         ))}
       </dl>
 
-      <section aria-label="Orquestador y subagentes" className="rounded-panel border border-line bg-surface px-2 py-3">
+      <section aria-label="Orchestrator and subagents" className="rounded-panel border border-line bg-surface px-2 py-3">
         <div className="hidden @xl:block">
           <AgentConstellation agents={bob.agents} skills={bob.skills} now={now} orchestratorBusy={!bob.result} settled={settled || !!bob.result} />
         </div>
@@ -115,10 +115,10 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
       </section>
 
       <div className="grid grid-cols-1 gap-6 @3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <section aria-label="Plan de Bob">
-          <Eyebrow>Plan de Bob</Eyebrow>
+        <section aria-label="Bob's plan">
+          <Eyebrow>Bob's plan</Eyebrow>
           {bob.plan.length === 0 ? (
-            <p className="mt-2 text-caption text-subtle">{settled ? "Bob no publicó un plan en esta sesión." : "Esperando el plan…"}</p>
+            <p className="mt-2 text-caption text-subtle">{settled ? "Bob did not publish a plan in this session." : "Waiting for the plan…"}</p>
           ) : (
             <ol className="mt-2 space-y-2">
               {bob.plan.map((item, index) => (
@@ -126,7 +126,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
                   <span aria-hidden className={`${PLAN_MARK[item.state].tone} ${item.state === "active" && !settled ? "animate-pulse" : ""}`}>{PLAN_MARK[item.state].glyph}</span>
                   <span className={item.state === "pending" ? "text-subtle" : "text-fg-2"}>
                     {item.text}
-                    <span className="sr-only"> ({item.state === "done" ? "hecho" : item.state === "active" ? "en curso" : "pendiente"})</span>
+                    <span className="sr-only"> ({item.state === "done" ? "done" : item.state === "active" ? "in progress" : "pending"})</span>
                   </span>
                 </li>
               ))}
@@ -134,7 +134,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
           )}
           {bob.skills.length > 0 && (
             <>
-              <Eyebrow className="mt-5">Skills activadas</Eyebrow>
+              <Eyebrow className="mt-5">Skills activated</Eyebrow>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {bob.skills.map((skill) => <li key={skill} className="rounded-pill border border-line px-2.5 py-0.5 font-mono text-caption text-fg-2">{skill}</li>)}
               </ul>
@@ -142,11 +142,11 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
           )}
         </section>
 
-        <section aria-label="Razonamiento y acciones de Bob">
-          <Eyebrow>Razonamiento y acciones · {feed.length}</Eyebrow>
+        <section aria-label="Bob's reasoning and actions">
+          <Eyebrow>Reasoning and actions · {feed.length}</Eyebrow>
           <p role="status" className="sr-only">{announcement}</p>
-          <ol ref={scroller} role="log" aria-live="off" aria-label="Acciones de Bob en orden cronológico" className="mt-2 max-h-[26rem] space-y-1 overflow-y-auto pr-1">
-            {feed.length === 0 && <li className="text-caption text-subtle">{settled ? "Sin actividad registrada." : "Bob está arrancando…"}</li>}
+          <ol ref={scroller} role="log" aria-live="off" aria-label="Bob's actions in chronological order" className="mt-2 max-h-[26rem] space-y-1 overflow-y-auto pr-1">
+            {feed.length === 0 && <li className="text-caption text-subtle">{settled ? "No activity recorded." : "Bob is starting…"}</li>}
             {feed.map((item) => <FeedRow key={item.seq} item={item} />)}
           </ol>
         </section>
@@ -156,7 +156,7 @@ export function AgentsPanel({ model, now, settled, announce }: Props) {
 }
 
 function FeedRow({ item }: { item: FeedItem }) {
-  const Icon = item.kind === "bob.tool" && /Busc/.test(item.title) ? Search : ICON[item.kind] ?? FileText;
+  const Icon = item.kind === "bob.tool" && /^(Search|Busc)/.test(item.title) ? Search : ICON[item.kind] ?? FileText;
   const thinking = item.kind === "bob.thinking";
   const delegate = item.kind === "bob.subagent.start" || item.kind === "bob.subagent.end" || item.kind === "bob.subagent.report";
   return (
@@ -178,7 +178,7 @@ function FeedRow({ item }: { item: FeedItem }) {
   );
 }
 
-/** Un solo renglón para el progreso de redacción consecutivo (se actualiza en vez de repetirse). */
+/** A single row for consecutive writing progress (it updates instead of repeating). */
 function compactFeed(feed: FeedItem[]): FeedItem[] {
   const out: FeedItem[] = [];
   for (const item of feed) {

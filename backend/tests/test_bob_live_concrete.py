@@ -1,12 +1,12 @@
-"""Pruebas SUPER CONCRETAS con IBM Bob Shell en vivo (modo live).
+"""VERY CONCRETE tests against the live IBM Bob Shell (live mode).
 
-Diseñadas para validar la integración real de Bob de forma determinista y económica:
-- Limita estrictamente a 1 turno (max_turns=1).
-- Desactiva subagentes y MCP para no consumir bobcoins innecesarias (max_cost=0.5).
-- Verifica:
-  1. Ejecución en modo evidence-auditor devolviendo JSON estructurado y estadísticas reales.
-  2. Ejecución en modo migration-architect reconociendo el patrón Strangler Fig.
-  3. Streaming en vivo (stream-json) recibiendo eventos en tiempo real con BobAdapter.run_stream.
+Designed to validate the real Bob integration deterministically and cheaply:
+- Strictly limited to 1 turn (max_turns=1).
+- Subagents and MCP disabled so no bobcoins are spent needlessly (max_cost=0.5).
+- Checks:
+  1. evidence-auditor mode returning structured JSON and real statistics.
+  2. migration-architect mode recognizing the Strangler Fig pattern.
+  3. Live streaming (stream-json) receiving real-time events with BobAdapter.run_stream.
 """
 
 from __future__ import annotations
@@ -29,10 +29,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.live
 @pytest.mark.skipif(
     not (os.environ.get("BOB_API_KEY") and (shutil.which("bob") or shutil.which("bob.cmd"))),
-    reason="Requiere Bob Shell instalado y BOB_API_KEY en el entorno",
+    reason="Requires Bob Shell installed and BOB_API_KEY in the environment",
 )
 def test_live_evidence_auditor_minimal() -> None:
-    """Verifica que Bob en modo evidence-auditor responde en vivo con consumo mínimo de tokens."""
+    """Checks that Bob in evidence-auditor mode answers live with minimal token usage."""
     settings = BobRunSettings(
         max_turns=1,
         max_cost=0.5,
@@ -42,7 +42,7 @@ def test_live_evidence_auditor_minimal() -> None:
         accept_license=True,
     )
     adapter = BobAdapter(REPO_ROOT, settings)
-    prompt = 'Responde únicamente con el siguiente JSON sin formato adicional: {"status": "ok", "agent": "evidence-auditor"}. No ejecutes herramientas.'
+    prompt = 'Answer only with the following JSON and no extra formatting: {"status": "ok", "agent": "evidence-auditor"}. Do not run tools.'
     result = adapter.run("evidence-auditor", prompt)
 
     assert result.status == "success"
@@ -52,17 +52,17 @@ def test_live_evidence_auditor_minimal() -> None:
     assert result.stats.duration_ms > 0
     assert result.stats.session_costs >= 0.0
 
-    # Validar que el mensaje contiene el payload esperado
+    # Check that the message contains the expected payload
     assert "evidence-auditor" in result.last_message or "ok" in result.last_message
 
 
 @pytest.mark.live
 @pytest.mark.skipif(
     not (os.environ.get("BOB_API_KEY") and (shutil.which("bob") or shutil.which("bob.cmd"))),
-    reason="Requiere Bob Shell instalado y BOB_API_KEY en el entorno",
+    reason="Requires Bob Shell installed and BOB_API_KEY in the environment",
 )
 def test_live_migration_architect_minimal() -> None:
-    """Verifica que el modo migration-architect se ejecuta en vivo y devuelve razonamiento arquitectónico."""
+    """Checks that migration-architect mode runs live and returns architectural reasoning."""
     settings = BobRunSettings(
         max_turns=1,
         max_cost=0.5,
@@ -72,7 +72,7 @@ def test_live_migration_architect_minimal() -> None:
         accept_license=True,
     )
     adapter = BobAdapter(REPO_ROOT, settings)
-    prompt = 'Responde únicamente con un JSON con la clave "pattern": "Strangler Fig". No uses herramientas.'
+    prompt = 'Answer only with a JSON with the key "pattern": "Strangler Fig". Do not use tools.'
     result = adapter.run("migration-architect", prompt)
 
     assert result.status == "success"
@@ -83,10 +83,10 @@ def test_live_migration_architect_minimal() -> None:
 @pytest.mark.live
 @pytest.mark.skipif(
     not (os.environ.get("BOB_API_KEY") and (shutil.which("bob") or shutil.which("bob.cmd"))),
-    reason="Requiere Bob Shell instalado y BOB_API_KEY en el entorno",
+    reason="Requires Bob Shell installed and BOB_API_KEY in the environment",
 )
 def test_live_stream_json_events(tmp_path: Path) -> None:
-    """Valida el streaming en tiempo real (stream-json) con eventos de Bob reales."""
+    """Validates real-time streaming (stream-json) with real Bob events."""
     settings = BobRunSettings(
         max_turns=1,
         max_cost=0.5,
@@ -99,7 +99,7 @@ def test_live_stream_json_events(tmp_path: Path) -> None:
     seen_events: list[dict] = []
     raw_log = tmp_path / "live-bob-raw.jsonl"
 
-    prompt = 'Responde la palabra CONFIRMADO. No uses herramientas.'
+    prompt = 'Answer the word CONFIRMED. Do not use tools.'
     result = adapter.run_stream(
         mode="evidence-auditor",
         prompt=prompt,
@@ -112,11 +112,11 @@ def test_live_stream_json_events(tmp_path: Path) -> None:
     assert result.execution_mode == "live"
     assert len(seen_events) >= 2
 
-    # Debe haber al menos un evento de mensaje y un evento result
+    # There must be at least one message event and one result event
     event_types = [e.get("type") for e in seen_events]
     assert "message" in event_types
     assert "result" in event_types
 
-    # El log crudo se debió persistir
+    # The raw log must have been persisted
     assert raw_log.is_file()
     assert len(raw_log.read_text(encoding="utf-8").strip().splitlines()) >= 2

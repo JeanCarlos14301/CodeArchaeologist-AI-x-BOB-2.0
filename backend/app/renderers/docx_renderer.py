@@ -1,18 +1,18 @@
-"""Renderizador de Memorando Ejecutivo en formato DOCX para la Junta Directiva (D-05, D-08).
+"""Executive memo renderer in DOCX format for the board (D-05, D-08; the live product uses board_memo.py).
 
-Genera un documento corporativo de 4 a 6 páginas con python-docx:
-1. Resumen Ejecutivo y Decisión Solicitada
-2. Diagnóstico del Sistema y Evidencia Verificada
-3. Evaluación de Riesgo y Radio de Explosión (NetworkX)
-4. Opciones Arquitectónicas Comparadas
-5. Plan de Fases de Migración con Rangos PERT
-6. Resultados del Primer Corte Probado (Strangler Fig)
-7. Hoja de Ruta para los Próximos 30 Días
+Generates a 4-to-6 page corporate document with python-docx:
+1. Executive Summary and Decision Requested
+2. System Diagnosis and Verified Evidence
+3. Risk Assessment and Blast Radius (NetworkX)
+4. Architecture Options Compared
+5. Migration Phase Plan with PERT Ranges
+6. Results of the First Tested Cut (Strangler Fig)
+7. Roadmap for the Next 30 Days
 
-Cumple con:
-- Cero cifras inventadas: todos los números provienen del JSON validado.
-- Estilos tipográficos profesionales (encabezados, tablas formateadas con bordes sutiles, insignias).
-- Abre limpiamente en Microsoft Word sin advertencias de corrupción.
+Guarantees:
+- Zero invented figures: every number comes from the validated JSON.
+- Professional typography (headings, tables with subtle borders, badges).
+- Opens cleanly in Microsoft Word without corruption warnings.
 """
 
 from datetime import datetime, timezone
@@ -30,14 +30,14 @@ from backend.app.models import DossierResult
 
 
 def set_cell_background(cell, hex_color: str):
-    """Aplica color de fondo hexadecimal a una celda de tabla."""
+    """Applies a hexadecimal background color to a table cell."""
     tcPr = cell._tc.get_or_add_tcPr()
     shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{hex_color}"/>')
     tcPr.append(shd)
 
 
 def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
-    """Aplica márgenes internos a una celda."""
+    """Applies inner margins to a cell."""
     tcPr = cell._tc.get_or_add_tcPr()
     tcMar = parse_xml(
         f'<w:tcMar {nsdecls("w")}>'
@@ -51,7 +51,7 @@ def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
 
 
 def add_custom_heading(doc: Document, text: str, level: int):
-    """Añade encabezados con paleta corporativa IBM Blue / Slate."""
+    """Adds headings with the IBM Blue / Slate corporate palette."""
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12 if level > 1 else 18)
     p.paragraph_format.space_after = Pt(4)
@@ -62,7 +62,7 @@ def add_custom_heading(doc: Document, text: str, level: int):
     if level == 1:
         run.font.size = Pt(16)
         run.font.color.rgb = RGBColor(15, 98, 254)  # IBM Blue
-        # Línea horizontal sutil bajo el H1
+        # Subtle horizontal line under the H1
         pBdr = parse_xml(f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="8" w:space="4" w:color="0F62FE"/></w:pBdr>')
         p._p.get_or_add_pPr().append(pBdr)
     elif level == 2:
@@ -74,12 +74,12 @@ def add_custom_heading(doc: Document, text: str, level: int):
 
 
 def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> Path:
-    """Renderiza el expediente técnico completo a un documento DOCX ejecutivo."""
+    """Renders the complete technical dossier to an executive DOCX document."""
     doc = Document()
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Configuración de márgenes estándar (1 pulgada = 2.54 cm)
+    # Standard margins (1 inch = 2.54 cm)
     for section in doc.sections:
         section.top_margin = Inches(1.0)
         section.bottom_margin = Inches(1.0)
@@ -91,7 +91,7 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     # ==========================================
     p_meta = doc.add_paragraph()
     p_meta.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run_meta = p_meta.add_run(f"Expediente Técnico: {dossier.job_id}\nFecha: {datetime.now(timezone.utc).strftime('%Y-%m-%d')} | Modo: {dossier.execution_mode.upper()}")
+    run_meta = p_meta.add_run(f"Technical Dossier: {dossier.job_id}\nDate: {datetime.now(timezone.utc).strftime('%Y-%m-%d')} | Mode: {dossier.execution_mode.upper()}")
     run_meta.font.size = Pt(9)
     run_meta.font.color.rgb = RGBColor(110, 110, 110)
 
@@ -105,26 +105,26 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
 
     sub_p = doc.add_paragraph()
     sub_p.paragraph_format.space_after = Pt(18)
-    sub_run = sub_p.add_run(f"Memorando Ejecutivo de Decisión Arquitectónica — Sistema: {dossier.snapshot.repo_name}")
+    sub_run = sub_p.add_run(f"Executive Architecture Decision Memo — System: {dossier.snapshot.repo_name}")
     sub_run.font.size = Pt(12)
     sub_run.font.italic = True
     sub_run.font.color.rgb = RGBColor(57, 57, 57)
 
     # ==========================================
-    # SECCIÓN 1: RESUMEN EJECUTIVO Y DECISIÓN
+    # SECTION 1: EXECUTIVE SUMMARY AND DECISION
     # ==========================================
-    add_custom_heading(doc, "1. Resumen Ejecutivo y Decisión Solicitada", level=1)
+    add_custom_heading(doc, "1. Executive Summary and Decision Requested", level=1)
 
     p_summary = doc.add_paragraph()
     p_summary.paragraph_format.line_spacing = 1.15
     p_summary.paragraph_format.space_after = Pt(8)
     p_summary.add_run(
-        f"Se somete a consideración de la Junta Directiva el diagnóstico forense del repositorio "
-        f"'{dossier.snapshot.repo_name}' ({dossier.snapshot.total_files} archivos, {dossier.snapshot.total_loc} líneas de código). "
-        f"El sistema actual presenta vulnerabilidades severas de seguridad y deuda técnica que impiden su evolución comercial sin riesgo de contingencia."
+        f"The forensic diagnosis of the repository is submitted to the Board of Directors: "
+        f"'{dossier.snapshot.repo_name}' ({dossier.snapshot.total_files} files, {dossier.snapshot.total_loc} lines of code). "
+        f"The current system has severe security vulnerabilities and technical debt that prevent its commercial evolution without contingency risk."
     )
 
-    # Cuadro de Decisión Solicitada destacada
+    # Highlighted Decision Requested box
     callout_tbl = doc.add_table(rows=1, cols=1)
     callout_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     c_cell = callout_tbl.cell(0, 0)
@@ -133,39 +133,39 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     set_cell_margins(c_cell, top=140, bottom=140, left=180, right=180)
     
     cp = c_cell.paragraphs[0]
-    c_bold = cp.add_run("DECISIÓN PROPUESTA A LA JUNTA:\n")
+    c_bold = cp.add_run("DECISION PROPOSED TO THE BOARD:\n")
     c_bold.font.bold = True
     c_bold.font.size = Pt(10)
     c_bold.font.color.rgb = RGBColor(15, 98, 254)
 
     pert_total = sum(p.pert_expected_days for p in dossier.pert_plan) if dossier.pert_plan else 20.5
     cp.add_run(
-        f"Autorizar la migración incremental mediante el patrón Strangler Fig, iniciando de inmediato con el corte "
-        f"seguro del endpoint '{dossier.selected_first_cut}' (esfuerzo estimado: {pert_total:.1f} días laborables). "
-        f"La inversión no requiere detener la operación del negocio ni reescribir el sistema a ciegas; "
-        f"cuenta con reversión instantánea (rollback a costo cero) y pruebas de caracterización golden-master automatizadas."
+        f"Authorize the incremental migration with the Strangler Fig pattern, starting right away with the safe cut "
+        f"of the endpoint '{dossier.selected_first_cut}' (estimated effort: {pert_total:.1f} working days). "
+        f"The investment does not require stopping business operations or rewriting the system blindly; "
+        f"it has instant rollback (zero-cost) and automated golden-master characterization tests."
     )
     doc.add_paragraph().paragraph_format.space_after = Pt(8)
 
     # ==========================================
-    # SECCIÓN 2: DIAGNÓSTICO Y EVIDENCIA VERIFICADA
+    # SECTION 2: DIAGNOSIS AND VERIFIED EVIDENCE
     # ==========================================
-    add_custom_heading(doc, "2. Diagnóstico del Sistema y Evidencia Física Verificada", level=1)
+    add_custom_heading(doc, "2. System Diagnosis and Verified Physical Evidence", level=1)
 
     p_ev = doc.add_paragraph()
     p_ev.paragraph_format.space_after = Pt(6)
     p_ev.add_run(
-        f"Regla de auditoría estricta de CodeArchaeologist: 100% de los reclamos técnicos citan archivo, rango de líneas y código real. "
-        f"Tasa de fidelidad comprobada: {dossier.validation_report.fidelity_ratio * 100:.1f}% "
-        f"({dossier.validation_report.valid_references} de {dossier.validation_report.total_references} referencias válidas en disco)."
+        f"CodeArchaeologist strict audit rule: 100% of the technical claims cite a file, a line range and real code. "
+        f"Verified fidelity rate: {dossier.validation_report.fidelity_ratio * 100:.1f}% "
+        f"({dossier.validation_report.valid_references} of {dossier.validation_report.total_references} valid references on disk)."
     )
 
-    # Tabla de hallazgos
+    # Findings table
     findings_tbl = doc.add_table(rows=1, cols=5)
     findings_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     col_widths = [Inches(0.8), Inches(1.1), Inches(2.2), Inches(1.6), Inches(0.8)]
 
-    headers = ["ID", "Severidad", "Hallazgo Técnico", "Ubicación en Código", "Estado"]
+    headers = ["ID", "Severity", "Technical Finding", "Location in Code", "Status"]
     hdr_cells = findings_tbl.rows[0].cells
     for i, h_text in enumerate(headers):
         hdr_cells[i].text = h_text
@@ -184,7 +184,7 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
         row_cells[1].text = f.severity
         row_cells[2].text = f.title
         
-        # Ubicación
+        # Location
         loc_str = "N/A"
         if f.evidence:
             ev = f.evidence[0]
@@ -201,43 +201,43 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
     # ==========================================
-    # SECCIÓN 3: EVALUACIÓN DE RIESGO Y RADIO DE EXPLOSIÓN
+    # SECTION 3: RISK ASSESSMENT AND BLAST RADIUS
     # ==========================================
-    add_custom_heading(doc, "3. Evaluación de Riesgo y Radio de Explosión (CBRS)", level=1)
+    add_custom_heading(doc, "3. Risk Assessment and Blast Radius (CBRS)", level=1)
 
     p_risk = doc.add_paragraph()
     p_risk.paragraph_format.space_after = Pt(6)
     p_risk.add_run(
-        "A diferencia de puntuaciones subjetivas de IA, el Radio de Explosión (Composite Blast Radius Score - CBRS) "
-        "se calcula mediante grafos dirigidos de llamadas con NetworkX, midiendo invocadores directos e impacto transitivo:"
+        "Unlike subjective AI scores, the Composite Blast Radius Score (CBRS) "
+        "is computed on directed call graphs with NetworkX, measuring direct callers and transitive impact:"
     )
 
-    # Bullet points de radio de impacto
+    # Blast radius bullet points
     for f in [f for f in dossier.findings if f.severity in ["CRITICAL", "HIGH"]][:4]:
         bp = doc.add_paragraph(style="List Bullet")
         bp.paragraph_format.space_after = Pt(3)
         b_run = bp.add_run(f"[{f.id}] {f.title}: ")
         b_run.font.bold = True
-        bp.add_run(f"Puntaje CBRS: {f.blast_radius_score:.1f}/100. Símbolos impactados: {', '.join(f.transitive_impacted_symbols[:4])}")
+        bp.add_run(f"CBRS score: {f.blast_radius_score:.1f}/100. Impacted symbols: {', '.join(f.transitive_impacted_symbols[:4])}")
 
     doc.add_paragraph().paragraph_format.space_after = Pt(8)
 
     # ==========================================
-    # SECCIÓN 4: OPCIONES ARQUITECTÓNICAS COMPARADAS
+    # SECTION 4: ARCHITECTURE OPTIONS COMPARED
     # ==========================================
-    add_custom_heading(doc, "4. Opciones Arquitectónicas Comparadas", level=1)
+    add_custom_heading(doc, "4. Architecture Options Compared", level=1)
 
     p_opts = doc.add_paragraph()
     p_opts.paragraph_format.space_after = Pt(6)
     p_opts.add_run(
-        "Se evaluaron tres estrategias de modernización frente al monolito heredado, recomendando la opción Strangler Fig "
-        "por ofrecer la menor exposición al riesgo operacional:"
+        "Three modernization strategies were assessed against the legacy monolith, recommending the Strangler Fig option "
+        "because it offers the lowest exposure to operational risk:"
     )
 
     opts_tbl = doc.add_table(rows=1, cols=4)
     opts_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     opts_widths = [Inches(1.8), Inches(1.3), Inches(2.2), Inches(1.2)]
-    opts_hdrs = ["Opción y Patrón", "Riesgo Operativo", "Ventajas Clave", "Esfuerzo PERT"]
+    opts_hdrs = ["Option and Pattern", "Operational Risk", "Key Advantages", "PERT Effort"]
     for i, h in enumerate(opts_hdrs):
         opts_tbl.rows[0].cells[i].text = h
         opts_tbl.rows[0].cells[i].width = opts_widths[i]
@@ -256,7 +256,7 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
             row[0].text += " ★ RECOMENDADA"
         row[1].text = opt.risk_level
         row[2].text = " • " + "\n • ".join(opt.pros[:2])
-        row[3].text = f"{opt.estimated_effort_days:.1f} días"
+        row[3].text = f"{opt.estimated_effort_days:.1f} days"
 
         for j in range(4):
             row[j].width = opts_widths[j]
@@ -267,21 +267,21 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
     # ==========================================
-    # SECCIÓN 5: PLAN DE FASES PERT
+    # SECTION 5: PERT PHASE PLAN
     # ==========================================
-    add_custom_heading(doc, "5. Plan de Fases de Migración con Distribución PERT", level=1)
+    add_custom_heading(doc, "5. Migration Phase Plan with PERT Distribution", level=1)
 
     p_pert = doc.add_paragraph()
     p_pert.paragraph_format.space_after = Pt(6)
     p_pert.add_run(
-        "Las estimaciones no son plazos fijos sino rangos probabilísticos basados en la fórmula estándar PERT: "
-        "E = (O + 4M + P) / 6 y Varianza = ((P - O) / 6)²."
+        "The estimates are not fixed deadlines but probabilistic ranges based on the standard PERT formula: "
+        "E = (O + 4M + P) / 6 and Variance = ((P - O) / 6)²."
     )
 
     pert_tbl = doc.add_table(rows=1, cols=5)
     pert_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     pert_widths = [Inches(0.6), Inches(2.3), Inches(1.2), Inches(1.2), Inches(1.2)]
-    pert_hdrs = ["Fase", "Nombre y Alcance", "Rango (O/M/P)", "Esperado (E)", "Rollback"]
+    pert_hdrs = ["Phase", "Name and Scope", "Range (O/M/P)", "Expected (E)", "Rollback"]
     for i, h in enumerate(pert_hdrs):
         pert_tbl.rows[0].cells[i].text = h
         pert_tbl.rows[0].cells[i].width = pert_widths[i]
@@ -298,7 +298,7 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
         row[0].text = str(ph.phase_number)
         row[1].text = ph.name
         row[2].text = f"O: {ph.optimistic_days}d\nM: {ph.nominal_days}d\nP: {ph.pessimistic_days}d"
-        row[3].text = f"{ph.pert_expected_days:.1f} días\n(σ²={ph.pert_variance:.2f})"
+        row[3].text = f"{ph.pert_expected_days:.1f} days\n(σ²={ph.pert_variance:.2f})"
         row[4].text = ph.rollback_strategy
 
         for j in range(5):
@@ -310,34 +310,34 @@ def render_dossier_to_docx(dossier: DossierResult, output_path: Path | str) -> P
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
     # ==========================================
-    # SECCIÓN 6: RESULTADOS DEL PRIMER CORTE PROBADO
+    # SECTION 6: RESULTS OF THE FIRST TESTED CUT
     # ==========================================
-    add_custom_heading(doc, "6. Resultados del Primer Corte Probado en Laboratorio", level=1)
+    add_custom_heading(doc, "6. Results of the First Cut Tested in the Lab", level=1)
 
     p_cut = doc.add_paragraph()
     p_cut.paragraph_format.space_after = Pt(6)
     p_cut.add_run(
-        f"Demostración técnica de equivalencia y seguridad: el endpoint '{dossier.selected_first_cut}' fue extraído "
-        f"a una implementación en FastAPI con validación Pydantic v2 y consultas SQL parametrizadas.\n\n"
-        f"• Veredicto pruebas contra sistema legado: {dossier.migration_summary.legacy_tests_verdict if dossier.migration_summary else 'PASS'}\n"
-        f"• Veredicto pruebas contra sistema modernizado: {dossier.migration_summary.modern_tests_verdict if dossier.migration_summary else 'PASS'}\n"
-        f"• Mitigación BOLA: Facturas ajenas devuelven HTTP 404 seguro (anteriormente expuestas con HTTP 200).\n"
-        f"• Parche unificado disponible: migration.diff generado automáticamente."
+        f"Technical demonstration of equivalence and security: the endpoint '{dossier.selected_first_cut}' was extracted "
+        f"to a FastAPI implementation with Pydantic v2 validation and parameterized SQL queries.\n\n"
+        f"• Verdict of the tests against the legacy system: {dossier.migration_summary.legacy_tests_verdict if dossier.migration_summary else 'PASS'}\n"
+        f"• Verdict of the tests against the modernized system: {dossier.migration_summary.modern_tests_verdict if dossier.migration_summary else 'PASS'}\n"
+        f"• BOLA mitigation: other users' invoices return a safe HTTP 404 (previously exposed with HTTP 200).\n"
+        f"• Unified patch available: migration.diff generated automatically."
     )
 
     # ==========================================
-    # SECCIÓN 7: HOJA DE RUTA PARA LOS PRÓXIMOS 30 DÍAS
+    # SECTION 7: ROADMAP FOR THE NEXT 30 DAYS
     # ==========================================
-    add_custom_heading(doc, "7. Hoja de Ruta para los Próximos 30 Días", level=1)
+    add_custom_heading(doc, "7. Roadmap for the Next 30 Days", level=1)
 
     p_road = doc.add_paragraph()
     p_road.paragraph_format.space_after = Pt(6)
     p_road.add_run(
-        "Cronograma propuesto tras la aprobación de la Junta:\n"
-        "• Días 1–5: Puesta en marcha de la Fachada Strangler Fig en entorno de staging y enrutamiento del 5% del tráfico de consulta.\n"
-        "• Días 6–12: Migración del 100% de tráfico de lectura hacia el micro-servicio FastAPI con monitoreo de latencia y errores.\n"
-        "• Días 13–20: Extracción de la lógica de descuentos unificada (resolución del bug de discrepancia en reports.py).\n"
-        "• Días 21–30: Auditoría final de seguridad y desmantelamiento de librerías obsoletas en el monolito Flask."
+        "Proposed schedule after Board approval:\n"
+        "• Days 1–5: Start the Strangler Fig facade in staging and route 5% of the read traffic.\n"
+        "• Days 6–12: Move 100% of the read traffic to the FastAPI micro-service while monitoring latency and errors.\n"
+        "• Days 13–20: Extract the unified discount logic (fixing the discrepancy bug in reports.py).\n"
+        "• Days 21–30: Final security audit and removal of obsolete libraries from the Flask monolith."
     )
 
     doc.save(str(out_file))

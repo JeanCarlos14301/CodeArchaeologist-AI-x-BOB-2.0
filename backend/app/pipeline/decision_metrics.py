@@ -1,7 +1,7 @@
-"""Métricas deterministas para la decisión de migración.
+"""Deterministic metrics for the migration decision.
 
-No contiene salidas de IA: riesgo, impacto y PERT se derivan del expediente
-validado y del análisis estático del workspace.
+No AI output here: risk, impact and PERT are derived from the validated dossier
+and from the static analysis of the workspace.
 """
 
 import hashlib
@@ -17,7 +17,7 @@ SEVERITY_WEIGHT = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
 
 def source_sha256(workspace: Path) -> str:
-    """Hash reproducible de rutas y bytes del código, excluyendo activos internos de Bob."""
+    """Reproducible hash of code paths and bytes, excluding Bob's internal assets."""
     digest = hashlib.sha256()
     for path in sorted(item for item in workspace.rglob("*") if item.is_file()):
         relative = path.relative_to(workspace)
@@ -102,7 +102,7 @@ def calculate_decision_metrics(workspace: Path, dossier: Dossier) -> tuple[list[
     expected = round((optimistic + 4 * most_likely + pessimistic) / 6, 2)
     variance = round(((pessimistic - optimistic) / 6) ** 2, 2)
     formula = (
-        "M = (2×rutas + funciones + ceil(líneas/25) + ceil(complejidad/5)) × 0.5; "
+        "M = (2×routes + functions + ceil(lines/25) + ceil(complexity/5)) × 0.5; "
         "O = 0.6×M; P = 1.8×M; E = (O + 4M + P) / 6"
     )
     estimate = PertEstimate(
@@ -117,10 +117,10 @@ def calculate_decision_metrics(workspace: Path, dossier: Dossier) -> tuple[list[
         variance=variance,
         formula=formula,
         assumptions=[
-            "Una persona desarrolladora familiarizada con Python, Flask, FastAPI y SQLite.",
-            "Cada punto equivale a 0,5 días laborables e incluye implementación y pruebas del primer corte.",
-            "El alcance se limita al hallazgo con mayor riesgo calculado y a sus llamadores transitivos.",
-            "No incluye espera por aprobaciones, despliegue productivo ni migración de otros endpoints.",
+            "One developer familiar with Python, Flask, FastAPI and SQLite.",
+            "Each point equals 0.5 working days and includes implementing and testing the first cut.",
+            "The scope is limited to the finding with the highest computed risk and its transitive callers.",
+            "Excludes waiting for approvals, production deployment and migrating other endpoints.",
         ],
     )
     return matrix, estimate

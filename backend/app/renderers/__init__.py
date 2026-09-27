@@ -1,1 +1,1 @@
-"""Renderizadores del mismo JSON a DOCX, HTML autónomo y PPTX (etapa 11, D-05, D-08, D-09)."""
+"""Renderers of the same JSON to DOCX, standalone HTML and PPTX."""

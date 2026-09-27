@@ -33,7 +33,7 @@ def seed(path, reset=False):
         for index in range(1, 31):
             connection.execute(
                 "INSERT INTO customers(id, owner_id, name, email) VALUES (?, ?, ?, ?)",
-                (index, ((index - 1) % 3) + 1, f"Cliente Demo {index:02d}", f"cliente{index:02d}@example.invalid"),
+                (index, ((index - 1) % 3) + 1, f"Demo Customer {index:02d}", f"customer{index:02d}@example.invalid"),
             )
         connection.commit()
         for index in range(200):
@@ -44,16 +44,16 @@ def seed(path, reset=False):
             issue_date = date(2024, month, day).isoformat()
             if index == 0:
                 items = [
-                    {"description": "Caso redondeo A", "quantity": 1, "unit_price": "50.03"},
-                    {"description": "Caso redondeo B", "quantity": 1, "unit_price": "50.04"},
+                    {"description": "Rounding case A", "quantity": 1, "unit_price": "50.03"},
+                    {"description": "Rounding case B", "quantity": 1, "unit_price": "50.04"},
                 ]
             else:
                 items = [
-                    {"description": f"Servicio {index:03d}-A", "quantity": rng.randint(1, 3),
+                    {"description": f"Service {index:03d}-A", "quantity": rng.randint(1, 3),
                      "unit_price": f"{rng.randint(8, 45)}.{rng.randint(0, 99):02d}"},
-                    {"description": f"Servicio {index:03d}-B", "quantity": rng.randint(1, 2),
+                    {"description": f"Service {index:03d}-B", "quantity": rng.randint(1, 2),
                      "unit_price": f"{rng.randint(5, 38)}.{rng.randint(0, 99):02d}"},
-                    {"description": f"Servicio {index:03d}-C", "quantity": 1,
+                    {"description": f"Service {index:03d}-C", "quantity": 1,
                      "unit_price": f"{rng.randint(2, 22)}.{rng.randint(0, 99):02d}"},
                 ]
             create_invoice(connection, owner_id, customer_id, issue_date,

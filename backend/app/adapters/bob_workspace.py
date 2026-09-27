@@ -1,13 +1,13 @@
-"""Activos de Bob (`.bob`) que viajan a cada workspace, con permisos acotados a ese workspace.
+"""Bob assets (`.bob`) that travel to each workspace, with permissions scoped to that workspace.
 
-Garantías deterministas, sin depender del criterio del modelo:
+Deterministic guarantees that do not depend on the model's judgment:
 
-- Bob compara el `fileRegex` de un modo con la RUTA ABSOLUTA del archivo. En el repositorio, los modos que
-  editan llevan el marcador `__WORK_ROOT__`: sin sustituir no coincide con ninguna ruta (falla cerrado). Al
-  instalar los activos se sustituye por la raíz absoluta de ESTE workspace, así Bob solo escribe dentro de él.
-- Solo viajan los subagentes de solo lectura: un modo que delega no puede invocar a uno que edita o ejecuta
-  aunque un repositorio subido intente convencerlo (inyección de instrucciones).
-- Bob se lanza sin los secretos de la aplicación (`bob_adapter.bob_child_env`).
+- Bob matches a mode's `fileRegex` against the file's ABSOLUTE PATH. In the repository, the modes that
+  edit carry the `__WORK_ROOT__` marker: unsubstituted, it matches no path (fails closed). When the
+  assets are installed it is replaced with the absolute root of THIS workspace, so Bob only writes inside it.
+- Only read-only subagents travel: a mode that delegates cannot invoke one that edits or executes,
+  even if an uploaded repository tries to talk it into it (prompt injection).
+- Bob is launched without the application's secrets (`bob_adapter.bob_child_env`).
 """
 
 import re
@@ -24,7 +24,7 @@ _FRONTMATTER = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.DOTALL)
 
 
 def agent_groups(text: str) -> frozenset[str] | None:
-    """Grupos que declara el frontmatter de un agente; None si no se pueden determinar."""
+    """Groups declared by an agent's frontmatter; None when they cannot be determined."""
     match = _FRONTMATTER.match(text)
     if not match:
         return None
@@ -52,18 +52,18 @@ def _is_read_only(agent: Path) -> bool:
 
 
 def workspace_root_pattern(workspace: Path) -> str:
-    """Raíz del workspace como regex: la ruta tal como se le da a Bob y su ruta real (enlaces simbólicos)."""
+    """Workspace root as a regex: the path as given to Bob and its real path (symlinks)."""
     roots = sorted({str(workspace.absolute()), str(workspace.resolve())})
     return "(?:" + "|".join(re.escape(root) for root in roots) + ")"
 
 
 def render_modes(text: str, workspace: Path) -> str:
-    """Sustituye el marcador por la raíz del workspace, escapada para una cadena YAML entre comillas dobles."""
+    """Replaces the marker with the workspace root, escaped for a double-quoted YAML string."""
     return text.replace(WORK_ROOT_TOKEN, workspace_root_pattern(workspace).replace("\\", "\\\\"))
 
 
 def install_bob_assets(workspace: Path, source: Path = CUSTOM_MODES_FILE.parent) -> None:
-    """Copia modos, skills y reglas del proyecto, y solo los subagentes de solo lectura."""
+    """Copies the project's modes, skills and rules, and only the read-only subagents."""
     destination = workspace / ".bob"
     if destination.exists():
         shutil.rmtree(destination)

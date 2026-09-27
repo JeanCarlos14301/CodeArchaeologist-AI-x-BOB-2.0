@@ -1,33 +1,35 @@
 # Frontend
 
-Workspace de modernización (Vite + React 19 + TypeScript + Tailwind 4), servido por FastAPI desde `dist/`.
+Modernization workspace (Vite + React 19 + TypeScript + Tailwind 4), served by FastAPI from `dist/`.
 
-- **Diseño:** [../DESIGN.md](../DESIGN.md) (tokens, componentes, reglas). **Producto:** [../PRODUCT.md](../PRODUCT.md).
-- **Dueño:** Edgar (E-01 a E-08).
+- **Design:** [../DESIGN.md](../DESIGN.md) (tokens, components, rules). **Product:** [../PRODUCT.md](../PRODUCT.md).
+- **Owner:** Edgar (E-01 to E-08).
 
-## Uso
+## Usage
 
 ```bash
 npm install
-npm run dev     # http://localhost:5173 con proxy de /api y /health a http://127.0.0.1:8000
-npm run build   # genera dist/, que FastAPI sirve en http://127.0.0.1:8000
+npm run dev     # http://localhost:5173 with a proxy for /api and /health to http://127.0.0.1:8000
+npm run build   # builds dist/, which FastAPI serves at http://127.0.0.1:8000
 ```
 
-## Estructura
+## Structure
 
-| Carpeta | Contenido |
+| Folder | Contents |
 |---|---|
-| `src/styles/tokens.css` | tokens primitivos (`--ca-*`) y semánticos (`@theme`); las paletas por defecto de Tailwind están desactivadas |
-| `src/lib/` | estado y dominio sin UI: `workspace.tsx` (proveedor), `router.ts` (hash), `flow.ts`, `severity.ts`, `stack.ts`, `tree.ts`, `graphLayout.ts` |
-| `src/components/ui/` | primitivos: `Button`, `Badge` (Chip, SeverityBadge, ModeBadge, Kbd, StatusDot), `Layout` (ScreenHeader, Section, Panel, DataList, Meter, Segmented), `States` |
-| `src/components/domain/` | componentes del dominio (código, evidencia, grafos, riesgos, migración, Bob) |
-| `src/components/domain/console/` | consola de la sesión: etapas en vivo, agentes de Bob, evidencia, pruebas y reproducción |
-| `src/components/shell/` | app shell: barra superior, navegación, estado, paleta ⌘K, panel de Bob ⌘J |
-| `src/views/` | una pantalla por sección; `JobGate` resuelve estados del análisis (privado, en curso, fallido) |
+| `src/styles/tokens.css` | primitive (`--ca-*`) and semantic (`@theme`) tokens; Tailwind's default palettes are disabled |
+| `src/lib/` | state and domain logic without UI: `workspace.tsx` (provider), `router.ts` (hash), `flow.ts`, `severity.ts`, `stack.ts`, `tree.ts`, `graphLayout.ts` |
+| `src/components/ui/` | primitives: `Button`, `Badge` (Chip, SeverityBadge, ModeBadge, Kbd, StatusDot), `Layout` (ScreenHeader, Section, Panel, DataList, Meter, Segmented), `States` |
+| `src/components/domain/` | domain components (code, evidence, graphs, risks, migration, Bob) |
+| `src/components/domain/console/` | the session console: live stages, Bob's agents, evidence, tests and replay |
+| `src/components/shell/` | app shell: top bar, navigation, status bar, ⌘K palette, ⌘J Bob panel |
+| `src/views/` | one screen per section; `JobGate` resolves the analysis states (private, running, failed) |
 
-## Datos
+## Data
 
-Todo sale del backend (`src/api.ts`): `/api/audits*` (análisis, expediente, grafo, arquitectura, migración,
-código fuente, descargas), `/api/audits/{id}/events?after=N` (actividad por etapas, con cursor), `/api/bob/status`
-y `POST /api/audits/{id}/ask` (pregunta a Bob, exige token).
-Los tipos de `src/types.ts` reflejan `backend/app/contracts/schema_v1.py`.
+Everything comes from the backend (`src/api.ts`): `/api/audits*` (analyses, dossier, graph, architecture, migration,
+source code, downloads), `/api/audits/{id}/events?after=N` (per-stage activity, by cursor), `/api/bob/status`
+and `POST /api/audits/{id}/ask` (ask Bob; spends bobcoins).
+The access token is only requested when the server sets `LIVE_AUDIT_TOKEN` (`bob.live_requires_token`); otherwise the
+UI hides every token field.
+The types in `src/types.ts` mirror `backend/app/contracts/schema_v1.py`.

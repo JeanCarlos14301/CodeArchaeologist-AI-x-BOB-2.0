@@ -9,7 +9,7 @@ const COL_GAP = 96;
 const ROW_GAP = 18;
 const PAD = 24;
 const ISOLATED_GAP = 56;
-/** Por debajo de este ancho el texto sería ilegible: se permite scroll horizontal. */
+/** Below this width the text would be unreadable: horizontal scrolling is allowed. */
 const MIN_RENDER_W = 640;
 
 interface Props {
@@ -19,8 +19,8 @@ interface Props {
 }
 
 /**
- * Mapa de módulos por capas: de los puntos de entrada (izquierda) a las dependencias (derecha).
- * Aristas = llamadas medidas por AST entre archivos. Aristas de un ciclo: discontinuas y en rojo.
+ * Layered module map: from the entry points (left) to the dependencies (right).
+ * Edges = calls measured by AST between files. Edges of a cycle: dashed and in red.
  */
 export function ModuleMap({ data, selected, onSelect }: Props) {
   const [hover, setHover] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export function ModuleMap({ data, selected, onSelect }: Props) {
         style={{ width: "100%", minWidth: Math.min(layout.width, MIN_RENDER_W) }}
         className="block h-auto"
         role="group"
-        aria-label="Mapa de módulos y sus dependencias medidas"
+        aria-label="Module map and its measured dependencies"
       >
         <defs>
           <marker id="mm-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -97,7 +97,7 @@ export function ModuleMap({ data, selected, onSelect }: Props) {
 
         {layout.hasIsolated && (
           <text x={PAD} y={layout.isolatedTop - 16} className="fill-subtle font-sans" fontSize="10" letterSpacing="1.4">
-            SIN LLAMADAS ENTRE MÓDULOS
+            NO CALLS BETWEEN MODULES
           </text>
         )}
 
@@ -132,7 +132,7 @@ export function ModuleMap({ data, selected, onSelect }: Props) {
           const isSelected = module.file === selected;
           const dim = focus !== null && !neighbors.has(module.file);
           const severity = module.worst_severity ? SEVERITY_VAR[module.worst_severity] : null;
-          const label = `${module.file}: ${module.functions} funciones, ${module.findings} hallazgos${module.worst_severity ? `, peor severidad ${module.worst_severity}` : ""}`;
+          const label = `${module.file}: ${module.functions} functions, ${module.findings} findings${module.worst_severity ? `, worst severity ${module.worst_severity}` : ""}`;
           return (
             <g
               key={module.file}
@@ -155,7 +155,7 @@ export function ModuleMap({ data, selected, onSelect }: Props) {
               {severity && <rect x="0" y="10" width="2.5" height={NODE_H - 20} rx="1.25" fill={severity} />}
               <text x="14" y="22" fontSize="12" className="fill-fg font-mono">{module.file.length > 22 ? `…${module.file.slice(-21)}` : module.file}</text>
               <text x="14" y="40" fontSize="11" className="fill-subtle font-sans">
-                {module.functions} fn{module.findings > 0 ? ` · ${module.findings} hallazgo${module.findings === 1 ? "" : "s"}` : ""}
+                {module.functions} fn{module.findings > 0 ? ` · ${module.findings} finding${module.findings === 1 ? "" : "s"}` : ""}
               </text>
             </g>
           );

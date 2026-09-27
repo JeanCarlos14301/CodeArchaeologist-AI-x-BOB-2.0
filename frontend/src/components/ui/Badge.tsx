@@ -10,7 +10,7 @@ export function Chip({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
-/** Severidad = glifo + etiqueta + color (nunca solo color). */
+/** Severity = glyph + label + color (never color alone). */
 export function SeverityBadge({ severity, compact = false }: { severity: Severity; compact?: boolean }) {
   const info = SEVERITY[severity];
   return (
@@ -22,9 +22,9 @@ export function SeverityBadge({ severity, compact = false }: { severity: Severit
 }
 
 const MODE: Record<ExecutionMode, { label: string; hint: string; tone: string }> = {
-  live: { label: "LIVE", hint: "Bob analizó este repositorio en vivo", tone: "text-verified border-verified/40" },
-  imported: { label: "IMPORTADO", hint: "Respuesta real de Bob grabada y reutilizada", tone: "text-fg-2 border-line-strong" },
-  example: { label: "EJEMPLO", hint: "Datos de ejemplo: no provienen de un análisis real", tone: "text-warning border-warning/40" },
+  live: { label: "LIVE", hint: "Bob analyzed this repository live", tone: "text-verified border-verified/40" },
+  imported: { label: "IMPORTED", hint: "A real Bob reply, recorded and replayed", tone: "text-fg-2 border-line-strong" },
+  example: { label: "EXAMPLE", hint: "Example data: it does not come from a real analysis", tone: "text-warning border-warning/40" },
 };
 
 export function ModeBadge({ mode }: { mode: ExecutionMode }) {

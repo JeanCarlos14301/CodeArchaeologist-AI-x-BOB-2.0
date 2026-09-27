@@ -1,8 +1,8 @@
 import type { PipelineEvent, Severity, StageId } from "../types";
 
 /**
- * Modelo de la actividad del análisis a partir de los eventos del backend (función pura).
- * Para reproducir una sesión basta con construirlo con los eventos cuyo `t` ≤ cabezal.
+ * Model of the analysis activity built from the backend events (pure function).
+ * To replay a session, build it with the events whose `t` ≤ the playhead.
  */
 
 export const STAGE_ORDER: StageId[] = ["preparing", "auditing", "validating", "migration", "done"];
@@ -33,7 +33,7 @@ export interface AgentRun {
   turns: number | null;
   cost: number | null;
   durationMs: number | null;
-  /** Primera frase del informe que el subagente devolvió al orquestador. */
+  /** First sentence of the report the subagent returned to the orchestrator. */
   report: string | null;
 }
 
@@ -134,7 +134,7 @@ export function buildActivity(events: PipelineEvent[]): ActivityModel {
   return model;
 }
 
-/** Reemplaza (sin mutarlo) el primer subagente que cumple la condición; false si no hay ninguno. */
+/** Replaces (without mutating it) the first subagent that matches; false if there is none. */
 function patchAgent(model: ActivityModel, match: (agent: AgentRun) => boolean, patch: Partial<AgentRun>): boolean {
   const index = model.bob.agents.findIndex(match);
   if (index < 0) return false;
@@ -147,7 +147,7 @@ function apply(model: ActivityModel, event: PipelineEvent): void {
   if (FEED_KINDS.has(event.kind)) {
     const chars = num(d.chars);
     const title = (event.kind === "bob.writing" || event.kind === "bob.answer" || event.kind === "bob.subagent.report") && chars
-      ? `${event.title} · ${chars.toLocaleString("es")} caracteres`
+      ? `${event.title} · ${chars.toLocaleString("en")} characters`
       : event.title;
     model.bob.feed.push({ seq: event.seq, t: event.t, kind: event.kind, actor: event.actor, title, detail: event.detail, target: str(d.target) });
   }
@@ -185,17 +185,17 @@ function apply(model: ActivityModel, event: PipelineEvent): void {
       break;
     case "bob.subagent.start":
       model.bob.agents.push({
-        name: str(d.agent) ?? "subagente", task: event.detail, status: "running", startedAt: event.t,
+        name: str(d.agent) ?? "subagent", task: event.detail, status: "running", startedAt: event.t,
         endedAt: null, toolUses: null, turns: null, cost: null, durationMs: null, report: null,
       });
       break;
-    // Bob no da un id al iniciar un subagente: cada informe y cada cierre llenan el primer subagente
-    // con ese nombre que aún no lo tiene, sin sobrescribir nunca uno ya completo.
+    // Bob gives no id when a subagent starts: each report and each closing fills the first subagent
+    // with that name that does not have it yet, never overwriting one that is already complete.
     case "bob.subagent.report": {
-      const name = str(d.agent) ?? "subagente";
+      const name = str(d.agent) ?? "subagent";
       const report = event.detail ?? "";
       if (!patchAgent(model, (agent) => agent.name === name && agent.report === null, { report })) {
-        // Sin el log de Bob no hubo subagent_start: el informe basta para saber que trabajó.
+        // Without the Bob log there was no subagent_start: the report is enough to know it worked.
         model.bob.agents = [...model.bob.agents, {
           name, task: null, status: "done", startedAt: event.t, endedAt: event.t,
           toolUses: null, turns: null, cost: null, durationMs: null, report,
@@ -204,7 +204,7 @@ function apply(model: ActivityModel, event: PipelineEvent): void {
       break;
     }
     case "bob.subagent.end": {
-      const name = str(d.agent) ?? "subagente";
+      const name = str(d.agent) ?? "subagent";
       patchAgent(model, (agent) => agent.name === name && agent.status === "running", {
         status: "done", endedAt: event.t, toolUses: num(d.tool_uses), turns: num(d.turns), cost: num(d.cost), durationMs: num(d.duration_ms),
       });
@@ -256,30 +256,30 @@ function apply(model: ActivityModel, event: PipelineEvent): void {
   }
 }
 
-/** Resumen de una línea por etapa para el riel (solo cifras presentes en los eventos). */
+/** One-line summary per stage for the rail (only figures present in the events). */
 export function stageMetric(model: ActivityModel, stage: StageId): string | null {
   switch (stage) {
     case "preparing":
-      return model.inventory ? `${model.inventory.files} archivos · ${model.inventory.python_lines.toLocaleString("es")} líneas Python` : null;
+      return model.inventory ? `${model.inventory.files} files · ${model.inventory.python_lines.toLocaleString("en")} Python lines` : null;
     case "auditing": {
       const parts: string[] = [];
-      if (model.bob.tools) parts.push(`${model.bob.tools} lecturas y búsquedas`);
-      if (model.bob.agents.length) parts.push(`${model.bob.agents.length} subagente${model.bob.agents.length === 1 ? "" : "s"}`);
+      if (model.bob.tools) parts.push(`${model.bob.tools} reads and searches`);
+      if (model.bob.agents.length) parts.push(`${model.bob.agents.length} subagent${model.bob.agents.length === 1 ? "" : "s"}`);
       if (model.bob.result?.cost != null) parts.push(`${model.bob.result.cost.toFixed(2)} bc`);
       return parts.length ? parts.join(" · ") : null;
     }
     case "validating": {
-      if (model.evidence.summary) return `${model.evidence.summary.valid}/${model.evidence.summary.total} citas verificadas`;
+      if (model.evidence.summary) return `${model.evidence.summary.valid}/${model.evidence.summary.total} citations verified`;
       const valid = model.evidence.checks.filter((c) => c.status === "valid").length;
-      return model.evidence.checks.length ? `${valid}/${model.evidence.checks.length} citas…` : null;
+      return model.evidence.checks.length ? `${valid}/${model.evidence.checks.length} citations…` : null;
     }
     case "migration":
-      if (model.migration.skipped) return "No se ejecuta código subido";
+      if (model.migration.skipped) return "Uploaded code never runs";
       return model.migration.tests.length
-        ? `${model.migration.tests.filter((t) => t.status === "passed").length}/${model.migration.tests.length} pruebas pasan`
+        ? `${model.migration.tests.filter((t) => t.status === "passed").length}/${model.migration.tests.length} tests pass`
         : null;
     case "done":
-      return model.done ? `${model.done.findings} hallazgos con evidencia` : null;
+      return model.done ? `${model.done.findings} findings with evidence` : null;
   }
 }
 

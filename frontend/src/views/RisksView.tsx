@@ -50,32 +50,32 @@ function Risks({ dossier }: { dossier: Dossier }) {
     <div className="flex flex-col @3xl:h-full @3xl:min-h-0">
       <div className="px-6 pt-6 @3xl:px-10">
         <ScreenHeader
-          eyebrow="Riesgos · ¿Qué podría complicar la modernización?"
-          title={`${dossier.findings.length} hallazgos con evidencia`}
-          description="Cada hallazgo apunta a un archivo y unas líneas que el validador comprobó. Selecciona uno para ver su evidencia, el código afectado y la acción recomendada."
+          eyebrow="Risks · What could complicate the modernization?"
+          title={`${dossier.findings.length} findings with evidence`}
+          description="Each finding points to a file and lines the validator checked. Select one to see its evidence, the affected code and the recommended action."
         />
         <div className="flex flex-wrap items-center gap-3 py-4">
           <Segmented<Severity | "all">
-            label="Filtrar por severidad"
+            label="Filter by severity"
             value={severity}
             onChange={setSeverity}
             options={[
-              { value: "all", label: <>Todas <span className="font-mono text-subtle">{dossier.findings.length}</span></> },
+              { value: "all", label: <>All <span className="font-mono text-subtle">{dossier.findings.length}</span></> },
               ...SEVERITY_ORDER.filter((level) => counts[level] > 0).map((level) => ({
                 value: level,
                 label: <><span aria-hidden className={SEVERITY[level].text}>{SEVERITY[level].glyph}</span>{SEVERITY[level].label} <span className="font-mono text-subtle">{counts[level]}</span></>,
               })),
             ]}
           />
-          <label className="sr-only" htmlFor="risk-category">Categoría</label>
+          <label className="sr-only" htmlFor="risk-category">Category</label>
           <select id="risk-category" value={category} onChange={(event) => setCategory(event.target.value)}
             className="h-8 rounded-pill border border-line bg-control px-3 text-caption text-fg-2 focus:border-focus focus:outline-none">
-            <option value="all">Todas las categorías</option>
+            <option value="all">All categories</option>
             {categories.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
           </select>
           <div className="relative ml-auto w-full sm:w-64">
             <Search size={14} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-subtle" />
-            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por título, id o archivo" aria-label="Buscar hallazgos"
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by title, id or file" aria-label="Search findings"
               className="h-8 w-full rounded-pill border border-line bg-control pr-3 pl-8 text-caption text-fg placeholder:text-subtle focus:border-focus focus:outline-none" />
           </div>
         </div>
@@ -85,7 +85,7 @@ function Risks({ dossier }: { dossier: Dossier }) {
         <div className="@3xl:min-h-0 @3xl:overflow-y-auto @3xl:border-r @3xl:border-line">
           {groups.length === 0 ? (
             <div className="p-6">
-              <EmptyState title="Ningún hallazgo coincide con los filtros." action={<Button size="sm" onClick={() => { setSeverity("all"); setCategory("all"); setQuery(""); }}>Quitar filtros</Button>} />
+              <EmptyState title="No finding matches the filters." action={<Button size="sm" onClick={() => { setSeverity("all"); setCategory("all"); setQuery(""); }}>Clear filters</Button>} />
             </div>
           ) : (
             groups.map((group) => (
@@ -105,7 +105,7 @@ function Risks({ dossier }: { dossier: Dossier }) {
           {dossier.rejected_findings.length > 0 && (
             <div className="border-t border-line p-4">
               <Button size="sm" variant="ghost" onClick={() => setShowRejected((v) => !v)} aria-expanded={showRejected}>
-                {showRejected ? "Ocultar" : "Mostrar"} {dossier.rejected_findings.length} descartados por el validador
+                {showRejected ? "Hide" : "Show"} {dossier.rejected_findings.length} discarded by the validator
               </Button>
               {showRejected && (
                 <ul className="mt-2">
@@ -122,7 +122,7 @@ function Risks({ dossier }: { dossier: Dossier }) {
           {selected ? (
             <FindingInspector key={selected.id} finding={selected} dossier={dossier} graph={graph} rejected={selectedRejected} />
           ) : (
-            <EmptyState title="Selecciona un hallazgo">Verás su evidencia, el código afectado y la acción recomendada.</EmptyState>
+            <EmptyState title="Select a finding">You will see its evidence, the affected code and the recommended action.</EmptyState>
           )}
         </div>
       </div>

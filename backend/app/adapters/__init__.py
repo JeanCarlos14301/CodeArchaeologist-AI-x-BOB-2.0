@@ -1,6 +1,6 @@
-"""Adaptadores externos.
+"""External adapters.
 
-- bob_adapter: invoca Bob Shell (`bob run`) por subprocess con lista de argumentos,
-  prompt por stdin, timeout y modo; soporta ejecución live e importación de JSON (D12, D-04).
-- telemetry_mcp: telemetría externa vía FastMCP (D17).
+- bob_adapter: invokes Bob Shell (`bob run`) through subprocess with an argument list,
+  prompt on stdin, timeout and mode; supports live runs and JSON import (D12, D-04).
+- telemetry_mcp: external telemetry through FastMCP (D17, not wired into the product).
 """

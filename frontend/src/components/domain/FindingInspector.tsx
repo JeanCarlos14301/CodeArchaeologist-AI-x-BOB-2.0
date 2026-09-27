@@ -20,7 +20,7 @@ interface Props {
   rejected: boolean;
 }
 
-/** Revelación progresiva: resumen → por qué importa → evidencia → impacto → acción (PRODUCT.md §21). */
+/** Progressive disclosure: summary → why it matters → evidence → impact → action (PRODUCT.md §21). */
 export function FindingInspector({ finding, dossier, graph, rejected }: Props) {
   const { route, go, token, seedComposer } = useWorkspace();
   const [index, setIndex] = useState(0);
@@ -61,20 +61,20 @@ export function FindingInspector({ finding, dossier, graph, rejected }: Props) {
         <h2 id="inspector-title" className="mt-2 font-display text-title font-normal text-balance text-fg">{finding.title}</h2>
         <p className="mt-2 text-caption text-muted">
           <span className={finding.observed_or_inferred === "observed" ? "text-verified" : "text-warning"}>
-            {finding.observed_or_inferred === "observed" ? "Hecho detectado" : "Inferencia"}
+            {finding.observed_or_inferred === "observed" ? "Detected fact" : "Inference"}
           </span>
           {" · "}
-          {rejected ? "rechazado: su evidencia no coincide con el código" : "evidencia comprobada por el validador"}
+          {rejected ? "rejected: its evidence does not match the code" : "evidence checked by the validator"}
         </p>
       </header>
 
       <section>
-        <Eyebrow>Por qué importa</Eyebrow>
+        <Eyebrow>Why it matters</Eyebrow>
         <p className="mt-1.5 text-body text-pretty text-fg-2">{finding.explanation}</p>
       </section>
 
       <section>
-        <Eyebrow>Evidencia · {plural(finding.evidence.length, "referencia", "referencias")}</Eyebrow>
+        <Eyebrow>Evidence · {plural(finding.evidence.length, "reference", "references")}</Eyebrow>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {finding.evidence.map((item, i) => {
             const status = check(i);
@@ -98,7 +98,7 @@ export function FindingInspector({ finding, dossier, graph, rejected }: Props) {
               path={evidence.path}
               lines={excerpt ? excerpt.lines : toLines(evidence.snippet, evidence.line_start)}
               marks={[{ start: evidence.line_start, end: evidence.line_end, severity: finding.severity, label: finding.title }]}
-              caption={excerpt ? `de ${excerpt.total_lines} líneas` : excerptFailed ? "fragmento citado por Bob" : "cargando…"}
+              caption={excerpt ? `of ${excerpt.total_lines} lines` : excerptFailed ? "snippet cited by Bob" : "loading…"}
               maxHeight="18rem"
             />
           </div>
@@ -106,18 +106,18 @@ export function FindingInspector({ finding, dossier, graph, rejected }: Props) {
       </section>
 
       <section>
-        <Eyebrow>Código afectado</Eyebrow>
+        <Eyebrow>Affected code</Eyebrow>
         {!graph ? (
-          <p className="mt-1.5 text-caption text-subtle">Cargando grafo de llamadas…</p>
+          <p className="mt-1.5 text-caption text-subtle">Loading the call graph…</p>
         ) : !blast ? (
-          <p className="mt-1.5 text-body text-muted">Sin cálculo de impacto para este hallazgo.</p>
+          <p className="mt-1.5 text-body text-muted">No impact calculation for this finding.</p>
         ) : (
           <div className="mt-1.5 space-y-2 text-body">
             <p className="text-fg-2">
-              Origen en <span className="font-mono text-fg">{blast.origin_nodes.map(nodeName).join(", ")}</span>.{" "}
+              Origin in <span className="font-mono text-fg">{blast.origin_nodes.map(nodeName).join(", ")}</span>.{" "}
               {blast.impacted_nodes.length === 0
-                ? "Ninguna otra función la llama directa o indirectamente."
-                : `${plural(blast.impacted_nodes.length, "función la llama", "funciones la llaman")} directa o indirectamente.`}
+                ? "No other function calls it directly or indirectly."
+                : `${plural(blast.impacted_nodes.length, "function calls it", "functions call it")} directly or indirectly.`}
             </p>
             {blast.impacted_nodes.length > 0 && (
               <ul className="flex flex-wrap gap-1.5">
@@ -126,26 +126,26 @@ export function FindingInspector({ finding, dossier, graph, rejected }: Props) {
                 ))}
               </ul>
             )}
-            {risk && <p className="font-mono text-caption text-subtle">Riesgo calculado: {risk.formula}</p>}
+            {risk && <p className="font-mono text-caption text-subtle">Computed risk: {risk.formula}</p>}
           </div>
         )}
       </section>
 
       <section>
-        <Eyebrow>Acción recomendada</Eyebrow>
+        <Eyebrow>Recommended action</Eyebrow>
         <p className="mt-1.5 border-l-2 border-verified pl-3 text-body text-pretty text-fg">{finding.recommendation}</p>
       </section>
 
       <div className="flex flex-wrap gap-2 border-t border-line pt-4">
-        <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`¿Qué podría romperse si corrijo ${finding.id} (${finding.title})? ¿Qué pruebas debería ejecutar?`)}>
-          Preguntar a Bob por el impacto
+        <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`What could break if I fix ${finding.id} (${finding.title})? Which tests should I run?`)}>
+          Ask Bob about the impact
         </Button>
         <Button size="sm" variant="ghost" icon={<GitFork size={14} aria-hidden />} onClick={() => go("architecture", { finding: finding.id })}>
-          Ver en el grafo de llamadas
+          View in the call graph
         </Button>
         {evidence && (
           <Button size="sm" variant="ghost" icon={<FileCode2 size={14} aria-hidden />} onClick={() => go("repository", { file: evidence.path, line: evidence.line_start, finding: finding.id })}>
-            Abrir {evidence.path}
+            Open {evidence.path}
           </Button>
         )}
       </div>

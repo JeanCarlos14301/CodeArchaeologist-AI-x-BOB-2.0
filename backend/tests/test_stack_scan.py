@@ -1,4 +1,4 @@
-"""Detección de stack: lenguajes, frameworks, bases de datos, infraestructura y arquitectura."""
+"""Stack detection: languages, frameworks, databases, infrastructure and architecture."""
 
 import json
 from pathlib import Path

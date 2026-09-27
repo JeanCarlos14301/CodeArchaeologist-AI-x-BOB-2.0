@@ -1,8 +1,8 @@
-"""Tests deterministas para la etapa migration-architect (opciones sobre el ranking de rutas).
+"""Deterministic tests for the migration-architect stage (options over the route ranking).
 
-No invocan Bob live: usan un stub de BobAdapter que devuelve respuestas fijas.
-Cubren: respuesta válida, endpoint o hallazgo inventado, cifras en pros/cons, recomendación
-distinta del corte del motor, JSON inválido, fallo de Bob, ranking vacío y topes de la sesión.
+They never invoke the live Bob: they use a BobAdapter stub that returns fixed replies.
+They cover: a valid reply, an invented endpoint or finding, figures in pros/cons, a recommendation
+different from the engine's cut, invalid JSON, a Bob failure, an empty ranking and the session caps.
 """
 
 import json
@@ -33,10 +33,10 @@ ALT_2 = "GET /reports/monthly"
 # ---------------------------------------------------------------------------
 
 def _stub_adapter(last_message: str, fail: bool = False) -> MagicMock:
-    """Crea un BobAdapter stub cuyo .run() devuelve last_message o lanza BobExecutionError."""
+    """Creates a BobAdapter stub whose .run() returns last_message or raises BobExecutionError."""
     adapter = MagicMock()
     if fail:
-        adapter.run.side_effect = BobExecutionError("Bob simulado falló")
+        adapter.run.side_effect = BobExecutionError("Simulated Bob failed")
     else:
         adapter.run.return_value = BobResult(
             mode="migration-architect",
@@ -53,7 +53,7 @@ def _candidate(endpoint: str, score: float, findings: list[str]) -> RouteCandida
     return RouteCandidate(
         endpoint=endpoint, http_methods=[method], rule=rule, function_name=rule.strip("/").replace("/", "_") or "index",
         file_path="app.py", line_start=1, line_end=10, value=1.0 + len(findings), risk=2.0, testability=1.0,
-        score=score, formula="calculada", findings_mitigated=findings, why="Responde JSON puro con contrato formal.",
+        score=score, formula="computed", findings_mitigated=findings, why="Returns pure JSON with a formal contract.",
     )
 
 
@@ -61,13 +61,13 @@ def _dossier(with_routes: bool = True) -> Dossier:
     findings = [
         Finding(
             id=fid,
-            title=f"Hallazgo {fid}",
+            title=f"Finding {fid}",
             category="security",
             subcategory="test",
             severity="high",
             observed_or_inferred="observed",
             evidence=[Evidence(path="app.py", line_start=1, line_end=2, snippet="x = 1")],
-            explanation="Descripción de prueba suficientemente larga.",
+            explanation="Long enough test description.",
             recommendation="Corregir.",
         )
         for fid in ("F-1", "F-2", "F-3")
@@ -93,23 +93,23 @@ def _dossier(with_routes: bool = True) -> Dossier:
 
 
 def _valid_payload() -> dict:
-    """Respuesta que pasa todos los validadores: una opción por candidato, la recomendada es la del motor."""
+    """A reply that passes every validator: one option per candidate, the recommended one is the engine's."""
     return {"migration_options": [
         {
-            "id": "OPT-1", "name": "Extraer primero el detalle de factura", "pattern": "Strangler Fig",
+            "id": "OPT-1", "name": "Extract the invoice detail first", "pattern": "Strangler Fig",
             "endpoint": RECOMMENDED, "finding_ids": ["F-2"],
-            "pros": ["Contrato JSON fácil de fijar con pruebas", "Rollback sencillo detrás de la fachada"],
-            "cons": ["Exige mantener la fachada temporal"], "recommended": True,
+            "pros": ["JSON contract easy to pin with tests", "Simple rollback behind the facade"],
+            "cons": ["Requires keeping the temporary facade"], "recommended": True,
         },
         {
-            "id": "OPT-2", "name": "Empezar por el listado de clientes", "pattern": "Strangler Fig",
+            "id": "OPT-2", "name": "Start with the customer list", "pattern": "Strangler Fig",
             "endpoint": ALT_1, "finding_ids": [],
-            "pros": ["Ruta de solo lectura"], "cons": ["Aporta poco valor de negocio al inicio"], "recommended": False,
+            "pros": ["Read-only route"], "cons": ["Adds little business value at the start"], "recommended": False,
         },
         {
-            "id": "OPT-3", "name": "Empezar por el reporte mensual", "pattern": "Strangler Fig",
+            "id": "OPT-3", "name": "Start with the monthly report", "pattern": "Strangler Fig",
             "endpoint": ALT_2, "finding_ids": ["F-3"],
-            "pros": ["Aísla una regla de descuento"], "cons": ["Depende de consultas agregadas"], "recommended": False,
+            "pros": ["Isolates a discount rule"], "cons": ["Depends on aggregate queries"], "recommended": False,
         },
     ]}
 
@@ -120,7 +120,7 @@ def _run(payload: dict | str, dossier: Dossier | None = None) -> tuple[list, str
 
 
 # ---------------------------------------------------------------------------
-# Casos de prueba
+# Test cases
 # ---------------------------------------------------------------------------
 
 def test_valid_response_returns_one_option_per_candidate_in_ranking_order() -> None:
@@ -142,11 +142,11 @@ def test_prompt_carries_the_route_ranking_not_the_finding_ranking() -> None:
 
 def test_endpoint_not_in_ranking_is_rejected() -> None:
     payload = _valid_payload()
-    payload["migration_options"][1]["endpoint"] = "GET /inventada"
+    payload["migration_options"][1]["endpoint"] = "GET /invented"
 
     options, reason = _run(payload)
 
-    assert options == [] and "/inventada" in reason
+    assert options == [] and "/invented" in reason
 
 
 def test_duplicated_endpoint_is_rejected() -> None:
@@ -155,12 +155,12 @@ def test_duplicated_endpoint_is_rejected() -> None:
 
     options, reason = _run(payload)
 
-    assert options == [] and "mismo endpoint" in reason
+    assert options == [] and "same endpoint" in reason
 
 
 def test_finding_not_mitigated_by_that_candidate_is_rejected() -> None:
     payload = _valid_payload()
-    payload["migration_options"][1]["finding_ids"] = ["F-1"]  # GET /customers no mitiga F-1
+    payload["migration_options"][1]["finding_ids"] = ["F-1"]  # GET /customers does not mitigate F-1
 
     options, reason = _run(payload)
 
@@ -169,20 +169,20 @@ def test_finding_not_mitigated_by_that_candidate_is_rejected() -> None:
 
 def test_number_in_pros_is_rejected() -> None:
     payload = _valid_payload()
-    payload["migration_options"][0]["pros"][0] = "Reduce riesgo en un 80%"
+    payload["migration_options"][0]["pros"][0] = "Cuts risk by 80%"
 
     options, reason = _run(payload)
 
-    assert options == [] and "cifras" in reason
+    assert options == [] and "figures" in reason
 
 
 def test_estimate_written_in_words_is_rejected() -> None:
     payload = _valid_payload()
-    payload["migration_options"][0]["pros"] = ["Se entrega en dos semanas"]
+    payload["migration_options"][0]["pros"] = ["Delivered in two weeks"]
 
     options, reason = _run(payload)
 
-    assert options == [] and "cifras" in reason
+    assert options == [] and "figures" in reason
 
 
 def test_two_recommended_is_rejected() -> None:
@@ -191,18 +191,18 @@ def test_two_recommended_is_rejected() -> None:
 
     options, reason = _run(payload)
 
-    assert options == [] and "recomendada" in reason
+    assert options == [] and "recommended" in reason
 
 
 def test_recommending_other_than_the_engine_cut_is_rejected() -> None:
-    """Bob explica el corte del motor (D3); no puede recomendar otro."""
+    """Bob explains the engine's cut (D3); it cannot recommend another one."""
     payload = _valid_payload()
     payload["migration_options"][0]["recommended"] = False
     payload["migration_options"][2]["recommended"] = True
 
     options, reason = _run(payload)
 
-    assert options == [] and "no es el corte que eligió el motor" in reason
+    assert options == [] and "is not the cut the engine picked" in reason
 
 
 def test_wrong_option_count_is_rejected() -> None:
@@ -211,11 +211,11 @@ def test_wrong_option_count_is_rejected() -> None:
 
     options, reason = _run(payload)
 
-    assert options == [] and "exactamente 3" in reason
+    assert options == [] and "exactly 3" in reason
 
 
 def test_invalid_json_is_rejected() -> None:
-    options, reason = _run("Esto no es JSON en absoluto.")
+    options, reason = _run("This is not JSON at all.")
 
     assert options == [] and reason != ""
 
@@ -244,7 +244,7 @@ def test_architect_session_is_bounded() -> None:
 
 
 def test_imported_audit_never_calls_bob_and_still_completes(tmp_path) -> None:
-    """Regresión: la etapa nueva rompía cada auditoría (etapa fuera del vocabulario) y llamaba a Bob al importar."""
+    """Regression: the new stage broke every audit (stage outside the vocabulary) and called Bob on import."""
     from pathlib import Path
 
     from app.pipeline.activity import EventLog
@@ -264,6 +264,6 @@ def test_imported_audit_never_calls_bob_and_still_completes(tmp_path) -> None:
     adapter.run.assert_not_called()
     assert dossier.migration_options == []
     assert stages == ["preparing", "auditing", "validating", "migration"]
-    # La recomendación y su PERT se calculan igual en modo importado.
+    # The recommendation and its PERT are computed the same way in imported mode.
     assert dossier.recommendation is not None and dossier.recommendation.recommended is not None
     assert dossier.first_cut_pert == dossier.recommendation.first_cut_pert

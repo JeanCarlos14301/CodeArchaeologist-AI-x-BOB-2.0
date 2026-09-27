@@ -1,7 +1,7 @@
-"""POST /api/audits/{job_id}/ask: pregunta contextual a IBM Bob sobre un análisis terminado.
+"""POST /api/audits/{job_id}/ask: contextual question to IBM Bob about a finished analysis.
 
-Siempre exige `X-Live-Token` (cada pregunta gasta bobcoins, también en la vitrina pública)
-y el mismo control de acceso que el resto de lecturas del job.
+Requires `X-Live-Token` only in locked mode (each question spends bobcoins, also on the public
+showcase) and applies the same access control as every other read of the job.
 """
 
 from typing import Annotated
@@ -46,11 +46,11 @@ def ask_about_audit(
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     if job.status != "done":
-        raise HTTPException(status.HTTP_409_CONFLICT, "El análisis aún no termina; pregunta cuando esté completo.")
-    # Las auditorías tienen `workspace`; los proyectos subidos solo para modernizar, su copia íntegra `source`.
+        raise HTTPException(status.HTTP_409_CONFLICT, "The analysis has not finished yet; ask once it is complete.")
+    # Audits have a `workspace`; projects uploaded only for modernization have their full copy in `source`.
     workspace = next((d for d in (service.job_dir(job_id) / "workspace", service.job_dir(job_id) / "source") if d.is_dir()), None)
     if workspace is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "El código de este análisis no está disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "The code for this analysis is not available.")
     try:
         return ask_bob(workspace, body)
     except AssistantBusyError as exc:
@@ -71,7 +71,7 @@ def ask_progress_page(
     after: Annotated[int, Query(ge=0)] = 0,
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> AskProgressPage:
-    """Lo que Bob está haciendo para responder una pregunta (se sondea mientras responde)."""
+    """What Bob is doing to answer a question (polled while it answers)."""
     require_upload_token(x_live_token)
     try:
         require_job_access(service.get_job(job_id), x_live_token)

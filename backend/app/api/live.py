@@ -1,11 +1,11 @@
-"""Auditoría real de repositorios subidos y vistas derivadas del análisis estático.
+"""Real audits of uploaded repositories and views derived from the static analysis.
 
-Nada de esto usa datos de ejemplo:
-- POST /api/audits/upload : ZIP -> extracción segura -> Bob real (evidence-auditor) -> validación de evidencia.
-  Exige SIEMPRE el token `X-Live-Token` (variable LIVE_AUDIT_TOKEN); sin la variable, el servidor rechaza cargas.
-- GET  /api/audits/{id}/graph        : funciones y llamadas reales (AST) con las marcas del expediente.
-- GET  /api/audits/{id}/architecture : módulos, dependencias, rutas y complejidad medidos sobre el código.
-- GET  /api/audits/{id}/files/{name} : descarga del expediente y de la respuesta cruda de Bob.
+None of this uses example data:
+- POST /api/audits/upload : ZIP -> safe extraction -> real Bob (evidence-auditor) -> evidence validation.
+  Requires `X-Live-Token` only when LIVE_AUDIT_TOKEN is set (locked mode); see app/api/access.py.
+- GET  /api/audits/{id}/graph        : real functions and calls (AST) with the dossier marks.
+- GET  /api/audits/{id}/architecture : modules, dependencies, routes and complexity measured on the code.
+- GET  /api/audits/{id}/files/{name} : download of the dossier and of Bob's raw response.
 """
 
 import re
@@ -63,9 +63,9 @@ async def upload_audit(
     require_upload_token(x_live_token)
     data = await zip_file.read(MAX_ZIP_COMPRESSED_BYTES + 1)
     if len(data) > MAX_ZIP_COMPRESSED_BYTES:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f"El ZIP supera {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB.")
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f"The ZIP exceeds {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB.")
     if not data.startswith(b"PK"):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo no es un ZIP válido.")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "The file is not a valid ZIP.")
     try:
         return service.start_upload(_safe_name(zip_file.filename), data, purpose)
     except BusyError as exc:
@@ -80,7 +80,7 @@ def _workspace(service: AuditService, job_id: str, token: str | None) -> Path:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     workspace = service.job_dir(job_id) / "workspace"
     if not workspace.is_dir():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "El código de este análisis aún no está disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "The code for this analysis is not available yet.")
     return workspace
 
 
@@ -122,7 +122,7 @@ def read_graph(
                         "node": node_id, "path": ev.path, "line_start": ev.line_start, "line_end": ev.line_end,
                     })
                 if status_name == "accepted":
-                    # Radio de explosión: quién llama, directa o indirectamente, a la función afectada.
+                    # Blast radius: who calls the affected function, directly or indirectly.
                     impacted: set[str] = set()
                     frontier = list(origins)
                     while frontier:
@@ -144,7 +144,7 @@ def read_graph(
         "findings": marks,
         "blast_radius": blast,
         "migration_cut": None,
-        "notes": "Grafo medido con AST sobre el código subido. Aristas resueltas por nombre de función; los nombres ambiguos entre archivos se omiten. Impacto = llamadores directos e indirectos de la función con la evidencia.",
+        "notes": "Graph measured with AST on the uploaded code. Edges are resolved by function name; names that are ambiguous across files are skipped. Impact = direct and indirect callers of the function holding the evidence.",
     }
 
 
@@ -156,7 +156,7 @@ def _mermaid(modules: list[dict[str, Any]], deps: list[dict[str, Any]]) -> str:
     ids = {m["file"]: f"m{i}" for i, m in enumerate(modules)}
     lines = ["flowchart LR"]
     for m in modules:
-        suffix = f"<br/>{m['functions']} funciones" + (f" · {m['findings']} hallazgos" if m["findings"] else "")
+        suffix = f"<br/>{m['functions']} functions" + (f" · {m['findings']} findings" if m["findings"] else "")
         lines.append(f'  {ids[m["file"]]}["{_label(m["file"])}{suffix}"]:::{m["worst_severity"] or "clean"}')
     for d in deps:
         lines.append(f'  {ids[d["source"]]} -->|"{d["calls"]}"| {ids[d["target"]]}')
@@ -251,7 +251,7 @@ def read_migration(
         dossier = None
 
     if dossier is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "El resultado de migración aún no está disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "The migration result is not available yet.")
 
     workspace = service.job_dir(job_id) / "workspace"
     recommendation = dossier.recommendation
@@ -271,7 +271,7 @@ def read_migration(
         if dossier.migration
         else {
             "status": "not_run",
-            "reason": "Primer corte de caracterización no ejecutado para este repositorio.",
+            "reason": "First characterization cut not run for this repository.",
             "implementation_origin": "strangler-fig",
             "endpoint": recommendation.recommended.endpoint if recommendation and recommendation.recommended else "None",
             "tests": [],
@@ -314,7 +314,7 @@ def download_file(
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> FileResponse:
     if name not in DOWNLOADABLE:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Archivo no disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not available.")
     try:
         job = service.get_job(job_id)
         require_job_access(job, x_live_token)
@@ -322,5 +322,5 @@ def download_file(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     path = service.job_dir(job_id) / name
     if not path.is_file():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Archivo no disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not available.")
     return FileResponse(path, media_type=DOWNLOADABLE[name], filename=f"{job_id}-{name}")

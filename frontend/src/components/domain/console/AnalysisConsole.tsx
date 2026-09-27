@@ -15,16 +15,16 @@ import { STAGE_INFO, StageRail, stageStates } from "./StageRail";
 import { useReplay } from "./useReplay";
 
 const FAILURE_HINT: Record<StageId, string> = {
-  preparing: "Revisa que el ZIP sea un repositorio Python de menos de 5 MB, sin enlaces simbólicos ni ejecutables.",
-  auditing: "Bob no entregó un expediente válido. Vuelve a lanzar el análisis; si se repite, sube BOB_MAX_COST o audita un repositorio más acotado.",
-  validating: "La respuesta de Bob no se pudo validar contra el código. Revisa bob-result.json en Reportes.",
-  migration: "Falló el sandbox de pruebas del primer corte. Revisa los logs del servidor.",
-  done: "No se pudo generar el expediente. Revisa los logs del servidor.",
+  preparing: "Check that the ZIP is a Python repository under 5 MB, with no symbolic links or executables.",
+  auditing: "Bob did not deliver a valid dossier. Run the analysis again; if it happens again, raise BOB_MAX_COST or audit a smaller repository.",
+  validating: "Bob's reply could not be validated against the code. Check bob-result.json in Reports.",
+  migration: "The first cut's test sandbox failed. Check the server logs.",
+  done: "The dossier could not be generated. Check the server logs.",
 };
 
 /**
- * Sesión de análisis: qué hace cada etapa mientras ocurre (y su reproducción cuando terminó).
- * Todo sale de los eventos del backend: no hay progreso simulado.
+ * Analysis session: what each stage does while it happens (and its replay once it has finished).
+ * Everything comes from the backend events: there is no simulated progress.
  */
 export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
   const { flow, activity, activityReady, go } = useWorkspace();
@@ -39,15 +39,15 @@ export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const selectStage = (stage: StageId) => {
     setPicked(stage);
-    // El contenido cambia en el panel: se lleva el foco allí para teclado y lectores de pantalla.
+    // The content changes in the panel: focus moves there for keyboard and screen reader users.
     requestAnimationFrame(() => panelHeading.current?.focus());
   };
   const startReplay = () => {
-    setPicked(null); // la reproducción sigue a la etapa activa (mismo render que el arranque)
+    setPicked(null); // the replay follows the active stage (same render as the start)
     replay.start();
   };
 
-  // En vivo el reloj avanza aunque Bob no emita eventos (p. ej. mientras un subagente trabaja).
+  // Live, the clock advances even when Bob emits no events (e.g. while a subagent works).
   const createdAt = flow?.created_at;
   useEffect(() => {
     if (!live || !createdAt) return;
@@ -68,16 +68,16 @@ export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
     return (
       <div className="max-w-xl space-y-4">
         <AnalysisStatus flow={flow} />
-        <p className="text-caption text-subtle">Este análisis se ejecutó antes de que existiera el registro de actividad por etapas.</p>
+        <p className="text-caption text-subtle">This analysis ran before the per-stage activity log existed.</p>
       </div>
     );
   }
 
   return (
-    <section aria-label="Sesión de análisis" className="space-y-5">
+    <section aria-label="Analysis session" className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-4">
         <div className="min-w-0">
-          <Eyebrow>Sesión de análisis · ¿Cómo lo analizó IBM Bob?</Eyebrow>
+          <Eyebrow>Analysis session · How did IBM Bob analyze it?</Eyebrow>
           <h1 className="mt-1.5 flex flex-wrap items-center gap-3 font-display text-heading font-normal text-fg">
             {jobLabel(flow.label)}
             <ModeBadge mode={flow.execution_mode} />
@@ -92,12 +92,12 @@ export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
           ) : replay.playing ? (
             <>
               <span className="font-mono text-caption text-fg-2 tabular-nums">{formatClock(replay.playhead ?? 0)} / {formatClock(replay.duration)}</span>
-              <Button size="sm" variant="secondary" icon={<Square size={12} aria-hidden />} onClick={replay.stop}>Mostrar la sesión completa</Button>
+              <Button size="sm" variant="secondary" icon={<Square size={12} aria-hidden />} onClick={replay.stop}>Show the full session</Button>
             </>
           ) : activity.length > 0 ? (
             <>
-              <span className="font-mono text-caption text-subtle tabular-nums">duración {formatClock(replay.duration)}</span>
-              {replay.available && <Button size="sm" variant="secondary" icon={<Play size={12} aria-hidden />} onClick={startReplay}>Reproducir la sesión</Button>}
+              <span className="font-mono text-caption text-subtle tabular-nums">duration {formatClock(replay.duration)}</span>
+              {replay.available && <Button size="sm" variant="secondary" icon={<Play size={12} aria-hidden />} onClick={startReplay}>Replay the session</Button>}
             </>
           ) : null}
         </div>
@@ -110,10 +110,10 @@ export function AnalysisConsole({ autoplay }: { autoplay: boolean }) {
       <div className="grid grid-cols-1 gap-6 @3xl:grid-cols-[17.5rem_minmax(0,1fr)]">
         <div className="space-y-4">
           <StageRail model={model} states={states} selected={selected} onSelect={selectStage} panelId="stage-panel" />
-          {live && <p role="status" className="sr-only">Etapa en curso: {STAGE_INFO[followed].running}</p>}
+          {live && <p role="status" className="sr-only">Stage in progress: {STAGE_INFO[followed].running}</p>}
           {flow.status === "failed" && (
             <div role="alert" className="rounded-inner border border-danger/40 bg-danger/5 px-3 py-3">
-              <p className="text-body text-fg"><span aria-hidden className="mr-1.5 text-danger">✗</span>El análisis se detuvo en «{STAGE_INFO[model.failure?.stage ?? "preparing"].label}»</p>
+              <p className="text-body text-fg"><span aria-hidden className="mr-1.5 text-danger">✗</span>The analysis stopped at «{STAGE_INFO[model.failure?.stage ?? "preparing"].label}»</p>
               <p className="mt-1 font-mono text-caption break-words text-fg-2">{flow.error ?? model.failure?.message}</p>
               <p className="mt-2 text-caption text-muted">{FAILURE_HINT[model.failure?.stage ?? "preparing"]}</p>
             </div>

@@ -20,7 +20,7 @@ interface Props {
   onMarkClick?: (mark: CodeMark) => void;
 }
 
-/** Superficie de código: el código es el contenido principal (PRODUCT.md §23). */
+/** Code surface: the code is the main content (PRODUCT.md §23). */
 export function CodeViewer({ path, lines, marks = [], focusLine = null, caption, actions, maxHeight = "70vh", onMarkClick }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -59,7 +59,7 @@ export function CodeViewer({ path, lines, marks = [], focusLine = null, caption,
                       type="button"
                       onClick={() => mark && onMarkClick?.(mark)}
                       title={mark?.label}
-                      aria-label={mark?.label ?? "Hallazgo"}
+                      aria-label={mark?.label ?? "Finding"}
                       className={`text-caption leading-none ${tone.text}`}
                     >
                       {tone.glyph}

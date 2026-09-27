@@ -1,209 +1,211 @@
 # CodeArchaeologist × IBM Bob 2.0
 
-**Por dónde empezar a modernizar un sistema heredado, con evidencia.**
+**Where to start modernizing a legacy system, with evidence.**
 
-CodeArchaeologist usa IBM Bob para auditar un repositorio heredado (Python 3, Flask y SQLite) y entrega un
-expediente técnico con evidencia verificada por archivo y línea, una recomendación de migración calculada
-por código, un memo DOCX para la junta directiva y, en la muestra controlada, un primer corte Strangler Fig
-probado.
+CodeArchaeologist uses IBM Bob to audit a legacy repository (Python 3, Flask and SQLite) and delivers a technical
+dossier with evidence verified by file and line, a migration recommendation computed by code, a DOCX memo for the
+board of directors and, on the controlled sample, a tested first Strangler Fig cut.
 
-Construido durante el [IBM Bob 2.0 Hackathon](https://lablab.ai/ai-hackathons/ibm-bob-2-hackathon)
-(25–27 de septiembre de 2026). Material preparado antes del evento: [docs/pre-event.md](docs/pre-event.md).
+Built during the [IBM Bob 2.0 Hackathon](https://lablab.ai/ai-hackathons/ibm-bob-2-hackathon)
+(September 25–27, 2026). Material prepared before the event: [docs/pre-event.md](docs/pre-event.md).
 
-- **Demo pública:** `https://<servicio>.onrender.com` *(pendiente: pegar la URL de Render)*
-- **Video:** *(pendiente)* · **Presentación:** *(pendiente)*
-- **Documentos de entrega:** [docs/entrega/](docs/entrega/)
+- **Live demo:** `https://<service>.onrender.com` *(pending: paste the Render URL)*
+- **Video:** *(pending)* · **Slides:** *(pending)*
+- **Submission documents:** [docs/submission/](docs/submission/)
 
-## Cómo evaluarlo en 5 minutos (sin credenciales)
+## Try it in 5 minutes (no credentials)
 
-1. Abrir la demo pública. Si tarda ~1 minuto, el servidor gratuito se estaba despertando.
-2. En **Inicio**, elegir **FacturaYa · ya generado** y pulsar **Abrir el análisis de FacturaYa**. Es una
-   auditoría real de IBM Bob grabada (etiqueta `imported`): no pide token ni gasta bobcoins.
-3. **Sesión de Bob** → *Reproducir la sesión*: el plan de Bob, sus lecturas y la delegación en paralelo en 4
-   subagentes.
-4. **Riesgos**: 12 hallazgos validados; cada uno abre el código citado. 14 de 14 citas verificadas.
-5. **Modernización → Recomendación y primer corte**: qué migrar primero (`GET /invoices`), con la fórmula, la
-   ruta a evitar, 3 olas con esfuerzo PERT y el primer corte de referencia con 6/6 pruebas.
-6. **Reportes**: descargar el memo DOCX para la junta.
+1. Open the live demo. If it takes about a minute, the free server was waking up.
+2. **Home** opens on **FacturaYa · already generated**: press **Open the FacturaYa analysis**. It is a real IBM Bob
+   audit, recorded (`imported` label): it spends no bobcoins.
+3. **Bob session** → *Replay the session*: Bob's plan, its reads and its parallel delegation to 4 subagents.
+4. **Risks**: 12 validated findings; each one opens the cited code. 14 of 14 citations verified.
+5. **Modernization → Recommendation and first cut**: what to migrate first (`GET /invoices`), with the formula, the
+   route to avoid, 3 waves with PERT effort and the reference first cut with 6/6 tests.
+6. **Reports**: download the board memo (DOCX).
+7. Optional, live: ask Bob a question from the ⌘J panel, upload your own ZIP or use the Modernization Studio. These
+   call IBM Bob for real and spend bobcoins from the server's account, within per-run caps. No token is needed.
 
-Auditar un repositorio propio, preguntarle a Bob o usar el Estudio de modernización invoca a Bob en vivo y
-requiere un token de acceso ([cómo pedirlo](docs/entrega/app-publica.md#3-token-de-acceso-live_audit_token)).
+## The problem
 
-## El problema
+Every mature company has a critical system nobody dares to touch: no tests, no original author and business rules
+buried in the code. When the board asks how much modernizing it costs and where to start, the answer is usually a
+weeks-long consulting engagement or an unsupported opinion.
 
-Toda empresa madura tiene un sistema crítico que nadie se atreve a tocar: sin pruebas, sin su autor original
-y con reglas de negocio enterradas en el código. Cuando la junta pregunta cuánto cuesta modernizarlo y por
-dónde empezar, la respuesta suele ser una consultoría de semanas o una opinión sin respaldo.
+## What it delivers
 
-## Qué entrega
+1. **A verifiable technical dossier.** Bob proposes findings with a file, a line range and a snippet. A Python
+   validator checks that the snippet exists at those lines; if it does not match, the finding is rejected. The
+   interface shows the cited code, the call graph and the measured architecture.
+2. **A migration recommendation.** A deterministic engine scores every Flask route with
+   `value × testability × business data / risk` over the call graph, the SQL and the complexity. It returns the
+   recommended cut, alternatives, the route not to touch first and a 3-wave roadmap with PERT. Details:
+   [docs/migration-engine.md](docs/migration-engine.md).
+3. **A board memo** (`board_memo.docx`): decision, risk matrix, migration recommendation, effort and traceability
+   (analysis ID, SHA-256 hash and execution mode).
+4. **A tested first cut.** Registered samples only: the team's reference implementation of `GET /invoices/{id}`
+   passes the same characterization tests as the legacy code (6/6), and the diff is published.
+5. **A Modernization Studio.** For any stack: code measures the stack, the person picks the targets, Bob assesses
+   feasibility, builds a step-by-step plan and, with explicit confirmation, implements it on a copy, with spending
+   caps per step and per implementation. Generated code is only compiled to check its syntax; it never runs.
 
-1. **Expediente técnico verificable.** Bob propone hallazgos con archivo, rango de líneas y fragmento. Un
-   validador en Python comprueba que el fragmento exista en esas líneas; si no calza, el hallazgo se rechaza.
-   La interfaz muestra el código citado, el grafo de llamadas y la arquitectura medida.
-2. **Recomendación de migración.** Un motor determinista puntúa cada ruta Flask con
-   `valor × facilidad de prueba × datos de negocio / riesgo` sobre el grafo de llamadas, el SQL y la
-   complejidad. Devuelve el corte recomendado, alternativas, la ruta que no conviene tocar primero y una hoja
-   de ruta en 3 olas con PERT. Detalle: [docs/motor-de-migracion.md](docs/motor-de-migracion.md).
-3. **Memo para la junta** (`board_memo.docx`): decisión, matriz de riesgo, recomendación de migración,
-   esfuerzo y trazabilidad (ID, hash SHA-256 y modo de ejecución del análisis).
-4. **Primer corte probado.** Solo en muestras registradas: la implementación de referencia del equipo para
-   `GET /invoices/{id}` pasa las mismas pruebas de caracterización que el legado (6/6) y se publica el diff.
-5. **Estudio de modernización.** Para cualquier stack: el código mide el stack, la persona elige los
-   destinos, Bob evalúa la viabilidad, arma un plan por pasos y, con confirmación explícita, lo implementa
-   sobre una copia, con topes de gasto por paso y por implementación. Lo generado solo se compila para
-   comprobar su sintaxis; nunca se ejecuta.
+Every result states its `execution_mode`: `live` (Bob live) or `imported` (a real recorded session).
 
-Cada resultado indica su `execution_mode`: `live` (Bob en vivo) o `imported` (sesión real grabada).
+## How it uses IBM Bob
 
-## Cómo usa IBM Bob
+The backend invokes **Bob Shell 2.0.5** (`bob run`) through `subprocess`, with an argument list, no `shell=True`
+and the prompt on stdin. Every session runs on an isolated copy of the repository, with no evaluation material and
+none of the application's secrets.
 
-El backend invoca **Bob Shell 2.0.5** (`bob run`) con `subprocess`, una lista de argumentos, sin
-`shell=True` y con el prompt por stdin. Cada sesión corre sobre una copia aislada del repositorio, sin
-material de evaluación y sin los secretos de la aplicación.
-
-| Dónde | Modo de Bob | Qué hace |
+| Where | Bob mode | What it does |
 |---|---|---|
-| Auditoría | `evidence-auditor` + subagentes `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-security-scanner`, `legacy-dependency-tracer` | Hallazgos en JSON con evidencia por archivo y línea |
-| Migración (solo live) | `migration-architect` | Lectura cualitativa de los 3 mejores cortes del motor; se descarta si contradice al motor o escribe cifras |
-| Chat | `ask` (nativo) | Responde preguntas sobre el código analizado |
-| Estudio | `modernization-planner`, `modernization-surgeon` | Evalúa, planifica y aplica pasos sobre una copia |
+| Audit | `evidence-auditor` + subagents `legacy-sql-auditor`, `legacy-route-mapper`, `legacy-security-scanner`, `legacy-dependency-tracer` | JSON findings with evidence by file and line |
+| Migration (live only) | `migration-architect` | Qualitative reading of the engine's top 3 cuts; discarded if it contradicts the engine or writes figures |
+| Chat | `ask` (built-in) | Answers questions about the analyzed code |
+| Studio | `modernization-planner`, `modernization-surgeon` | Assesses, plans and applies steps on a copy |
 
-- Activos propios en [.bob/](.bob/): 11 modos (`custom_modes.yaml`), 18 subagentes y 24 skills. Los que no usa
-  el producto están marcados así en [docs/bob-usage.md](docs/bob-usage.md).
-- **Actividad en vivo:** la interfaz muestra lo que Bob lee, busca y delega a partir de su stream
-  (`--format stream-json`) y de su log. Nunca progreso simulado.
-- **Topes y rescate:** cada sesión tiene tope de turnos, tiempo y bobcoins. Si Bob agota el presupuesto o se
-  corta la conexión antes del JSON, el pipeline reanuda la misma sesión (`--resume`) con un turno de cierre.
-- **La IA propone, el código decide:** riesgo, orden de migración y PERT los calcula código, nunca Bob.
-- **Uso durante el desarrollo:** sesiones registradas con ID de tarea y costo en
-  [docs/bob-usage.md](docs/bob-usage.md); capturas de cada integrante en [bob-sessions/](bob-sessions/).
+- Our own assets in [.bob/](.bob/): 11 modes (`custom_modes.yaml`), 18 subagents and 24 skills. The ones the product
+  does not use are marked as such in [docs/bob-usage.md](docs/bob-usage.md).
+- **Live activity:** the interface shows what Bob reads, searches and delegates, from its stream
+  (`--format stream-json`) and its log. Never simulated progress.
+- **Caps and rescue:** every session has a turn, time and bobcoin cap. If Bob exhausts its budget or the connection
+  drops before the JSON, the pipeline resumes the same session (`--resume`) with a closing turn.
+- **The AI proposes, code decides:** risk, migration order and PERT are computed by code, never by Bob.
+- **Use during development:** sessions logged with task ID and cost in [docs/bob-usage.md](docs/bob-usage.md);
+  screenshots from each team member in [bob-sessions/](bob-sessions/).
 
-La vitrina pública reproduce la sesión real grabada el 26 de septiembre
-(`contracts/fixtures/bob-session-facturaya.json` y `bob-events-facturaya.jsonl`: 4 subagentes, 12 hallazgos,
-14/14 evidencias, 1,15 bobcoins, 165 s).
+The public showcase replays the real session recorded on September 26
+(`contracts/fixtures/bob-session-facturaya.json` and `bob-events-facturaya.jsonl`: 4 subagents, 12 findings,
+14/14 evidence, 1.15 bobcoins, 165 s). That session ran with a Spanish prompt; for the English submission the prose
+of its findings was translated, while ids, evidence, lines, snippets, costs and timings stay exactly as recorded
+(original in `contracts/fixtures/recorded-es/`). Live runs now ask Bob for English output.
 
-## Arquitectura
+## Architecture
 
 ```mermaid
 flowchart TD
-    A[ZIP privado o muestra registrada] --> B[Workspace aislado]
-    B --> C[Bob evidence-auditor + 4 subagentes]
-    C --> D[Validador de evidencia en Python]
-    D --> E[Grafo, SQL, complejidad y riesgo]
-    E --> F[Motor de migración: ranking, olas y PERT]
-    F --> G[Bob migration-architect: lectura cualitativa]
-    F --> H{¿Muestra registrada?}
-    H -->|Sí| I[Primer corte de referencia + pytest]
-    H -->|No, ZIP de usuario| J[not_run: nunca se ejecuta]
-    E & F & I --> K[Expediente JSON]
-    K --> L[Interfaz React]
-    K --> M[Memo DOCX]
-    L --> N[Chat ask y Estudio de modernización]
+    A[Private ZIP or registered sample] --> B[Isolated workspace]
+    B --> C[Bob evidence-auditor + 4 subagents]
+    C --> D[Python evidence validator]
+    D --> E[Graph, SQL, complexity and risk]
+    E --> F[Migration engine: ranking, waves and PERT]
+    F --> G[Bob migration-architect: qualitative reading]
+    F --> H{Registered sample?}
+    H -->|Yes| I[Reference first cut + pytest]
+    H -->|No, user ZIP| J[not_run: never executed]
+    E & F & I --> K[JSON dossier]
+    K --> L[React interface]
+    K --> M[DOCX memo]
+    L --> N[Ask chat and Modernization Studio]
 ```
 
-Un solo contenedor Docker: FastAPI sirve la API, el worker y el build de React. Los trabajos se guardan en
-SQLite y los artefactos bajo `ARTIFACTS_DIR`. Despliegue en Render con CI previo: [docs/deploy.md](docs/deploy.md).
+A single Docker container: FastAPI serves the API, the worker and the React build. Jobs are stored in SQLite and the
+artifacts under `ARTIFACTS_DIR`. Deployed on Render after CI: [docs/deploy.md](docs/deploy.md).
 
-## Seguridad y privacidad
+## Security and privacy
 
-- El contenido del repositorio analizado se trata como **datos, nunca como instrucciones**.
-- El código subido por usuarios **nunca se ejecuta**: se analiza con `ast`. Solo la muestra registrada corre
-  su primer corte, en un sandbox sin credenciales.
-- Los ZIP se validan contra ZipSlip, enlaces simbólicos y bombas de descompresión (5 MB comprimido, 20 MB
-  descomprimido).
-- Toda operación que invoca a Bob exige `X-Live-Token`. Los análisis subidos son privados: no aparecen en el
-  listado ni se leen sin token.
-- Los modos que editan solo pueden escribir dentro de su copia (`fileRegex` anclado a la ruta absoluta) y el
-  proceso de Bob no recibe `LIVE_AUDIT_TOKEN` ni otras claves.
-- Cabeceras CSP, `X-Frame-Options: DENY`, `nosniff` y `Referrer-Policy: no-referrer`.
-- Credenciales solo en variables de entorno: [SECURITY.md](SECURITY.md).
+- The content of the analyzed repository is treated as **data, never as instructions**.
+- Code uploaded by users **never runs**: it is analyzed with `ast`. Only the registered sample runs its first cut,
+  in a sandbox with no credentials.
+- ZIP files are checked against ZipSlip, symbolic links and decompression bombs (5 MB compressed, 20 MB extracted).
+- **Access:** `LIVE_AUDIT_TOKEN` is optional. Without it (the public deployment), anyone can run live operations, and
+  spending is bounded by per-run bobcoin caps, one live audit at a time, one Bob question at a time, a daily
+  server-wide limit (`BOB_DAILY_SPEND_LIMIT`, after which live features pause until the next day) and the Bob
+  account's budget. Uploaded analyses are never listed publicly; they are reachable only through their random job
+  id. Setting `LIVE_AUDIT_TOKEN` locks every Bob call and every read of an upload behind `X-Live-Token`: that is the
+  kill switch if the public URL is abused.
+- Modes that edit can only write inside their copy (`fileRegex` anchored to the absolute path), and the Bob process
+  never receives `LIVE_AUDIT_TOKEN` or any other key.
+- CSP, `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy: no-referrer` headers.
+- Credentials only in environment variables: [SECURITY.md](SECURITY.md).
 
-## Ejecutar en local
+## Run locally
 
-Requisitos: Python 3.11+, Node 24+ y, para lo que invoca a Bob, Bob Shell 2.0.5 con una API key.
+Requirements: Python 3.11+, Node 24+ and, for anything that calls Bob, Bob Shell 2.0.5 with an API key.
 
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install -r backend\requirements.txt    # Windows
 cd frontend && npm ci && npm run build && cd ..
-copy .env.example .env      # rellenar BOB_API_KEY y LIVE_AUDIT_TOKEN; nunca hacer commit de .env
+copy .env.example .env      # fill in BOB_API_KEY; never commit .env
 .venv\Scripts\python -m uvicorn backend.app.main:app --port 8000
 ```
 
-Abrir `http://127.0.0.1:8000`. Con Docker: `docker compose up --build`. Variables disponibles y sus topes:
+Open `http://127.0.0.1:8000`. With Docker: `docker compose up --build`. Available variables and their caps:
 [.env.example](.env.example).
 
-## Pruebas
+## Tests
 
 ```bash
-cd backend && ..\.venv\Scripts\python -m pytest        # suite del backend, sin invocar a Bob
+cd backend && ..\.venv\Scripts\python -m pytest        # backend suite, never calls Bob
 ..\.venv\Scripts\python -m pytest ..\samples\facturaya-v1\tests -q
 cd ..\frontend && npm run lint && npm run build
 ```
 
-Las pruebas no gastan bobcoins: sustituyen la llamada live por respuestas reales grabadas (las marcadas
-`live` se omiten). El CI corre backend, frontend y la imagen Docker antes de cada despliegue.
-`python evaluation/score.py <dossier.json>` mide los hallazgos contra la verdad de referencia, que nunca se
-pasa a Bob ([evaluation/README.md](evaluation/README.md)).
+The tests spend no bobcoins: they replace the live call with real recorded replies (the ones marked `live` are
+skipped). CI runs the backend, the frontend and the Docker image before every deploy.
+`python evaluation/score.py <dossier.json>` scores the findings against the ground truth, which is never passed to
+Bob ([evaluation/README.md](evaluation/README.md)).
 
 ## API
 
-| Método | Endpoint | Descripción |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Estado del servicio |
-| `GET` | `/api/bob/status` | Bob instalado, API key configurada y si live exige token |
-| `GET` | `/api/samples` | Muestras registradas |
-| `POST` | `/api/audits` | Abre la vitrina `imported` o inicia una auditoría live con token |
-| `POST` | `/api/audits/upload` | Sube un ZIP privado (auditoría o solo modernización), con token |
-| `GET` | `/api/audits` | Muestras públicas; con token incluye las subidas privadas |
-| `GET` | `/api/audits/{id}` | Estado y expediente |
-| `GET` | `/api/audits/{id}/events` | Actividad de Bob y del pipeline |
-| `GET` | `/api/audits/{id}/source` | Fragmento de código citado |
-| `GET` | `/api/audits/{id}/graph` | Grafo de llamadas y radio de impacto |
-| `GET` | `/api/audits/{id}/architecture` | Rutas, SQL, módulos y complejidad |
-| `GET` | `/api/audits/{id}/migration` | Recomendación, olas, PERT y resultado del primer corte |
-| `GET` | `/api/audits/{id}/files/{name}` | `dossier.json`, `bob-result.json`, `board_memo.docx` o `migration.diff` |
-| `POST` | `/api/audits/{id}/ask` | Pregunta a Bob sobre el análisis, con token |
-| `GET` | `/api/audits/{id}/ask/{request_id}/progress` | Actividad de Bob mientras responde |
-| `GET`/`POST` | `/api/audits/{id}/modernization/…` | Estudio: `stack`, `assess`, `plan`, `implement`, `download/{name}` |
+| `GET` | `/health` | Service status |
+| `GET` | `/api/bob/status` | Bob installed, API key configured and whether live requires a token |
+| `GET` | `/api/samples` | Registered samples |
+| `POST` | `/api/audits` | Opens the `imported` showcase or starts a live audit |
+| `POST` | `/api/audits/upload` | Uploads a private ZIP (audit or modernization only) |
+| `GET` | `/api/audits` | Public samples; with a valid token it also lists private uploads |
+| `GET` | `/api/audits/{id}` | Status and dossier |
+| `GET` | `/api/audits/{id}/events` | Bob and pipeline activity |
+| `GET` | `/api/audits/{id}/source` | Cited code snippet |
+| `GET` | `/api/audits/{id}/graph` | Call graph and blast radius |
+| `GET` | `/api/audits/{id}/architecture` | Routes, SQL, modules and complexity |
+| `GET` | `/api/audits/{id}/migration` | Recommendation, waves, PERT and first cut result |
+| `GET` | `/api/audits/{id}/files/{name}` | `dossier.json`, `bob-result.json`, `board_memo.docx` or `migration.diff` |
+| `POST` | `/api/audits/{id}/ask` | Ask Bob about the analysis |
+| `GET` | `/api/audits/{id}/ask/{request_id}/progress` | Bob's activity while it answers |
+| `GET`/`POST` | `/api/audits/{id}/modernization/…` | Studio: `stack`, `assess`, `plan`, `implement`, `download/{name}` |
 
-Las lecturas de un análisis subido exigen el mismo token que lo creó.
+When `LIVE_AUDIT_TOKEN` is set, every operation that calls Bob and every read of an uploaded analysis requires the
+`X-Live-Token` header.
 
-## Alcance y limitaciones
+## Scope and limitations
 
-- La auditoría con evidencia y el ranking de migración cubren Python 3, Flask y SQLite. El Estudio de
-  modernización acepta cualquier stack.
-- El primer corte probado es una implementación de referencia del equipo y solo corre sobre muestras
-  registradas. En un ZIP subido, la migración se informa como `not_run` con el corte recomendado como guía.
-- El motor recomienda `GET /invoices`; el corte de referencia ejecutado es `GET /invoices/{id}` (segundo en el
-  ranking). La interfaz y el memo lo dicen explícitamente.
-- La vitrina no invoca `migration-architect` (no gasta bobcoins), así que su lectura cualitativa de Bob solo
-  aparece en auditorías live.
-- El PERT es una heurística no calibrada (0,5 días por punto de complejidad y acoplamiento) y así se rotula.
-- Bob varía entre corridas: sobre FacturaYa, distintas sesiones detectaron 5 o 6 de los 6 hallazgos esperados.
-  La única medición reproducible con datos del repo da 6/6 sin falsos positivos.
-- En Render free el servidor se duerme tras 15 minutos sin tráfico y el disco es efímero.
+- The evidence audit and the migration ranking cover Python 3, Flask and SQLite. The Modernization Studio accepts
+  any stack.
+- The tested first cut is a team reference implementation and only runs on registered samples. For an uploaded ZIP,
+  the migration is reported as `not_run`, with the recommended cut as guidance.
+- The engine recommends `GET /invoices`; the reference cut that runs is `GET /invoices/{id}` (second in the
+  ranking). The interface and the memo say so explicitly.
+- The showcase does not invoke `migration-architect` (it spends no bobcoins), so Bob's qualitative reading only
+  appears in live audits.
+- PERT is an uncalibrated heuristic (0.5 days per point of complexity and coupling) and is labeled as such.
+- Bob varies between runs: on FacturaYa, different sessions detected 5 or 6 of the 6 expected findings. The only
+  measurement reproducible with data in the repo gives 6/6 with no false positives.
+- On Render's free plan the server sleeps after 15 minutes without traffic and the disk is ephemeral.
 
-## Documentación
+## Documentation
 
-| Documento | Contenido |
+| Document | Contents |
 |---|---|
-| [docs/entrega/](docs/entrega/) | Checklist y textos de la entrega del hackatón |
-| [docs/motor-de-migracion.md](docs/motor-de-migracion.md) | Fórmulas del ranking, olas y PERT con los datos de FacturaYa |
-| [docs/bob-usage.md](docs/bob-usage.md) | Registro de sesiones de Bob y cómo se integra |
-| [docs/decisions.md](docs/decisions.md) | Decisiones de diseño (D1–D39) |
-| [docs/deploy.md](docs/deploy.md) | Despliegue en Render |
-| [evaluation/README.md](evaluation/README.md) | Medición contra la verdad de referencia |
-| [docs/archivo/](docs/archivo/) | Material previo que no describe el producto |
-| [AGENTS.md](AGENTS.md), [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md) | Guía para agentes, producto y sistema visual |
+| [docs/submission/](docs/submission/) | Hackathon submission checklist and texts |
+| [docs/migration-engine.md](docs/migration-engine.md) | Ranking, waves and PERT formulas with FacturaYa's data |
+| [docs/bob-usage.md](docs/bob-usage.md) | Log of Bob sessions and how Bob is integrated |
+| [docs/decisions.md](docs/decisions.md) | Design decisions (D1–D41) |
+| [docs/deploy.md](docs/deploy.md) | Deploying on Render |
+| [evaluation/README.md](evaluation/README.md) | Scoring against the ground truth |
+| [docs/archive/](docs/archive/) | Earlier material that does not describe the product |
+| [AGENTS.md](AGENTS.md), [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md) | Guide for agents, product and visual system |
 
-## Equipo
+## Team
 
-- **Jean Carlos Reyes:** Product Owner, DevOps y pitch
-- **Felipe:** integración de IBM Bob
-- **Daniel:** backend, métricas deterministas y exportadores
-- **Edgar:** frontend y UX
+- **Jean Carlos Reyes:** Product Owner, DevOps and pitch
+- **Felipe:** IBM Bob integration
+- **Daniel:** backend, deterministic metrics and exporters
+- **Edgar:** frontend and UX
 
-## Licencia
+## License
 
 [MIT](LICENSE)

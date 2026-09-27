@@ -1,9 +1,9 @@
-"""Generador de contratos JSON v1 y fixtures válidos y parciales (D-01).
+"""Generator of the v1 JSON contract and the valid and partial fixtures (D-01).
 
-Genera:
-- contracts/schema-v1.json (JSON Schema estándar a partir de Pydantic v2).
-- contracts/fixtures/valid-dossier.json (Expediente completo y validado sobre FacturaYa v1).
-- contracts/fixtures/partial-dossier.json (Expediente en estado de ejecución parcial).
+Generates:
+- contracts/schema-v1.json (standard JSON Schema from Pydantic v2).
+- contracts/fixtures/valid-dossier.json (complete, validated dossier on FacturaYa v1).
+- contracts/fixtures/partial-dossier.json (dossier in a partial run state).
 """
 
 import json
@@ -27,16 +27,16 @@ FIXTURES_DIR = CONTRACTS_DIR / "fixtures"
 
 
 def generate_schema() -> Path:
-    """Genera schema-v1.json desde DossierResult."""
+    """Generates schema-v1.json from DossierResult."""
     schema = DossierResult.model_json_schema()
     schema_path = CONTRACTS_DIR / "schema-v1.json"
     schema_path.write_text(json.dumps(schema, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"[OK] Generado: {schema_path}")
+    print(f"[OK] Generated: {schema_path}")
     return schema_path
 
 
 def build_valid_dossier() -> DossierResult:
-    """Construye un expediente completo y real para FacturaYa v1."""
+    """Builds a complete, real dossier for FacturaYa v1."""
     snapshot = SnapshotMetadata(
         sample_id="facturaya-v1",
         repo_name="FacturaYa v1 (Legacy Monolith)",
@@ -52,7 +52,7 @@ def build_valid_dossier() -> DossierResult:
     findings = [
         Finding(
             id="EF-1",
-            title="Inyección SQL por concatenación en búsqueda de facturas",
+            title="SQL injection through concatenation in the invoice search",
             category="security/sql-injection",
             severity="CRITICAL",
             confidence="HIGH",
@@ -67,15 +67,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="El parámetro de búsqueda 'q' y el owner_id se concatenan directamente a la consulta SQL sin parametrizar, permitiendo exfiltración de datos no autorizados.",
-            verification_method="Inyectar ' OR 1=1 -- en el query parameter de búsqueda; la respuesta devuelve facturas de otros clientes.",
+            explanation="The search parameter 'q' and the owner_id are concatenated straight into the SQL query without parameters, allowing unauthorized data exfiltration.",
+            verification_method="Inject ' OR 1=1 -- into the search query parameter; the response returns other customers' invoices.",
             blast_radius_score=85.0,
             transitive_impacted_symbols=["app.invoices_search", "db.query_db", "billing.get_invoice"],
             status="accepted",
         ),
         Finding(
             id="EF-2",
-            title="Función de ruta monolítica con responsabilidades mezcladas",
+            title="Monolithic route function with mixed responsibilities",
             category="maintainability/large-function",
             severity="HIGH",
             confidence="HIGH",
@@ -90,15 +90,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="La función 'invoice_new' tiene 155 líneas y mezcla validación de formulario, reglas de negocio de descuentos, transacciones de BD y renderizado HTML directo.",
-            verification_method="Inspección AST y medición de complejidad ciclomática con Radon (CC > 18).",
+            explanation="The 'invoice_new' function has 155 lines and mixes form validation, discount business rules, DB transactions and direct HTML rendering.",
+            verification_method="AST inspection and cyclomatic complexity measured with Radon (CC > 18).",
             blast_radius_score=68.5,
             transitive_impacted_symbols=["app.invoice_new", "billing.calculate_totals", "db.get_db"],
             status="accepted",
         ),
         Finding(
             id="EF-3",
-            title="Regla de descuento duplicada con redondeo divergente",
+            title="Duplicated discount rule with diverging rounding",
             category="business-rule/duplication",
             severity="HIGH",
             confidence="HIGH",
@@ -120,15 +120,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 ),
             ],
-            explanation="Facturación redondea el descuento sobre el subtotal global, mientras que el módulo de reportes redondea línea por línea y luego suma, causando discrepancias contables.",
-            verification_method="Factura FY-00001 tiene descuento facturado de 7.51 pero en el reporte contable aparece como 7.50.",
+            explanation="Billing rounds the discount on the overall subtotal, while the reports module rounds line by line and then adds up, causing accounting discrepancies.",
+            verification_method="Invoice FY-00001 has a billed discount of 7.51 but shows as 7.50 in the accounting report.",
             blast_radius_score=54.0,
             transitive_impacted_symbols=["billing.calculate_discount", "reports.generate_summary"],
             status="accepted",
         ),
         Finding(
             id="EF-4",
-            title="Claves secretas ficticias escritas en código fuente",
+            title="Fictitious secret keys written in the source code",
             category="security/hardcoded-secret",
             severity="CRITICAL",
             confidence="HIGH",
@@ -150,15 +150,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 ),
             ],
-            explanation="Constantes criptográficas y credenciales de pasarela declaradas en texto plano en el repositorio.",
-            verification_method="Inspección estática de config.py y escaneo Bandit.",
+            explanation="Cryptographic constants and payment gateway credentials declared in plain text in the repository.",
+            verification_method="Static inspection of config.py and a Bandit scan.",
             blast_radius_score=40.0,
             transitive_impacted_symbols=["config.SECRET_KEY", "app.app.config"],
             status="accepted",
         ),
         Finding(
             id="EF-5",
-            title="Dependencia circular diferida entre módulos de negocio",
+            title="Deferred circular dependency between business modules",
             category="architecture/cyclic-dependency",
             severity="MEDIUM",
             confidence="HIGH",
@@ -180,15 +180,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 ),
             ],
-            explanation="billing.py importa customers a nivel de módulo, y customers.py importa billing de forma diferida dentro de una función, indicando alto acoplamiento.",
-            verification_method="Inspección del grafo de imports y prueba de carga diferida.",
+            explanation="billing.py imports customers at module level, and customers.py imports billing lazily inside a function, which signals high coupling.",
+            verification_method="Inspection of the import graph and a lazy-loading test.",
             blast_radius_score=62.0,
             transitive_impacted_symbols=["billing", "customers"],
             status="accepted",
         ),
         Finding(
             id="EF-6",
-            title="Acceso a JSON de factura sin autorización por propietario (BOLA/IDOR)",
+            title="Invoice JSON access without owner authorization (BOLA/IDOR)",
             category="security/broken-object-authorization",
             severity="CRITICAL",
             confidence="HIGH",
@@ -203,15 +203,15 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="El endpoint GET /invoices/<id> comprueba que exista una sesión activa pero no valida que la factura solicitada pertenezca al usuario autenticado.",
-            verification_method="Autenticarse como usuario 'bruno' y solicitar la factura 1 de 'ana'; el sistema responde HTTP 200 con datos ajenos.",
+            explanation="The GET /invoices/<id> endpoint checks that an active session exists but does not validate that the requested invoice belongs to the authenticated user.",
+            verification_method="Log in as user 'bruno' and request invoice 1 of 'ana'; the system answers HTTP 200 with someone else's data.",
             blast_radius_score=72.0,
             transitive_impacted_symbols=["app.invoice_json", "db.get_invoice_by_id"],
             status="accepted",
         ),
         Finding(
             id="EF-7",
-            title="Consulta SQL de búsqueda de cliente correctamente parametrizada",
+            title="Customer search SQL query correctly parameterized",
             category="control/parameterized-query",
             severity="INFO",
             confidence="HIGH",
@@ -226,8 +226,8 @@ def build_valid_dossier() -> DossierResult:
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Control negativo: La consulta utiliza el placeholder '?' de SQLite. No constituye vulnerabilidad y debe mantenerse protegida.",
-            verification_method="Prueba de caracterización pasando cargas SQL sintéticas; la consulta retorna cero filas sin error de sintaxis.",
+            explanation="Negative control: the query uses SQLite's '?' placeholder. It is not a vulnerability and must stay protected.",
+            verification_method="Characterization test passing synthetic SQL payloads; the query returns zero rows without a syntax error.",
             blast_radius_score=5.0,
             transitive_impacted_symbols=["db.get_customer_by_email"],
             status="accepted",
@@ -237,16 +237,16 @@ def build_valid_dossier() -> DossierResult:
     architecture_options = [
         ArchitectureOption(
             id="OPT-1",
-            name="Extracción Progresiva con Strangler Fig (Recomendada)",
+            name="Progressive extraction with Strangler Fig (Recommended)",
             pattern="Strangler Fig",
             pros=[
-                "Bajo riesgo operativo: el sistema antiguo y el nuevo conviven simultáneamente.",
-                "Primer corte verificable con pruebas de caracterización golden-master.",
-                "Despliegue incremental por endpoint sin interrupción del negocio.",
+                "Low operational risk: the old and the new system coexist.",
+                "First cut verifiable with golden-master characterization tests.",
+                "Incremental deployment per endpoint without interrupting the business.",
             ],
             cons=[
-                "Requiere mantener una capa de enrutamiento fachada durante la transición.",
-                "Duplicidad temporal de modelos de datos.",
+                "Requires keeping a facade routing layer during the transition.",
+                "Temporary duplication of data models.",
             ],
             target_stack="FastAPI (Python 3.11) + SQLite/Postgres + Pydantic v2",
             risk_level="LOW",
@@ -255,32 +255,32 @@ def build_valid_dossier() -> DossierResult:
         ),
         ArchitectureOption(
             id="OPT-2",
-            name="Extracción por Módulos Hoja (Leaf Services)",
+            name="Extraction by leaf modules (Leaf Services)",
             pattern="Leaf Cut",
             pros=[
-                "Desacopla componentes sin dependencias entrantes (ej. reports.py).",
-                "Fácil de aislar y testear en contenedores independientes.",
+                "Decouples components with no incoming dependencies (e.g. reports.py).",
+                "Easy to isolate and test in independent containers.",
             ],
             cons=[
-                "Bajo impacto directo en el valor percibido por el usuario final.",
-                "No resuelve las vulnerabilidades críticas de autenticación y BOLA en el núcleo.",
+                "Low direct impact on the value the end user perceives.",
+                "Does not fix the critical authentication and BOLA vulnerabilities in the core.",
             ],
-            target_stack="Microservicios FastAPI independientes",
+            target_stack="Independent FastAPI microservices",
             risk_level="MEDIUM",
             estimated_effort_days=24.0,
             recommended=False,
         ),
         ArchitectureOption(
             id="OPT-3",
-            name="Reescritura Completa desde Cero (Big Bang)",
+            name="Full rewrite from scratch (Big Bang)",
             pattern="Big Bang Rewrite",
-            pros=["Código 100% nuevo sin arrastrar decisiones heredadas."],
+            pros=["100% new code without dragging legacy decisions along."],
             cons=[
-                "Riesgo extremo de desviación de cronograma y presupuesto.",
-                "Pérdida de reglas de negocio tácitas y casos borde no documentados.",
-                "Cero entregas de valor hasta el final del proyecto.",
+                "Extreme risk of schedule and budget overruns.",
+                "Loss of tacit business rules and undocumented edge cases.",
+                "Zero value delivered until the end of the project.",
             ],
-            target_stack="FastAPI o NestJS monolítico",
+            target_stack="Monolithic FastAPI or NestJS",
             risk_level="HIGH",
             estimated_effort_days=65.0,
             recommended=False,
@@ -290,42 +290,42 @@ def build_valid_dossier() -> DossierResult:
     pert_plan = [
         MigrationPhase(
             phase_number=1,
-            name="Fase 1: Fijación de Contratos y Pruebas de Caracterización",
-            description="Crear suite de pruebas golden-master con pytest que fijen el comportamiento observable actual de GET /invoices/{id}.",
+            name="Phase 1: Pin the contracts and write characterization tests",
+            description="Create a golden-master pytest suite that pins the current observable behavior of GET /invoices/{id}.",
             optimistic_days=2.0,
             nominal_days=3.0,
             pessimistic_days=5.0,
             pert_expected_days=3.17,
             pert_variance=0.25,
-            assumptions=["Acceso a base de datos de prueba con fixtures conocidos de FacturaYa."],
-            prerequisites=["Definición congelada de contratos JSON v1."],
-            rollback_strategy="Descartar suite de pruebas sin impacto en producción.",
+            assumptions=["Access to a test database with known FacturaYa fixtures."],
+            prerequisites=["Frozen definition of the v1 JSON contracts."],
+            rollback_strategy="Discard the test suite with no impact on production.",
         ),
         MigrationPhase(
             phase_number=2,
-            name="Fase 2: Implementación del Micro-endpoint en FastAPI y Enrutador Fachada",
-            description="Construir el nuevo módulo en modern/invoices_api.py con validación Pydantic y fachada que redirige GET /invoices/{id}.",
+            name="Phase 2: FastAPI micro-endpoint and facade router",
+            description="Build the new module in modern/invoices_api.py with Pydantic validation and a facade that routes GET /invoices/{id}.",
             optimistic_days=3.0,
             nominal_days=5.0,
             pessimistic_days=8.0,
             pert_expected_days=5.17,
             pert_variance=0.69,
-            assumptions=["FastAPI puede compartir el acceso a la base de datos SQLite en modo WAL."],
-            prerequisites=["Fase 1 aprobada con 100% de pruebas en verde contra el legado."],
-            rollback_strategy="Conmutar la bandera de enrutamiento en la fachada hacia la ruta original de Flask.",
+            assumptions=["FastAPI can share access to the SQLite database in WAL mode."],
+            prerequisites=["Phase 1 approved with 100% of the tests green against the legacy code."],
+            rollback_strategy="Flip the routing flag in the facade back to the original Flask route.",
         ),
         MigrationPhase(
             phase_number=3,
-            name="Fase 3: Modernización del Núcleo de Facturación y Clientes",
-            description="Reescribir app.invoice_new y billing.py eliminando dependencias circulares y parametrizando todas las consultas.",
+            name="Phase 3: Modernize the billing and customers core",
+            description="Rewrite app.invoice_new and billing.py, removing circular dependencies and parameterizing every query.",
             optimistic_days=6.0,
             nominal_days=10.0,
             pessimistic_days=16.0,
             pert_expected_days=10.33,
             pert_variance=2.78,
-            assumptions=["Las pruebas unitarias y de integración cubren los cálculos de redondeo."],
-            prerequisites=["Fase 2 desplegada y estable."],
-            rollback_strategy="Mantener el contenedor del backend Flask como respaldo activo.",
+            assumptions=["Unit and integration tests cover the rounding calculations."],
+            prerequisites=["Phase 2 deployed and stable."],
+            rollback_strategy="Keep the Flask backend container as an active fallback.",
         ),
     ]
 
@@ -449,7 +449,7 @@ def build_valid_dossier() -> DossierResult:
         valid_references=8,
         invalid_references=0,
         fidelity_ratio=1.0,
-        details=["100% de las citas apuntan a archivos y rangos de líneas válidos en samples/facturaya-v1/."],
+        details=["100% of the citations point to valid files and line ranges in samples/facturaya-v1/."],
     )
 
     mermaid_er = """erDiagram
@@ -479,9 +479,9 @@ def build_valid_dossier() -> DossierResult:
     INVOICES ||--|{ INVOICE_ITEMS : contains"""
 
     mermaid_flow = """flowchart TD
-    Client["Cliente / Navegador"] --> Facade["Fachada Strangler Fig"]
+    Client["Customer / Browser"] --> Facade["Strangler Fig facade"]
     Facade -->|GET /invoices/id| Modern["FastAPI (modern/invoices_api.py)"]
-    Facade -->|Otras rutas| Legacy["Flask Monolito (app.py)"]
+    Facade -->|Other routes| Legacy["Flask monolith (app.py)"]
     Modern --> DB[("SQLite Database")]
     Legacy --> DB"""
 
@@ -497,7 +497,7 @@ def build_valid_dossier() -> DossierResult:
         characterization_tests_modern=characterization_modern,
         migration_summary=migration_summary,
         validation_report=validation_report,
-        executive_summary="CodeArchaeologist completó el diagnóstico forense de FacturaYa v1. Se identificaron 6 problemas reales (2 críticos de seguridad: SQLi y BOLA/IDOR, 1 secreto ficticio, 1 cálculo contable divergente y 1 dependencia circular). Se recomienda la modernización progresiva con Strangler Fig iniciando en GET /invoices/{id}, logrando un primer paso probado en verde con cero tiempo de inactividad.",
+        executive_summary="CodeArchaeologist completed the forensic diagnosis of FacturaYa v1. It identified 6 real problems (2 critical security issues: SQLi and BOLA/IDOR, 1 fictitious secret, 1 diverging accounting calculation and 1 circular dependency). It recommends a progressive Strangler Fig modernization starting with GET /invoices/{id}, achieving a first step tested green with zero downtime.",
         mermaid_er_diagram=mermaid_er,
         mermaid_call_flow=mermaid_flow,
         execution_mode="live",
@@ -505,7 +505,7 @@ def build_valid_dossier() -> DossierResult:
 
 
 def build_partial_dossier() -> DossierResult:
-    """Construye un expediente en estado parcial (ejecución hasta etapa 5)."""
+    """Builds a dossier in a partial state (run up to stage 5)."""
     full = build_valid_dossier()
     return DossierResult(
         schema_version="1.0",
@@ -523,9 +523,9 @@ def build_partial_dossier() -> DossierResult:
             valid_references=3,
             invalid_references=0,
             fidelity_ratio=1.0,
-            details=["Validación parcial de etapas 1 a 5."],
+            details=["Partial validation of stages 1 to 5."],
         ),
-        executive_summary="Análisis preliminar en progreso. Se han identificado los primeros 3 hallazgos críticos.",
+        executive_summary="Preliminary analysis in progress. The first 3 critical findings have been identified.",
         mermaid_er_diagram=full.mermaid_er_diagram,
         mermaid_call_flow=full.mermaid_call_flow,
         execution_mode="live",
@@ -535,25 +535,25 @@ def build_partial_dossier() -> DossierResult:
 def main():
     FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 1. Generar JSON Schema
+    # 1. Generate the JSON Schema
     generate_schema()
 
-    # 2. Generar y validar fixture completo
+    # 2. Generate and validate the complete fixture
     valid_dossier = build_valid_dossier()
     valid_json = valid_dossier.model_dump_json(indent=2)
     valid_path = FIXTURES_DIR / "valid-dossier.json"
     valid_path.write_text(valid_json, encoding="utf-8")
-    # Re-validación estricta
+    # Strict re-validation
     DossierResult.model_validate_json(valid_path.read_text(encoding="utf-8"))
-    print(f"[OK] Generado y validado fixture completo: {valid_path}")
+    print(f"[OK] Generated and validated the complete fixture: {valid_path}")
 
-    # 3. Generar y validar fixture parcial
+    # 3. Generate and validate the partial fixture
     partial_dossier = build_partial_dossier()
     partial_json = partial_dossier.model_dump_json(indent=2)
     partial_path = FIXTURES_DIR / "partial-dossier.json"
     partial_path.write_text(partial_json, encoding="utf-8")
     DossierResult.model_validate_json(partial_path.read_text(encoding="utf-8"))
-    print(f"[OK] Generado y validado fixture parcial: {partial_path}")
+    print(f"[OK] Generated and validated the partial fixture: {partial_path}")
 
 
 if __name__ == "__main__":

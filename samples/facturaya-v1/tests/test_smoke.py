@@ -13,12 +13,12 @@ def test_login_logout(client, login):
 
 def test_customers_and_invoice_creation(client, login):
     login()
-    assert b"Cliente Demo 01" in client.get("/customers").data
+    assert b"Demo Customer 01" in client.get("/customers").data
     assert client.get("/customers/1").status_code == 200
     assert client.get("/customers/2").status_code == 404
     response = client.post("/invoices/new", data={
         "customer_id": "1", "issue_date": "2024-12-31", "status": "pending",
-        "description": ["Consultoría", "Soporte"], "quantity": ["2", "1"],
+        "description": ["Consulting", "Support"], "quantity": ["2", "1"],
         "unit_price": ["30.00", "40.00"],
     })
     assert response.status_code == 302
@@ -32,6 +32,6 @@ def test_invoice_rejects_non_iso_date(client, login):
     login()
     response = client.post("/invoices/new", data={
         "customer_id": "1", "issue_date": "20241231", "status": "pending",
-        "description": ["Trabajo"], "quantity": ["1"], "unit_price": ["10.00"],
+        "description": ["Work"], "quantity": ["1"], "unit_price": ["10.00"],
     })
     assert response.status_code == 400

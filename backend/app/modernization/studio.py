@@ -1,7 +1,7 @@
-"""Orquestación del Estudio de modernización: estado en disco por análisis, transiciones y una sola sesión de Bob a la vez.
+"""Modernization Studio orchestration: on-disk state per analysis, transitions and one Bob session at a time.
 
-Fases: idle -> assessing -> assessed -> planning -> planned -> implementing -> implemented (o failed).
-Nada se ejecuta sin que la persona lo pida; implementar exige una confirmación explícita.
+Phases: idle -> assessing -> assessed -> planning -> planned -> implementing -> implemented (or failed).
+Nothing runs unless the person asks for it; implementing requires an explicit confirmation.
 """
 
 import json
@@ -35,16 +35,16 @@ STATE_FILE = "state.json"
 STACK_FILE = "stack.json"
 MAX_EVENTS = 200
 RUNNING_PHASES = frozenset({"assessing", "planning", "implementing"})
-INTERRUPTED_MESSAGE = "La operación se interrumpió porque el servidor se reinició. Vuelve a lanzarla."
+INTERRUPTED_MESSAGE = "The operation was interrupted because the server restarted. Start it again."
 
 _IO_LOCK = threading.RLock()
-_BOB_LOCK = threading.Lock()  # una sola sesión de Bob de modernización a la vez en todo el servidor
+_BOB_LOCK = threading.Lock()  # a single modernization Bob session at a time across the whole server
 
 AdapterFactory = Callable[[Path, str], Runner]
 
 
 class _StudioLog:
-    """Recibe los eventos de BobActivity (misma interfaz que EventLog) y los guarda como actividad del Estudio."""
+    """Receives BobActivity events (same interface as EventLog) and stores them as Studio activity."""
 
     def __init__(self, studio: "Studio", phase: str, step_id: str | None = None) -> None:
         self.studio, self.phase, self.step_id = studio, phase, step_id
@@ -56,11 +56,11 @@ class _StudioLog:
 
 
 class StudioBusyError(RuntimeError):
-    """Ya hay una operación de modernización con Bob en curso."""
+    """A modernization operation with Bob is already running."""
 
 
 class StudioStateError(RuntimeError):
-    """La operación no es válida en la fase actual."""
+    """The operation is not valid in the current phase."""
 
 
 def _env_float(name: str, default: float) -> float:
@@ -71,7 +71,7 @@ def _env_float(name: str, default: float) -> float:
 
 
 def default_adapter(work: Path, kind: str) -> Runner:
-    """`planner` (solo lectura) o `surgeon` (edita la copia). Topes propios, ajustables por entorno."""
+    """`planner` (read-only) or `surgeon` (edits the copy). Their own caps, adjustable through the environment."""
     base = BobRunSettings.from_env()
     if kind == "surgeon":
         settings = base.model_copy(update={
@@ -89,21 +89,21 @@ def default_adapter(work: Path, kind: str) -> Runner:
 
 
 class Studio:
-    def __init__(self, job_dir: Path, project_name: str = "proyecto", adapter_factory: AdapterFactory = default_adapter) -> None:
+    def __init__(self, job_dir: Path, project_name: str = "project", adapter_factory: AdapterFactory = default_adapter) -> None:
         self.job_dir = job_dir
         self.dir = job_dir / "modernization"
         self.project_name = project_name
         self.adapter_factory = adapter_factory
 
-    # ------------------------------------------------------------ archivos
+    # ------------------------------------------------------------ files
     @property
     def source(self) -> Path:
-        """Código original: la copia íntegra guardada al subir o, en análisis antiguos, el workspace de la auditoría."""
+        """Original code: the full copy stored at upload or, in older analyses, the audit workspace."""
         for name in ("source", "workspace"):
             candidate = self.job_dir / name
             if candidate.is_dir():
                 return candidate
-        raise StudioStateError("El código de este análisis ya no está disponible en el servidor.")
+        raise StudioStateError("The code for this analysis is no longer available on the server.")
 
     @property
     def work(self) -> Path:
@@ -113,7 +113,7 @@ class Studio:
         path = self.dir / name
         return path if name in {ZIP_NAME, DIFF_NAME} and path.is_file() else None
 
-    # ------------------------------------------------------------ estado
+    # ------------------------------------------------------------ state
     def state(self) -> StudioState:
         with _IO_LOCK:
             path = self.dir / STATE_FILE
@@ -122,7 +122,7 @@ class Studio:
             try:
                 return StudioState.model_validate_json(path.read_text(encoding="utf-8"))
             except ValueError:
-                logger.warning("Estado de modernización ilegible en %s", self.dir.name)
+                logger.warning("Unreadable modernization state in %s", self.dir.name)
                 return StudioState()
 
     def _save(self, state: StudioState) -> None:
@@ -153,11 +153,11 @@ class Studio:
             self._save(state)
 
     def _sink(self, phase: str, actor: str, step_id: str | None = None):
-        """Convierte el stream de Bob en actividad real (lecturas, búsquedas, subagentes, ediciones)."""
+        """Turns the Bob stream into real activity (reads, searches, subagents, edits)."""
         return BobActivity(_StudioLog(self, phase, step_id), self.work, actor=actor).feed
 
     def findings_digest(self) -> str:
-        """Hallazgos ya validados de la auditoría (si la hubo): títulos y ubicaciones, sin código."""
+        """Findings already validated by the audit (if there was one): titles and locations, no code."""
         path = self.job_dir / "dossier.json"
         if not path.is_file():
             return "[]"
@@ -187,72 +187,72 @@ class Studio:
             path.write_text(report.model_dump_json(), encoding="utf-8")
         return report
 
-    # ------------------------------------------------------------ validación de solicitudes
+    # ------------------------------------------------------------ request validation
     def validate_request(self, request: AssessRequest) -> None:
         stack = self.stack()
         detected = {t.id for t in stack.technologies}
         if request.mode == "chosen":
             if not request.mappings:
-                raise StudioStateError("Elige al menos una migración o pide a Bob que recomiende destinos.")
+                raise StudioStateError("Pick at least one migration or ask Bob to recommend targets.")
             seen: set[tuple[str, str | None]] = set()
             for mapping in request.mappings:
                 if mapping.from_id not in detected:
-                    raise StudioStateError(f"«{mapping.from_id}» no está entre las tecnologías detectadas.")
+                    raise StudioStateError(f"«{mapping.from_id}» is not among the detected technologies.")
                 if mapping.to_id not in {t.id for t in targets_for(mapping.from_id)}:
-                    raise StudioStateError(f"«{mapping.to_id}» no es un destino posible para «{mapping.from_id}».")
+                    raise StudioStateError(f"«{mapping.to_id}» is not a possible target for «{mapping.from_id}».")
                 if (mapping.from_id, mapping.service) in seen:
-                    raise StudioStateError(f"«{mapping.from_id}» aparece con dos destinos distintos.")
+                    raise StudioStateError(f"«{mapping.from_id}» appears with two different targets.")
                 seen.add((mapping.from_id, mapping.service))
         elif request.mappings:
-            raise StudioStateError("En modo recomendación no se envían migraciones elegidas.")
+            raise StudioStateError("Recommendation mode does not accept chosen migrations.")
 
-    # ------------------------------------------------------------ transiciones (síncronas, rápidas)
+    # ------------------------------------------------------------ transitions (synchronous, fast)
     def begin_assess(self, request: AssessRequest) -> None:
         self.validate_request(request)
         self._begin(from_phases={"idle", "assessed", "planned", "implemented", "failed"}, to="assessing")
         self._update(request=request, assessment=None, plan=None, implementation=None, error=None)
-        self._event("assessing", "Bob evalúa si conviene migrar y qué se sacrifica.")
+        self._event("assessing", "Bob assesses whether migrating pays off and what is traded away.")
 
     def begin_plan(self) -> None:
         state = self.state()
         if state.assessment is None or state.request is None:
-            raise StudioStateError("Primero hay que evaluar la migración.")
+            raise StudioStateError("The migration has to be assessed first.")
         self._begin(from_phases={"assessed", "planned", "implemented", "failed"}, to="planning")
         self._update(plan=None, implementation=None, error=None)
-        self._event("planning", "Bob prepara el plan detallado por pasos.")
+        self._event("planning", "Bob prepares the detailed step-by-step plan.")
 
     def begin_implement(self) -> None:
         state = self.state()
         if state.plan is None or state.request is None:
-            raise StudioStateError("Primero hay que generar el plan.")
+            raise StudioStateError("The plan has to be generated first.")
         self._begin(from_phases={"planned", "implemented", "failed"}, to="implementing")
         self._update(implementation=None, error=None)
-        self._event("implementing", "Bob empieza a implementar el plan sobre una copia del proyecto.")
+        self._event("implementing", "Bob starts implementing the plan on a copy of the project.")
 
     def _begin(self, from_phases: set[str], to: Phase) -> None:
-        # Comprobar y cambiar de fase en un solo paso: un doble clic o un reintento no lanza dos sesiones.
+        # Check and change phase in a single step: a double click or a retry never launches two sessions.
         with _IO_LOCK:
             state = self.state()
             if state.phase in RUNNING_PHASES:
-                raise StudioBusyError("Ya hay una operación con Bob en curso para este análisis.")
+                raise StudioBusyError("A Bob operation is already running for this analysis.")
             if state.phase not in from_phases:
-                raise StudioStateError(f"No se puede pasar de «{state.phase}» a «{to}».")
+                raise StudioStateError(f"Cannot move from «{state.phase}» to «{to}».")
             self._update(phase=to)
 
-    # ------------------------------------------------------------ trabajo en segundo plano
+    # ------------------------------------------------------------ background work
     def _guard(self, fn: Callable[[], None]) -> None:
         if not _BOB_LOCK.acquire(blocking=False):
-            self._update(phase="failed", error="Hay otra sesión de modernización con Bob en curso en el servidor.")
+            self._update(phase="failed", error="Another modernization session with Bob is running on the server.")
             return
         try:
             fn()
         except PlannerError as exc:
-            logger.warning("Modernización %s: %s", self.job_dir.name, exc)
+            logger.warning("Modernization %s: %s", self.job_dir.name, exc)
             self._event("failed", str(exc))
             self._update(phase="failed", error=redact_paths(str(exc)))
-        except Exception:  # noqa: BLE001 - el worker nunca debe morir en silencio
-            logger.exception("Error inesperado en la modernización %s", self.job_dir.name)
-            self._update(phase="failed", error="Error interno inesperado; revisa los logs del servidor.")
+        except Exception:  # noqa: BLE001 - the worker must never die silently
+            logger.exception("Unexpected error in modernization %s", self.job_dir.name)
+            self._update(phase="failed", error="Unexpected internal error; check the server logs.")
         finally:
             _BOB_LOCK.release()
 
@@ -261,15 +261,15 @@ class Studio:
             state = self.state()
             assert state.request is not None
             stack = self.stack()
-            self._event("assessing", "Copiando el proyecto a un espacio de trabajo aislado")
+            self._event("assessing", "Copying the project to an isolated working copy")
             prepare_work(self.source, self.work)
-            self._event("assessing", f"Stack medido enviado a Bob: {len(stack.technologies)} tecnologías, arquitectura {stack.architecture.kind}")
+            self._event("assessing", f"Measured stack sent to Bob: {len(stack.technologies)} technologies, {stack.architecture.kind} architecture")
             assessment = planner.run_assessment(
                 self.adapter_factory(self.work, "planner"), stack, state.request, self.work,
                 findings=self.findings_digest(), sink=self._sink("assessing", "modernization-planner"),
                 note=lambda message: self._event("assessing", message, kind="validator"),
             )
-            self._event("assessed", f"Evaluación lista: veredicto {assessment.verdict}.")
+            self._event("assessed", f"Assessment ready: verdict {assessment.verdict}.")
             self._update(phase="assessed", assessment=assessment)
 
         self._guard(work)
@@ -278,14 +278,14 @@ class Studio:
         def work() -> None:
             state = self.state()
             assert state.request is not None and state.assessment is not None
-            self._event("planning", "Copiando el proyecto a un espacio de trabajo aislado")
+            self._event("planning", "Copying the project to an isolated working copy")
             prepare_work(self.source, self.work)
             plan = planner.run_plan(
                 self.adapter_factory(self.work, "planner"), self.stack(), state.request, state.assessment, self.work,
                 findings=self.findings_digest(), sink=self._sink("planning", "modernization-planner"),
                 note=lambda message: self._event("planning", message, kind="validator"),
             )
-            self._event("planned", f"Plan listo con {len(plan.steps)} pasos.")
+            self._event("planned", f"Plan ready with {len(plan.steps)} steps.")
             self._update(phase="planned", plan=plan)
 
         self._guard(work)
@@ -296,26 +296,26 @@ class Studio:
             assert state.plan is not None and state.request is not None
             mappings = state.request.mappings or [Mapping(from_id=r.from_id, to_id=r.to_id) for r in (state.assessment.recommended if state.assessment else [])]
             mappings_text = json.dumps([m.model_dump() for m in mappings], ensure_ascii=False)
-            # El adaptador apunta a la copia; run_implementation la prepara antes de la primera sesión.
+            # The adapter points at the copy; run_implementation prepares it before the first session.
             runner = self.adapter_factory(self.work, "surgeon")
             original = snapshot(self.source)
             result = run_implementation(
                 runner, state.plan, mappings_text, self.source, self.dir,
-                root_name=f"{_slug(self.project_name)}-modernizado",
+                root_name=f"{_slug(self.project_name)}-modernized",
                 on_event=lambda message, step: self._event("implementing", message, step),
                 sink_for=lambda step: self._sink("implementing", "modernization-surgeon", step.id),
             )
             if snapshot(self.source) != original:
-                # Bob solo puede escribir en la copia (fileRegex anclado); si aun así el original cambió, no se entrega.
-                raise PlannerError("Se detectaron cambios en el código original durante la implementación; se descartó el resultado.")
-            self._event("implemented", f"Migración lista: {result.files_changed} archivos cambiados.")
+                # Bob can only write to the copy (anchored fileRegex); if the original changed anyway, nothing is delivered.
+                raise PlannerError("Changes to the original code were detected during the implementation; the result was discarded.")
+            self._event("implemented", f"Migration ready: {result.files_changed} files changed.")
             self._update(phase="implemented", implementation=result)
 
         self._guard(work)
 
 
 def recover_interrupted(jobs_dir: Path) -> int:
-    """Al arrancar, marca como fallidas las operaciones que un reinicio dejó a medias (si no, quedarían bloqueadas)."""
+    """At startup, marks as failed the operations a restart left half-done (otherwise they would stay blocked)."""
     recovered = 0
     for state_file in jobs_dir.glob(f"*/modernization/{STATE_FILE}"):
         studio = Studio(state_file.parent.parent)
@@ -328,11 +328,11 @@ def recover_interrupted(jobs_dir: Path) -> int:
             studio._save(state)
         recovered += 1
     if recovered:
-        logger.warning("Se recuperaron %s operaciones de modernización interrumpidas por un reinicio", recovered)
+        logger.warning("Recovered %s modernization operations interrupted by a restart", recovered)
     return recovered
 
 
 def _slug(name: str) -> str:
     cleaned = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in name.rsplit(".", 1)[0]).strip("-_")
-    return cleaned[:40] or "proyecto"
+    return cleaned[:40] or "project"
 

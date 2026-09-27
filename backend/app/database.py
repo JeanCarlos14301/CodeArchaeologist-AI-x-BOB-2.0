@@ -1,7 +1,7 @@
-"""Persistencia SQLite local para jobs y eventos del pipeline determinista (D-02).
+"""Local SQLite persistence for jobs and events of the deterministic pipeline (D-02).
 
-Habilita WAL mode para concurrencia segura y rendimiento.
-Almacena el estado del job, eventos de cada una de las 11 etapas y el resultado final DossierResult.
+Enables WAL mode for safe concurrency and performance.
+Stores the job state, the events of each stage and the final DossierResult.
 """
 
 import json
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Directorio base del proyecto
+# Project base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DB_PATH = BASE_DIR / "jobs.db"
 
@@ -35,7 +35,7 @@ def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
 
 
 def init_db(db_path: Optional[Path] = None) -> None:
-    """Inicializa el esquema de base de datos si no existe."""
+    """Initializes the database schema when it does not exist."""
     conn = get_connection(db_path)
     with conn:
         conn.execute("""
@@ -80,7 +80,7 @@ def create_job(
     execution_mode: str = "example",
     db_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    """Registra un nuevo job en cola."""
+    """Registers a new queued job."""
     now = datetime.now(timezone.utc).isoformat()
     conn = get_connection(db_path)
     with conn:
@@ -96,7 +96,7 @@ def create_job(
                 job_id,
                 "queued",
                 0,
-                "En cola",
+                "Queued",
                 0,
                 source_type,
                 source_path,
@@ -119,7 +119,7 @@ def update_job_status(
     execution_mode: Optional[str] = None,
     db_path: Optional[Path] = None,
 ) -> None:
-    """Actualiza el progreso y estado de un job."""
+    """Updates a job's progress and state."""
     now = datetime.now(timezone.utc).isoformat()
     conn = get_connection(db_path)
     with conn:
@@ -151,7 +151,7 @@ def save_job_result(
     result_dict: Dict[str, Any],
     db_path: Optional[Path] = None,
 ) -> None:
-    """Guarda el expediente JSON final de un job completado."""
+    """Stores the final JSON dossier of a completed job."""
     now = datetime.now(timezone.utc).isoformat()
     json_str = json.dumps(result_dict, ensure_ascii=False)
     conn = get_connection(db_path)
@@ -176,7 +176,7 @@ def add_job_event(
     message: str = "",
     db_path: Optional[Path] = None,
 ) -> None:
-    """Registra un evento de etapa en la línea de tiempo del job."""
+    """Records a stage event in the job's timeline."""
     now = datetime.now(timezone.utc).isoformat()
     conn = get_connection(db_path)
     with conn:
@@ -192,7 +192,7 @@ def add_job_event(
 
 
 def get_job(job_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """Obtiene los detalles del job por ID."""
+    """Gets the job details by ID."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
@@ -204,7 +204,7 @@ def get_job(job_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, A
 
 
 def get_job_events(job_id: str, db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
-    """Obtiene los eventos cronológicos de un job."""
+    """Gets a job's events in chronological order."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute(
@@ -217,7 +217,7 @@ def get_job_events(job_id: str, db_path: Optional[Path] = None) -> List[Dict[str
 
 
 def get_job_result(job_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """Obtiene el resultado JSON parseado de un job."""
+    """Gets a job's parsed JSON result."""
     job = get_job(job_id, db_path=db_path)
     if not job or not job.get("result_json"):
         return None
@@ -225,7 +225,7 @@ def get_job_result(job_id: str, db_path: Optional[Path] = None) -> Optional[Dict
 
 
 def list_jobs(limit: int = 50, db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
-    """Lista los jobs recientes."""
+    """Lists recent jobs."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?", (limit,))

@@ -58,9 +58,9 @@ function Repository({ dossier }: { dossier: Dossier }) {
 
   const findingsPanel = (
     <>
-        <Eyebrow>Hallazgos en este archivo · {fileFindings.length}</Eyebrow>
+        <Eyebrow>Findings in this file · {fileFindings.length}</Eyebrow>
         {fileFindings.length === 0 ? (
-          <p className="mt-2 text-body text-muted">Bob no reportó hallazgos con evidencia en {path ?? "este archivo"}.</p>
+          <p className="mt-2 text-body text-muted">Bob reported no findings with evidence in {path ?? "this file"}.</p>
         ) : (
           <ul className="mt-2 space-y-1">
             {fileFindings.map((finding) => {
@@ -83,10 +83,10 @@ function Repository({ dossier }: { dossier: Dossier }) {
         )}
         {path && (
           <div className="mt-5 flex flex-col gap-2 border-t border-line pt-4">
-            <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`¿Qué hace ${path}, quién depende de él y qué riesgos tiene?`)}>
-              Preguntar a Bob sobre {path}
+            <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`What does ${path} do, what depends on it and what risks does it have?`)}>
+              Ask Bob about {path}
             </Button>
-            {route.finding && <Button size="sm" variant="ghost" onClick={() => go("risks", { finding: route.finding })}>Ver {route.finding} en Riesgos</Button>}
+            {route.finding && <Button size="sm" variant="ghost" onClick={() => go("risks", { finding: route.finding })}>View {route.finding} in Risks</Button>}
           </div>
         )}
     </>
@@ -94,22 +94,22 @@ function Repository({ dossier }: { dossier: Dossier }) {
 
   return (
     <div className="grid grid-cols-1 @2xl:h-full @2xl:min-h-0 @2xl:grid-cols-[240px_minmax(0,1fr)] @5xl:grid-cols-[240px_minmax(0,1fr)_300px]">
-      <h1 className="sr-only">Repositorio{path ? ` · ${path}` : ""}</h1>
+      <h1 className="sr-only">Repository{path ? ` · ${path}` : ""}</h1>
       <div className="border-b border-line @2xl:min-h-0 @2xl:overflow-y-auto @2xl:border-r @2xl:border-b-0">
         <div className="flex h-10 items-center border-b border-line px-3">
-          <Eyebrow>Repositorio · {files.length} archivos</Eyebrow>
+          <Eyebrow>Repository · {files.length} files</Eyebrow>
         </div>
-        {architecture.loading && !architecture.data ? <p className="p-3 text-caption text-subtle">Cargando archivos…</p> : <RepositoryTree root={tree} selected={path} onSelect={openFile} />}
-        <p className="border-t border-line-subtle p-3 text-caption text-subtle">Se listan los archivos medidos por AST y los citados como evidencia.</p>
+        {architecture.loading && !architecture.data ? <p className="p-3 text-caption text-subtle">Loading files…</p> : <RepositoryTree root={tree} selected={path} onSelect={openFile} />}
+        <p className="border-t border-line-subtle p-3 text-caption text-subtle">Files measured by AST and files cited as evidence are listed.</p>
       </div>
 
       <div className="p-4 @2xl:min-h-0 @2xl:overflow-y-auto">
         {!path ? (
-          <EmptyState title="No hay archivos que mostrar">Este análisis no encontró archivos Python ni evidencia citada.</EmptyState>
+          <EmptyState title="No files to show">This analysis found no Python files and no cited evidence.</EmptyState>
         ) : error ? (
-          <ErrorState title={`No se pudo leer ${path}.`} message={error} hint="El archivo puede no existir en el workspace de este análisis." />
+          <ErrorState title={`${path} could not be read.`} message={error} hint="The file may not exist in this analysis's workspace." />
         ) : !excerpt ? (
-          <Loading label={`Abriendo ${path}…`} />
+          <Loading label={`Opening ${path}…`} />
         ) : (
           <>
             <CodeViewer
@@ -118,7 +118,7 @@ function Repository({ dossier }: { dossier: Dossier }) {
               marks={marks}
               focusLine={route.line}
               maxHeight="calc(100dvh - 12rem)"
-              caption={`líneas ${lineRange(excerpt.start, excerpt.end)} de ${excerpt.total_lines}`}
+              caption={`lines ${lineRange(excerpt.start, excerpt.end)} of ${excerpt.total_lines}`}
               onMarkClick={(mark) => {
                 const finding = fileFindings.find((f) => mark.label?.startsWith(f.id));
                 if (finding) openFinding(finding.id, mark.start);
@@ -126,8 +126,8 @@ function Repository({ dossier }: { dossier: Dossier }) {
             />
             {excerpt.total_lines > PAGE && (
               <div className="mt-3 flex gap-2">
-                <Button size="sm" disabled={page === 1} onClick={() => setPage(Math.max(1, page - PAGE))}>Líneas anteriores</Button>
-                <Button size="sm" disabled={excerpt.end >= excerpt.total_lines} onClick={() => setPage(page + PAGE)}>Siguientes {PAGE} líneas</Button>
+                <Button size="sm" disabled={page === 1} onClick={() => setPage(Math.max(1, page - PAGE))}>Previous lines</Button>
+                <Button size="sm" disabled={excerpt.end >= excerpt.total_lines} onClick={() => setPage(page + PAGE)}>Next {PAGE} lines</Button>
               </div>
             )}
           </>
@@ -135,7 +135,7 @@ function Repository({ dossier }: { dossier: Dossier }) {
         <div className="mt-6 border-t border-line pt-4 @5xl:hidden">{findingsPanel}</div>
       </div>
 
-      <aside aria-label="Hallazgos del archivo" className="hidden border-l border-line p-4 @5xl:block @5xl:min-h-0 @5xl:overflow-y-auto">
+      <aside aria-label="Findings in the file" className="hidden border-l border-line p-4 @5xl:block @5xl:min-h-0 @5xl:overflow-y-auto">
         {findingsPanel}
       </aside>
     </div>

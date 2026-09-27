@@ -1,12 +1,12 @@
-"""Generador del Primer Corte de Migración Strangler Fig y Parche Unificado (D-07).
+"""Generator of the first Strangler Fig migration cut and its unified patch (D-07).
 
-Implementa:
-- Modernización de 'GET /invoices/{id}' en FastAPI bajo modern/invoices_api.py.
-- Tipado estricto con Pydantic v2 y consultas SQLite 100% parametrizadas.
-- Corrección de seguridad BOLA (Broken Object Level Authorization): rechazo de facturas ajenas con 404.
-- Regla de cálculo unificada con Decimal y ROUND_HALF_UP.
-- Fachada Strangler Fig (facade.py) para enrutamiento transparente entre monolito y nuevo servicio.
-- Parche unificado 'migration.diff'.
+Implements:
+- Modernization of 'GET /invoices/{id}' in FastAPI under modern/invoices_api.py.
+- Strict typing with Pydantic v2 and 100% parameterized SQLite queries.
+- BOLA (Broken Object Level Authorization) security fix: other users' invoices are rejected with 404.
+- Unified calculation rule with Decimal and ROUND_HALF_UP.
+- Strangler Fig facade (facade.py) for transparent routing between the monolith and the new service.
+- Unified patch 'migration.diff'.
 """
 
 import difflib
@@ -16,13 +16,13 @@ from typing import Dict, List, Tuple
 from backend.app.models import MigrationSummary
 
 
-MODERN_INVOICES_API_CODE = '''"""Micro-módulo moderno de consulta de facturas en FastAPI (Strangler Fig Cut 1).
+MODERN_INVOICES_API_CODE = '''"""Modern FastAPI invoice lookup micro-module (Strangler Fig cut 1).
 
-Stack: Python 3.11+, FastAPI, Pydantic v2, SQLite parametrizado seguro.
-Mitigaciones:
-- Inyección SQL eliminada: consultas con placeholders posicionales '?'.
-- BOLA corregida: validación de que owner_id pertenezca al usuario autenticado.
-- Aritmética financiera unificada: Decimal con redondeo bancario ROUND_HALF_UP.
+Stack: Python 3.11+, FastAPI, Pydantic v2, safe parameterized SQLite.
+Mitigations:
+- SQL injection removed: queries with positional '?' placeholders.
+- BOLA fixed: checks that owner_id belongs to the authenticated user.
+- Unified financial arithmetic: Decimal with ROUND_HALF_UP banker's rounding.
 """
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -72,14 +72,14 @@ def get_invoice_by_id(
     request: Request,
     x_user_id: Optional[int] = Header(default=None),
 ):
-    """Consulta segura de factura individual."""
-    # En entorno con sesión Flask o header de API
+    """Safe lookup of a single invoice."""
+    # In an environment with a Flask session or an API header
     current_user_id = x_user_id
     if current_user_id is None:
         current_user_id = request.scope.get("session", {}).get("user_id")
 
     if current_user_id is None:
-        raise HTTPException(status_code=401, detail="Autenticación requerida")
+        raise HTTPException(status_code=401, detail="Authentication required")
     effective_user_id = current_user_id
 
     conn = get_db_connection()
@@ -100,12 +100,12 @@ def get_invoice_by_id(
         if not row:
             raise HTTPException(status_code=404, detail="Factura no encontrada")
 
-        # BOLA Security Fix: Validar pertenencia del propietario
-        # Si la factura no pertenece al usuario autenticado, devolver 404 para no filtrar existencia
+        # BOLA security fix: validate the owner
+        # If the invoice does not belong to the authenticated user, return 404 so its existence is not leaked
         if row["owner_id"] != effective_user_id and current_user_id is not None:
             raise HTTPException(status_code=404, detail="Factura no encontrada")
 
-        # Cargar ítems con consulta parametrizada
+        # Load items with a parameterized query
         cur.execute(
             """
             SELECT description, quantity, unit_price, line_total
@@ -133,7 +133,7 @@ def get_invoice_by_id(
                 )
             )
 
-        # Regla de descuento unificada: 7.5% si subtotal >= 100.00
+        # Unified discount rule: 7.5% when subtotal >= 100.00
         rate = Decimal("0.075")
         calc_discount = Decimal("0.00")
         if calc_subtotal >= Decimal("100.00"):
@@ -160,11 +160,11 @@ def get_invoice_by_id(
 '''
 
 
-FACADE_ROUTER_CODE = '''"""Fachada de Enrutamiento Inverso Strangler Fig.
+FACADE_ROUTER_CODE = '''"""Strangler Fig reverse routing facade.
 
-Desvía selectivamente el endpoint migrado 'GET /invoices/{id}' al nuevo servicio FastAPI
-mientras mantiene el 100% de las rutas restantes en el servidor monolítico Flask.
-Permite rollback instantáneo a costo cero mediante una bandera de configuración.
+Selectively routes the migrated endpoint 'GET /invoices/{id}' to the new FastAPI service
+while keeping 100% of the remaining routes on the Flask monolith.
+Allows instant, zero-cost rollback through a configuration flag.
 """
 
 import os
@@ -181,7 +181,7 @@ class StranglerFigFacade:
     def should_route_to_modern(self, path: str, method: str) -> bool:
         if not ENABLE_STRANGLER_FACADE:
             return False
-        # Redirigir únicamente GET /invoices/<id>
+        # Route only GET /invoices/<id>
         parts = [p for p in path.strip("/").split("/") if p]
         if method.upper() == "GET" and len(parts) == 2 and parts[0] == "invoices" and parts[1].isdigit():
             return True
@@ -202,7 +202,7 @@ def apply_strangler_cut(
     endpoint: str = "GET /invoices/{id}",
     modern_code: str | None = None,
 ) -> MigrationSummary:
-    """Aplica la modernización en el sandbox y genera los artefactos y el diff unificado."""
+    """Applies the modernization in the sandbox and generates the artifacts and the unified diff."""
     sandbox_dir.mkdir(parents=True, exist_ok=True)
     modern_dir = sandbox_dir / "modern"
     modern_dir.mkdir(parents=True, exist_ok=True)
@@ -216,7 +216,7 @@ def apply_strangler_cut(
     facade_file = sandbox_dir / "facade.py"
     facade_file.write_text(FACADE_ROUTER_CODE, encoding="utf-8")
 
-    # 3. Generar el parche migration.diff
+    # 3. Generate the migration.diff patch
     legacy_code = ""
     app_py = sandbox_dir / "app.py"
     if app_py.exists():

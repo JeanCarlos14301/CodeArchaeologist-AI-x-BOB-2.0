@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eyebrow } from "../ui/Layout";
 
-/** Un paso real de Bob: del stream de Bob o del validador del backend (Estudio o chat). */
+/** A real Bob step: from the Bob stream or from the backend validator (Studio or chat). */
 export interface BobWorkEvent {
   t: number;
   kind: string;
@@ -41,7 +41,7 @@ function useElapsed(since: number | null): number {
   return since === null ? 0 : Math.max(0, Math.round(now - since));
 }
 
-/** Resumen para lectores de pantalla como mucho cada pocos segundos: nunca un anuncio por acción de Bob. */
+/** Summary for screen readers at most every few seconds: never one announcement per Bob action. */
 function useThrottled(text: string): string {
   const [announced, setAnnounced] = useState(text);
   const last = useRef(0);
@@ -61,33 +61,33 @@ const isSearch = (event: BobWorkEvent) => event.kind === "bob.tool" && ["search_
 
 const plural = (value: number, one: string, many: string) => (value === 1 ? one : many);
 
-/** Contadores de lo que Bob hizo (medidos sobre sus eventos reales), con la etiqueta en singular o plural. */
+/** Counters of what Bob did (measured on its real events), with the label in singular or plural. */
 export function bobCounters(events: BobWorkEvent[]): { label: string; value: number }[] {
   const reads = events.filter(isRead).length;
   const searches = events.filter(isSearch).length;
   const edits = events.filter((event) => event.kind === "bob.edit").length;
   const agents = events.filter((event) => event.kind === "bob.subagent.start").length;
   return [
-    { label: plural(reads, "lectura", "lecturas"), value: reads },
-    { label: plural(searches, "búsqueda", "búsquedas"), value: searches },
-    { label: plural(edits, "edición", "ediciones"), value: edits },
-    { label: plural(agents, "subagente", "subagentes"), value: agents },
+    { label: plural(reads, "read", "reads"), value: reads },
+    { label: plural(searches, "search", "searches"), value: searches },
+    { label: plural(edits, "edit", "edits"), value: edits },
+    { label: plural(agents, "subagent", "subagents"), value: agents },
   ].filter((counter) => counter.value > 0);
 }
 
 interface Props {
-  /** Título de lo que hace Bob ahora (arriba, con el cronómetro). */
+  /** Title of what Bob is doing now (at the top, with the timer). */
   title: string;
   events: BobWorkEvent[];
-  /** Instante (s epoch) en que empezó; por defecto, el del primer evento. */
+  /** Moment (epoch s) it started; by default, that of the first event. */
   since?: number | null;
-  /** Variante estrecha para el panel de Bob. */
+  /** Narrow variant for the Bob panel. */
   compact?: boolean;
 }
 
 /**
- * Lo que Bob está haciendo de verdad: cada línea sale del stream real de Bob o del validador del backend
- * (lecturas, búsquedas, subagentes, ediciones, rechazos). Nada de progreso inventado ni porcentajes.
+ * What Bob is really doing: every line comes from Bob's real stream or from the backend validator
+ * (reads, searches, subagents, edits, rejections). No invented progress and no percentages.
  */
 export function BobWork({ title, events, since, compact = false }: Props) {
   const start = since ?? events[0]?.t ?? null;
@@ -99,9 +99,9 @@ export function BobWork({ title, events, since, compact = false }: Props) {
   const pinned = useRef(true);
   const counters = bobCounters(events);
   const last = events[events.length - 1];
-  const announcement = useThrottled(`${title}. ${counters.map((c) => `${c.value} ${c.label}`).join(", ")}${last ? `. Último paso: ${last.message}` : ""}`);
+  const announcement = useThrottled(`${title}. ${counters.map((c) => `${c.value} ${c.label}`).join(", ")}${last ? `. Last step: ${last.message}` : ""}`);
 
-  // Solo se desplaza la propia lista, y solo si estaba al final: la página nunca salta mientras lees.
+  // Only the list itself scrolls, and only if it was at the bottom: the page never jumps while you read.
   useEffect(() => {
     const el = list.current;
     if (el && pinned.current) el.scrollTop = el.scrollHeight;
@@ -125,11 +125,11 @@ export function BobWork({ title, events, since, compact = false }: Props) {
         </p>
       </div>
       <div className={compact ? "mt-2" : "mt-3"}>
-        {!compact && <Eyebrow>Actividad de Bob, en directo</Eyebrow>}
-        <ul ref={list} onScroll={onScroll} aria-label="Pasos de Bob"
+        {!compact && <Eyebrow>Bob's activity, live</Eyebrow>}
+        <ul ref={list} onScroll={onScroll} aria-label="Bob's steps"
           className={`${compact ? "max-h-44" : "mt-2 max-h-72"} relative space-y-1 overflow-y-auto overscroll-contain border-l border-line pl-3`}>
           {visible.length === 0 && (
-            <li className="text-caption text-subtle">Esperando el primer movimiento de Bob… (arrancar la sesión puede tardar unos segundos)</li>
+            <li className="text-caption text-subtle">Waiting for Bob's first move… (starting the session can take a few seconds)</li>
           )}
           {visible.map((event, index) => {
             const style = BOB_GLYPH[event.kind] ?? BOB_GLYPH.info;

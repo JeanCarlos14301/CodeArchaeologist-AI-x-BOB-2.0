@@ -1,8 +1,8 @@
-"""Adaptador de Telemetría Externa vía FastMCP (DuckDB, SQLite y GitHub).
+"""External telemetry adapter through FastMCP (DuckDB, SQLite and GitHub).
 
-Permite inyectar contexto operativo en vivo (logs de acceso, latencia, errores en
-producción, esquemas vivos) a los agentes de IBM Bob.
-Cumple con la decisión D17 y la tarea F-14.
+Lets live operational context (access logs, latency, production errors, live schemas)
+be injected into IBM Bob's agents.
+Decision D17 and task F-14; not wired into the product.
 """
 
 import os
@@ -40,28 +40,28 @@ class TelemetryContext(BaseModel):
 
 
 class FastMCPTelemetryBridge:
-    """Puente FastMCP para consultar fuentes operativas externas."""
+    """FastMCP bridge to query external operational sources."""
 
     def __init__(self, duckdb_path: Optional[str] = None, sqlite_path: Optional[str] = None):
         self.duckdb_path = duckdb_path
         self.sqlite_path = sqlite_path
 
     def inspect_sqlite_schema(self, db_path: str | Path) -> Dict[str, int]:
-        """Inspecciona una base de datos SQLite en modo solo lectura y cuenta registros por tabla."""
+        """Inspects a SQLite database in read-only mode and counts rows per table."""
         counts: Dict[str, int] = {}
         target = Path(db_path)
         if not target.exists():
             return counts
 
         try:
-            # Conexión estrictamente en modo solo lectura
+            # Strictly read-only connection
             conn = sqlite3.connect(f"file:{target.resolve()}?mode=ro", uri=True)
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
             tables = [row[0] for row in cursor.fetchall()]
 
             for tbl in tables:
-                # Sanitización estricta del identificador de tabla
+                # Strict sanitization of the table identifier
                 if tbl.isidentifier():
                     cursor.execute(f'SELECT COUNT(*) FROM "{tbl}"')  # nosec B608 - validated by isidentifier()
                     counts[tbl] = cursor.fetchone()[0]
@@ -73,14 +73,14 @@ class FastMCPTelemetryBridge:
         return counts
 
     def query_duckdb_access_logs(self, log_dir_or_parquet: str | Path) -> List[EndpointTelemetry]:
-        """Consulta logs analíticos de acceso usando DuckDB si está disponible."""
+        """Queries analytical access logs with DuckDB when available."""
         telemetry: List[EndpointTelemetry] = []
         try:
             import duckdb
             target = Path(log_dir_or_parquet).resolve()
             if target.exists():
                 con = duckdb.connect(database=":memory:")
-                # Consulta agregada de latencia y volumen
+                # Aggregated latency and volume query
                 query = f"""
                 SELECT 
                     endpoint, 
@@ -106,7 +106,7 @@ class FastMCPTelemetryBridge:
                         )
                     )
         except Exception:
-            # Fallback seguro con datos sintéticos representativos si no hay parquets
+            # Safe fallback with representative synthetic data when there are no parquet files
             telemetry.append(
                 EndpointTelemetry(
                     endpoint="/api/v1/invoices/{id}",
@@ -120,7 +120,7 @@ class FastMCPTelemetryBridge:
         return telemetry
 
     def get_enriched_context(self, repo_dir: str | Path) -> TelemetryContext:
-        """Sintetiza la telemetría operativa para consumo de los modos de Bob."""
+        """Summarizes operational telemetry for consumption by Bob's modes."""
         repo_path = Path(repo_dir)
 
         # Buscar SQLite existente

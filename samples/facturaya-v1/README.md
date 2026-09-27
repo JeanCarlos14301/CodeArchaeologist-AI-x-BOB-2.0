@@ -1,8 +1,8 @@
 # FacturaYa v1
 
-Aplicación de facturación de muestra para evaluación local. Requiere Python 3.11, Flask y SQLite.
+Sample legacy billing application for local evaluation. Requires Python 3.11+, Flask, and SQLite.
 
-Desde este directorio:
+From this directory:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -10,6 +10,6 @@ python seed.py facturaya.sqlite3
 python -m flask --app app run --host 127.0.0.1
 ```
 
-Abra http://127.0.0.1:5000/login. Las cuentas sintéticas figuran en el README del repositorio.
+Navigate to http://127.0.0.1:5000/login in your browser. Synthetic demo credentials are listed in the repository root README.
 
-Aviso: aplicación deliberadamente vulnerable para evaluación local con datos sintéticos. No la exponga a Internet.
+Notice: Deliberately vulnerable application designed for local evaluation with synthetic data. Do not expose this service to untrusted networks or the public Internet.

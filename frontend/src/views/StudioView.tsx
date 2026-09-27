@@ -16,10 +16,10 @@ const WORKING: StudioPhase[] = ["assessing", "planning", "implementing"];
 
 const STEPS = [
   { id: "stack", label: "Stack" },
-  { id: "targets", label: "Destinos" },
-  { id: "assessment", label: "Evaluación" },
+  { id: "targets", label: "Targets" },
+  { id: "assessment", label: "Assessment" },
   { id: "plan", label: "Plan" },
-  { id: "implementation", label: "Implementación" },
+  { id: "implementation", label: "Implementation" },
 ] as const;
 
 function stepStatus(state: StudioState | null, id: (typeof STEPS)[number]["id"]): "done" | "active" | "pending" | "failed" {
@@ -34,9 +34,9 @@ function stepStatus(state: StudioState | null, id: (typeof STEPS)[number]["id"])
   return firstOpen === id ? "active" : "pending";
 }
 
-/** Estudio de modernización: medir el stack, decidir destinos, entender el impacto, planificar e implementar con Bob. */
+/** Modernization Studio: measure the stack, decide targets, understand the impact, plan and implement with Bob. */
 export function StudioView() {
-  const { flow, token, setToken, go, offline } = useWorkspace();
+  const { flow, token, setToken, tokenRequired, hasAccess, go, offline } = useWorkspace();
   const jobId = flow?.id ?? "";
   const [stack, setStack] = useState<StackReport | null>(null);
   const [stackError, setStackError] = useState<string | null>(null);
@@ -44,11 +44,11 @@ export function StudioView() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Respuestas en curso a las preguntas de la evaluación actual (por texto de la pregunta).
+  // Answers in progress to the questions of the current assessment (by question text).
   const [qa, setQa] = useState<Record<string, string>>({});
   const seeded = useRef<string | null>(null);
 
-  // Token vigente: si la persona cambia el token con una petición en vuelo, la respuesta vieja se descarta.
+  // Current token: if the person changes the token with a request in flight, the old response is discarded.
   const currentToken = useRef(token);
   useEffect(() => {
     currentToken.current = token;
@@ -68,7 +68,7 @@ export function StudioView() {
     return () => { cancelled = true; };
   }, [jobId, token, refresh]);
 
-  // Al abrir un análisis con decisiones previas, se recuperan en el tablero.
+  // When an analysis with previous decisions opens, they are restored on the board.
   useEffect(() => {
     if (!state?.request || seeded.current === jobId) return;
     seeded.current = jobId;
@@ -93,7 +93,7 @@ export function StudioView() {
     try {
       setState(await action());
     } catch (err) {
-      setActionError(err instanceof ApiError && err.status === 403 ? "El token no es válido." : (err as Error).message);
+      setActionError(err instanceof ApiError && err.status === 403 ? "The token is not valid." : (err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -101,7 +101,7 @@ export function StudioView() {
 
   const history = state?.request?.answers ?? [];
 
-  /** Solicitud de evaluación con las decisiones actuales y todo lo que la persona ya le respondió a Bob. */
+  /** Assessment request with the current decisions and everything the person already answered Bob. */
   const buildRequest = (fresh: { question: string; answer: string }[]): AssessRequest => {
     const byQuestion = new Map([...history, ...fresh].map((item) => [item.question, item]));
     return {
@@ -141,9 +141,9 @@ export function StudioView() {
     return map;
   }, [state?.implementation]);
 
-  if (offline) return <ErrorState title="No hay conexión con el backend." message="GET /api/audits no respondió." hint="Arranca el servidor y recarga la página." />;
-  if (stackError) return <ErrorState title="No se pudo medir el stack." message={stackError} hint="El código de este análisis puede haber sido eliminado del servidor." onRetry={() => setToken(token)} />;
-  if (!stack || !state) return <Loading label="Midiendo el stack del proyecto…" />;
+  if (offline) return <ErrorState title="No connection to the backend." message="GET /api/audits did not answer." hint="Start the server and reload the page." />;
+  if (stackError) return <ErrorState title="The stack could not be measured." message={stackError} hint="The code for this analysis may have been removed from the server." onRetry={() => setToken(token)} />;
+  if (!stack || !state) return <Loading label="Measuring the project's stack…" />;
 
   const phase = state.phase;
   const hasAssessment = !!state.assessment;
@@ -151,7 +151,7 @@ export function StudioView() {
 
   return (
     <div>
-      <ol className="mb-2 flex flex-wrap gap-x-6 gap-y-2 border-b border-line pb-4" aria-label="Progreso del estudio">
+      <ol className="mb-2 flex flex-wrap gap-x-6 gap-y-2 border-b border-line pb-4" aria-label="Studio progress">
         {STEPS.map((step, index) => {
           const status = stepStatus(state, step.id);
           const tone = status === "done" ? "text-verified" : status === "failed" ? "text-danger" : status === "active" ? "text-fg" : "text-subtle";
@@ -159,17 +159,17 @@ export function StudioView() {
             <li key={step.id} aria-current={status === "active" ? "step" : undefined} className={`flex items-center gap-2 text-caption ${tone}`}>
               <span aria-hidden className="font-mono">{status === "done" ? "✓" : status === "failed" ? "✗" : status === "active" ? "●" : String(index + 1).padStart(2, "0")}</span>
               {step.label}
-              <span className="sr-only">{status === "done" ? ", completado" : status === "failed" ? ", falló" : status === "active" ? ", en curso" : ", pendiente"}</span>
+              <span className="sr-only">{status === "done" ? ", complete" : status === "failed" ? ", failed" : status === "active" ? ", in progress" : ", pending"}</span>
             </li>
           );
         })}
       </ol>
 
-      <Section eyebrow="01 · Lo que usas hoy" title="Stack detectado en tu proyecto">
+      <Section eyebrow="01 · What you use today" title="Stack detected in your project">
         <StackBoard stack={stack} />
       </Section>
 
-      <Section eyebrow="02 · A dónde quieres ir" title="Destinos de la migración">
+      <Section eyebrow="02 · Where you want to go" title="Migration targets">
         <fieldset disabled={!editable} className="min-w-0 border-0 p-0">
           <TransformBoard
             stack={stack}
@@ -177,33 +177,33 @@ export function StudioView() {
             onChange={setDraft}
             onSubmit={assess}
             busy={busy || phase === "assessing"}
-            needsToken={!token}
+            needsToken={tokenRequired}
             token={token}
             onToken={setToken}
             resetsWork={hasAssessment}
           />
         </fieldset>
-        {actionError && <div className="mt-4"><ErrorState title="La acción no se completó." message={actionError} onRetry={() => setActionError(null)} retryLabel="Descartar" /></div>}
+        {actionError && <div className="mt-4"><ErrorState title="The action did not complete." message={actionError} onRetry={() => setActionError(null)} retryLabel="Dismiss" /></div>}
       </Section>
 
       {phase === "assessing" && (
-        <Section eyebrow="03 · Evaluación" title="Bob está evaluando">
-          <BobWork title="Bob lee tu código y pesa qué se gana y qué se sacrifica" events={state.events.filter((event) => event.phase === "assessing")} />
+        <Section eyebrow="03 · Assessment" title="Bob is assessing">
+          <BobWork title="Bob reads your code and weighs what is gained and what is traded away" events={state.events.filter((event) => event.phase === "assessing")} />
         </Section>
       )}
       {phase === "failed" && state.error && (
-        <Section eyebrow="Algo salió mal" title="La última operación con Bob falló">
+        <Section eyebrow="Something went wrong" title="The last operation with Bob failed">
           <ErrorState
-            title="Bob no pudo completar el paso."
+            title="Bob could not complete the step."
             message={state.error}
-            hint="No se gastó trabajo en vano: lo ya generado sigue disponible. Puedes reintentar."
+            hint="No work was wasted: what was already generated is still available. You can retry."
             onRetry={() => void run(() => (!state.assessment ? api.studioAssess(jobId, { mode: draft.mode, mappings: Object.entries(draft.mappings).map(([from_id, to_id]) => ({ from_id, to_id })), business_context: draft.business_context, priorities: draft.priorities }, token) : !state.plan ? api.studioPlan(jobId, token) : api.studioImplement(jobId, token)))}
           />
         </Section>
       )}
 
       {state.assessment && (
-        <Section eyebrow="03 · Antes de tocar nada" title="Evaluación: ¿conviene migrar?">
+        <Section eyebrow="03 · Before touching anything" title="Assessment: does migrating pay off?">
           <AssessmentPanel
             assessment={state.assessment}
             stack={stack}
@@ -216,25 +216,25 @@ export function StudioView() {
             history={history}
             onReassess={reassess}
             reassessBusy={busy || phase === "assessing"}
-            hasToken={!!token}
+            hasToken={hasAccess}
           />
         </Section>
       )}
 
       {phase === "planning" && (
-        <Section eyebrow="04 · Plan" title="Bob está preparando el plan">
-          <BobWork title="Bob ordena los pasos por dependencias" events={state.events.filter((event) => event.phase === "planning")} />
+        <Section eyebrow="04 · Plan" title="Bob is preparing the plan">
+          <BobWork title="Bob orders the steps by dependencies" events={state.events.filter((event) => event.phase === "planning")} />
         </Section>
       )}
 
       {state.plan && (
-        <Section eyebrow="04 · Cómo hacerlo" title={`Plan de migración · ${state.plan.steps.length} pasos`}>
+        <Section eyebrow="04 · How to do it" title={`Migration plan · ${state.plan.steps.length} steps`}>
           <PlanGraph plan={state.plan} runs={runs} onOpenFile={(path) => openFile(path)} />
         </Section>
       )}
 
       {state.plan && (
-        <Section eyebrow="05 · Hacerlo" title="Implementación con Bob">
+        <Section eyebrow="05 · Do it" title="Implementation with Bob">
           <ImplementationPanel
             plan={state.plan}
             state={state}
@@ -247,7 +247,7 @@ export function StudioView() {
       )}
 
       {!state.assessment && phase === "idle" && stack.technologies.length === 0 && (
-        <EmptyState title="No se reconoció ninguna tecnología.">El proyecto no contiene manifiestos de dependencias ni código en los lenguajes que sabemos medir.</EmptyState>
+        <EmptyState title="No technology was recognized.">The project contains no dependency manifests and no code in the languages we know how to measure.</EmptyState>
       )}
     </div>
   );

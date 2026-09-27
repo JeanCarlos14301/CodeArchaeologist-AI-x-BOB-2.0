@@ -1,7 +1,7 @@
-"""Servicio de auditorías: lanza el pipeline en un worker y expone resultados y código fuente.
+"""Audit service: runs the pipeline in a worker and exposes results and source code.
 
-Solo se auditan muestras registradas (sin rutas arbitrarias del cliente) y solo puede
-haber una auditoría `live` a la vez para acotar el gasto de bobcoins.
+Only registered samples are audited (no arbitrary client paths) and only one `live` audit
+can run at a time, to bound bobcoin spending.
 """
 
 import io
@@ -17,7 +17,14 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.adapters.bob_adapter import CUSTOM_MODES_FILE, REPO_ROOT, BobRunSettings, load_custom_mode_slugs
+from app.adapters.bob_adapter import (
+    CUSTOM_MODES_FILE,
+    REPO_ROOT,
+    BobRunSettings,
+    daily_spend_limit,
+    load_custom_mode_slugs,
+    spent_today,
+)
 from app.contracts.schema_v1 import Dossier
 from app.jobs.store import ExecutionMode, Job, JobStore
 from app.pipeline.activity import EVENTS_FILE, EventLog, redact_paths
@@ -40,59 +47,59 @@ SAMPLES: dict[str, Path] = {
     "facturaya-v1": REPO_ROOT / "samples" / "facturaya-v1",
 }
 FIXTURES_DIR = REPO_ROOT / "contracts" / "fixtures"
-# Vitrina: sesión real de Bob grabada con stream-json (resultado + actividad de la misma sesión).
-# `bob-evidence-auditor-facturaya.json` (sesión del 25-09, sin actividad) se conserva para la evaluación.
+# Showcase: a real Bob session recorded with stream-json (result + activity of the same session).
+# `bob-evidence-auditor-facturaya.json` (25-09 session, no activity) is kept for the evaluation.
 IMPORTED_FIXTURES: dict[str, Path] = {
     "facturaya-v1": FIXTURES_DIR / "bob-session-facturaya.json",
 }
-# Actividad real grabada de la misma sesión de Bob (stream-json saneado), para reproducirla.
+# Real recorded activity of the same Bob session (sanitized stream-json), for replay.
 IMPORTED_EVENTS: dict[str, Path] = {
     "facturaya-v1": FIXTURES_DIR / "bob-events-facturaya.jsonl",
 }
-# Proveniencia de la grabación versionada. Corresponde a la sesión documentada
-# en docs/bob-usage.md; no se sustituye por la hora en que un visitante la abre.
+# Provenance of the versioned recording. It matches the session documented in
+# docs/bob-usage.md; it is never replaced with the time a visitor opens it.
 IMPORTED_RECORDED_AT: dict[str, str] = {
     "facturaya-v1": "2026-09-26T00:27:50-05:00",
 }
 EXAMPLE_DOSSIER = FIXTURES_DIR / "dossier-example.json"
 MAX_SOURCE_LINES = 400
 MAX_SOURCE_BYTES = 2_000_000
-# `bob --version` arranca el CLI de Node: ~0.4 s en local, ~15 s en la instancia de Render.
+# `bob --version` starts the Node CLI: ~0.4 s locally, ~15 s on the Render instance.
 BOB_VERSION_TIMEOUT_S = 45
 
 
 STAGE_LABELS: dict[str, str] = {
-    "preparing": "Indexando repositorio",
-    "auditing": "Bob analiza el código",
-    "validating": "Verificando evidencia",
-    "migration": "Probando primer corte",
-    "done": "Expediente listo",
+    "preparing": "Indexing repository",
+    "auditing": "Bob analyzes the code",
+    "validating": "Verifying evidence",
+    "migration": "Testing the first cut",
+    "done": "Dossier ready",
 }
 
 
 def _emit_zip_checks(events: EventLog, data: bytes, max_files: int = MAX_FILES_COUNT) -> None:
-    """Controles de seguridad que el ZIP acaba de superar (todos ya validados en ingestion.py)."""
+    """Security checks the ZIP has just passed (all already enforced in ingestion.py)."""
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         members = archive.infolist()
     uncompressed = sum(member.file_size for member in members)
     checks = [
-        ("Tamaño comprimido", f"{len(data) / 1024:.0f} KB", f"≤ {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB"),
-        ("Entradas en el ZIP", str(len(members)), f"≤ {max_files}"),
-        ("Tamaño descomprimido", f"{uncompressed / 1024:.0f} KB", f"≤ {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB (anti zip-bomb)"),
-        ("Rutas", "sin «..» ni absolutas", "anti ZipSlip"),
-        ("Enlaces simbólicos", "ninguno", "rechazados"),
-        ("Binarios ejecutables", "ninguno", "rechazados"),
+        ("Compressed size", f"{len(data) / 1024:.0f} KB", f"≤ {MAX_ZIP_COMPRESSED_BYTES // (1024 * 1024)} MB"),
+        ("Entries in the ZIP", str(len(members)), f"≤ {max_files}"),
+        ("Uncompressed size", f"{uncompressed / 1024:.0f} KB", f"≤ {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB (anti zip-bomb)"),
+        ("Paths", "no «..» and no absolute paths", "anti ZipSlip"),
+        ("Symbolic links", "none", "rejected"),
+        ("Executable binaries", "none", "rejected"),
     ]
     for name, value, limit in checks:
         events.emit("preparing", "ingest.check", "python", name, None, {"value": value, "limit": limit, "status": "passed"})
 
 
 class BusyError(RuntimeError):
-    """Ya hay una auditoría live en curso."""
+    """A live audit is already running."""
 
 
 class NotFoundError(LookupError):
-    """Recurso inexistente (job, muestra o archivo)."""
+    """Missing resource (job, sample or file)."""
 
 
 class SourceLine(BaseModel):
@@ -118,6 +125,8 @@ class BobStatus(BaseModel):
     max_cost_per_run: float
     timeout_s: int
     live_requires_token: bool
+    daily_spend_limit: float | None = None
+    spent_today: float = 0.0
 
 
 class AuditService:
@@ -135,14 +144,14 @@ class AuditService:
 
     def start(self, sample: str, execution_mode: ExecutionMode) -> Job:
         if sample not in SAMPLES:
-            raise NotFoundError(f"Muestra desconocida: {sample}")
-        with self._start_lock:  # comprobar y crear de forma atómica: nunca dos auditorías live a la vez
+            raise NotFoundError(f"Unknown sample: {sample}")
+        with self._start_lock:  # check and create atomically: never two live audits at once
             if execution_mode == "imported":
                 reusable = self._reusable_showcase(sample)
                 if reusable is not None:
                     return reusable
             if execution_mode == "live" and self.store.has_active("live"):
-                raise BusyError("Ya hay una auditoría live en curso; espera a que termine.")
+                raise BusyError("A live audit is already running; wait for it to finish.")
             job = self.store.create(sample, execution_mode)
             if execution_mode == "imported":
                 self._showcase_jobs[sample] = job.id
@@ -167,14 +176,14 @@ class AuditService:
         return on_stage
 
     def _fail(self, job: Job, events: EventLog, message: str) -> None:
-        """Marca el fallo conservando la etapa en la que ocurrió (la UI la señala con ✗).
+        """Marks the failure while keeping the stage where it happened (the UI flags it with ✗).
 
-        El mensaje se publica (feed y job): nunca lleva rutas del servidor.
+        The message is published (feed and job): it never carries server paths.
         """
         message = redact_paths(message)
         stage = (self.store.get(job.id) or job).stage
         events.emit(stage if stage in STAGE_LABELS else "preparing", "pipeline.failed", "pipeline",  # type: ignore[arg-type]
-                    "El análisis se detuvo", message)
+                    "The analysis stopped", message)
         self.store.update(job.id, status="failed", error=message)
 
     def _execute(self, job: Job) -> None:
@@ -195,25 +204,25 @@ class AuditService:
                     recorded_events=IMPORTED_EVENTS.get(job.sample) if imported else None,
                 )
         except AuditError as exc:
-            logger.warning("Auditoría %s falló: %s", job.id, exc)
+            logger.warning("Audit %s failed: %s", job.id, exc)
             self._fail(job, events, str(exc))
             return
-        except Exception:  # noqa: BLE001 - el worker nunca debe morir en silencio
-            logger.exception("Error inesperado en la auditoría %s", job.id)
-            self._fail(job, events, "Error interno inesperado; revisa los logs del servidor.")
+        except Exception:  # noqa: BLE001 - the worker must never die silently
+            logger.exception("Unexpected error in audit %s", job.id)
+            self._fail(job, events, "Unexpected internal error; check the server logs.")
             return
         self.store.update(job.id, status="done", stage="done")
 
     def start_upload(self, filename: str, data: bytes, purpose: str = "audit") -> Job:
-        """Sube un repositorio como ZIP. `audit`: auditoría en vivo con Bob. `modernization`: solo lo prepara
-        (sin auditoría ni bobcoins) para el Estudio de modernización, con cualquier stack. Nunca ejecuta su código."""
+        """Uploads a repository as a ZIP. `audit`: live audit with Bob. `modernization`: only prepares it
+        (no audit, no bobcoins) for the Modernization Studio, with any stack. Its code never runs."""
         if purpose == "modernization":
             job = self.store.create(f"modernize:{filename}", "live")
             self.executor.submit(self._execute_modernize_upload, job, data)
             return job
         with self._start_lock:
             if self.store.has_active("live"):
-                raise BusyError("Ya hay una auditoría live en curso; espera a que termine.")
+                raise BusyError("A live audit is already running; wait for it to finish.")
             job = self.store.create(f"upload:{filename}", "live")
         self.executor.submit(self._execute_upload, job, data)
         return job
@@ -228,20 +237,20 @@ class AuditService:
             _emit_zip_checks(events, data, max_files=MODERNIZE_MAX_FILES)
             self._keep_source(staging, job.id)
         except IngestionSecurityError as exc:
-            logger.warning("Carga de modernización %s rechazada: %s", job.id, exc)
+            logger.warning("Modernization upload %s rejected: %s", job.id, exc)
             self._fail(job, events, str(exc))
             return
         except Exception:  # noqa: BLE001
-            logger.exception("Error inesperado preparando %s", job.id)
-            self._fail(job, events, "Error interno inesperado; revisa los logs del servidor.")
+            logger.exception("Unexpected error preparing %s", job.id)
+            self._fail(job, events, "Unexpected internal error; check the server logs.")
             return
         finally:
             shutil.rmtree(staging, ignore_errors=True)
-        events.emit("preparing", "inventory", "python", "Proyecto preparado para modernizar (sin auditoría de evidencia)")
+        events.emit("preparing", "inventory", "python", "Project prepared for modernization (no evidence audit)")
         self.store.update(job.id, status="done", stage="done")
 
     def _keep_source(self, staging: Path, job_id: str) -> Path:
-        """Guarda una copia íntegra (sin dependencias ni .git) del código subido: base del Estudio de modernización."""
+        """Keeps a full copy (no dependencies, no .git) of the uploaded code: the Modernization Studio's base."""
         entries = list(staging.iterdir())
         repo = entries[0] if len(entries) == 1 and entries[0].is_dir() else staging
         target = self.job_dir(job_id) / "source"
@@ -259,7 +268,7 @@ class AuditService:
             events.emit("preparing", "stage.start", "pipeline", STAGE_LABELS["preparing"])
             validate_and_extract_zip(data, source)
             _emit_zip_checks(events, data)
-            # Muchos ZIP traen una única carpeta raíz: el repositorio es esa carpeta.
+            # Many ZIP files carry a single root folder: that folder is the repository.
             repo = self._keep_source(source, job.id)
             run_evidence_audit(
                 repo,
@@ -271,19 +280,19 @@ class AuditService:
                 keep_tests=True,
             )
         except (AuditError, IngestionSecurityError) as exc:
-            logger.warning("Auditoría %s falló: %s", job.id, exc)
+            logger.warning("Audit %s failed: %s", job.id, exc)
             self._fail(job, events, str(exc))
             return
-        except Exception:  # noqa: BLE001 - el worker nunca debe morir en silencio
-            logger.exception("Error inesperado en la auditoría %s", job.id)
-            self._fail(job, events, "Error interno inesperado; revisa los logs del servidor.")
+        except Exception:  # noqa: BLE001 - the worker must never die silently
+            logger.exception("Unexpected error in audit %s", job.id)
+            self._fail(job, events, "Unexpected internal error; check the server logs.")
             return
         finally:
             shutil.rmtree(source, ignore_errors=True)
         self.store.update(job.id, status="done", stage="done")
 
     def _materialize_example(self, job: Job) -> None:
-        """Modo example: copia el expediente de ejemplo y el código para el visor."""
+        """Example mode: copies the example dossier and the code for the viewer."""
         target = self.job_dir(job.id)
         target.mkdir(parents=True, exist_ok=True)
         shutil.copytree(SAMPLES[job.sample], target / "workspace",
@@ -293,28 +302,28 @@ class AuditService:
     def get_job(self, job_id: str) -> Job:
         job = self.store.get(job_id)
         if job is None:
-            raise NotFoundError(f"Job inexistente: {job_id}")
+            raise NotFoundError(f"Unknown job: {job_id}")
         return job
 
     def get_dossier(self, job_id: str) -> Dossier | None:
         job = self.get_job(job_id)
         path = self.job_dir(job_id) / DOSSIER_FILE
-        # El worker escribe dossier.json antes de marcar el job como done; leerlo antes
-        # puede toparse con el archivo a medio escribir (o bloqueado, en Windows).
+        # The worker writes dossier.json before marking the job done; reading it earlier
+        # can hit a half-written file (or a locked one, on Windows).
         if job.status != "done" or not path.is_file():
             return None
         return Dossier.model_validate_json(path.read_text(encoding="utf-8"))
 
     def read_source(self, job_id: str, relative: str, start: int, end: int) -> SourceExcerpt:
-        """Devuelve líneas del workspace del job; nunca sale de su raíz."""
+        """Returns lines from the job's workspace; never leaves its root."""
         self.get_job(job_id)
         root = (self.job_dir(job_id) / "workspace").resolve()
         target = resolve_inside(root, relative)
         if target is None or not target.is_file() or ".bob" in target.relative_to(root).parts:
-            raise NotFoundError(f"Archivo no disponible: {relative}")
+            raise NotFoundError(f"File not available: {relative}")
         if target.stat().st_size > MAX_SOURCE_BYTES:
-            # Un volcado o un bundle subido por error no se carga entero en memoria en cada petición.
-            raise NotFoundError(f"El archivo es demasiado grande para el visor (máx. {MAX_SOURCE_BYTES // 1_000_000} MB): {relative}")
+            # A dump or bundle uploaded by mistake is never loaded whole into memory on every request.
+            raise NotFoundError(f"The file is too large for the viewer (max {MAX_SOURCE_BYTES // 1_000_000} MB): {relative}")
         lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
         start = max(start, 1)
         end = min(max(end, start), len(lines), start + MAX_SOURCE_LINES - 1)
@@ -329,7 +338,7 @@ _BOB_VERSIONS: dict[str, str] = {}
 
 
 def _read_bob_version(binary: str) -> str | None:
-    completed = subprocess.run(  # noqa: S603 - lista de argumentos, sin shell
+    completed = subprocess.run(  # noqa: S603 - argument list, no shell
         [binary, "--version"], capture_output=True, text=True,
         timeout=BOB_VERSION_TIMEOUT_S, check=False,
     )
@@ -338,20 +347,20 @@ def _read_bob_version(binary: str) -> str | None:
 
 
 def bob_version(binary: str) -> str | None:
-    """Versión de Bob Shell, calculada una sola vez por proceso.
+    """Bob Shell version, computed once per process.
 
-    El binario no cambia mientras el contenedor vive, y lanzar el CLI en cada consulta costaba ~15 s
-    en Render (con el botón de análisis bloqueado) y un proceso de Node por visita. Un fallo no se
-    guarda: la siguiente consulta lo reintenta.
+    The binary does not change while the container lives, and launching the CLI on every request cost
+    ~15 s on Render (with the analysis button blocked) and one Node process per visit. A failure is not
+    cached: the next request retries it.
     """
-    with _BOB_VERSION_LOCK:  # consultas simultáneas esperan a un único cálculo
+    with _BOB_VERSION_LOCK:  # concurrent requests wait for a single computation
         cached = _BOB_VERSIONS.get(binary)
         if cached:
             return cached
         try:
             version = _read_bob_version(binary)
         except (OSError, subprocess.TimeoutExpired):
-            logger.warning("No se pudo obtener la versión de Bob", exc_info=True)
+            logger.warning("Could not read the Bob version", exc_info=True)
             return None
         if version:
             _BOB_VERSIONS[binary] = version
@@ -359,14 +368,14 @@ def bob_version(binary: str) -> str | None:
 
 
 def warm_bob_version() -> None:
-    """Calcula la versión al arrancar para que ninguna visita espere al CLI de Bob."""
+    """Computes the version at startup so no visit waits for the Bob CLI."""
     binary = shutil.which(BobRunSettings.from_env().bob_binary)
     if binary:
         bob_version(binary)
 
 
 def bob_status() -> BobStatus:
-    """Diagnóstico de la integración con Bob (sin gastar bobcoins)."""
+    """Diagnostics of the Bob integration (spends no bobcoins)."""
     settings = BobRunSettings.from_env()
     binary = shutil.which(settings.bob_binary)
     bob_dir = CUSTOM_MODES_FILE.parent
@@ -380,4 +389,6 @@ def bob_status() -> BobStatus:
         max_cost_per_run=settings.max_cost,
         timeout_s=settings.timeout_s,
         live_requires_token=bool(os.environ.get("LIVE_AUDIT_TOKEN")),
+        daily_spend_limit=daily_spend_limit(),
+        spent_today=spent_today(),
     )

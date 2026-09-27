@@ -1,4 +1,4 @@
-"""Pruebas del Validador Determinista de Evidencia Física en Código (D-06)."""
+"""Tests for the deterministic validator of physical evidence in code (D-06)."""
 
 from pathlib import Path
 import pytest
@@ -13,15 +13,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def test_real_evidence_validation_on_facturaya():
-    """Verifica que las citas reales sobre FacturaYa v1 obtengan 100% de fidelidad."""
+    """Checks that the real citations on FacturaYa v1 reach 100% fidelity."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     findings = [
         Finding(
             id="EF-1",
-            title="Inyección SQL",
+            title="SQL injection",
             category="security/sql-injection",
             severity="CRITICAL",
             confidence="HIGH",
@@ -36,13 +36,13 @@ def test_real_evidence_validation_on_facturaya():
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Concatenación directa de parámetro q.",
+            explanation="Direct concatenation of the q parameter.",
             verification_method="Test SQL injection.",
             blast_radius_score=85.0,
         ),
         Finding(
             id="EF-4",
-            title="Secreto en código",
+            title="Secret in code",
             category="security/hardcoded-secret",
             severity="HIGH",
             confidence="HIGH",
@@ -57,8 +57,8 @@ def test_real_evidence_validation_on_facturaya():
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Secret key hardcodeada.",
-            verification_method="Inspección estática.",
+            explanation="Hardcoded secret key.",
+            verification_method="Static inspection.",
             blast_radius_score=40.0,
         ),
     ]
@@ -71,15 +71,15 @@ def test_real_evidence_validation_on_facturaya():
 
 
 def test_hallucinated_evidence_is_detected_and_rejected():
-    """Verifica que una cita ficticia generada por alucinación de un LLM sea detectada y rechazada."""
+    """Checks that a fictitious citation produced by an LLM hallucination is detected and rejected."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     fake_findings = [
         Finding(
             id="HALLUCINATED-1",
-            title="Vulnerabilidad fantasma en archivo inexistente",
+            title="Phantom vulnerability in a missing file",
             category="security/fake",
             severity="CRITICAL",
             confidence="HIGH",
@@ -94,13 +94,13 @@ def test_hallucinated_evidence_is_detected_and_rejected():
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Alucinación típica de LLM.",
+            explanation="Typical LLM hallucination.",
             verification_method="N/A",
             blast_radius_score=10.0,
         ),
         Finding(
             id="HALLUCINATED-2",
-            title="Cita con líneas fuera de rango en archivo real",
+            title="Citation with out-of-range lines in a real file",
             category="security/fake-lines",
             severity="HIGH",
             confidence="HIGH",
@@ -115,7 +115,7 @@ def test_hallucinated_evidence_is_detected_and_rejected():
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Líneas inexistentes en config.py.",
+            explanation="Lines that do not exist in config.py.",
             verification_method="N/A",
             blast_radius_score=10.0,
         ),

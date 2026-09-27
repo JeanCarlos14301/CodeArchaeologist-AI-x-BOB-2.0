@@ -1,7 +1,7 @@
-"""Pruebas de la carga de ZIP y de las vistas reales (api/live.py). No gastan bobcoins.
+"""Tests for the ZIP upload and the real views (api/live.py). They spend no bobcoins.
 
-Bob se sustituye por la respuesta real grabada en contracts/fixtures; el resto (extracción segura,
-validación de evidencia, grafo, arquitectura) es el código de producción.
+Bob is replaced with the real recorded reply in contracts/fixtures; the rest (safe extraction,
+evidence validation, graph, architecture) is production code.
 """
 
 import io
@@ -21,7 +21,7 @@ from app.pipeline.evidence_audit import AUDITOR_MODE, DOSSIER_FILE, build_dossie
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLE = REPO_ROOT / "samples" / "facturaya-v1"
 RECORDED_BOB = REPO_ROOT / "contracts" / "fixtures" / "bob-evidence-auditor-facturaya.json"
-TOKEN = "token-de-prueba"
+TOKEN = "test-token"
 
 
 def _zip_of_sample() -> bytes:
@@ -62,29 +62,35 @@ def _wait_done(client: TestClient, job_id: str) -> dict:
         if detail["job"]["status"] in {"done", "failed"}:
             return detail
         time.sleep(0.05)
-    raise AssertionError("la auditoría no terminó")
+    raise AssertionError("the audit did not finish")
 
 
-def test_token_is_always_required(client: TestClient) -> None:
+def test_token_is_required_when_configured(client: TestClient) -> None:
     data = _zip_of_sample()
     assert _upload(client, data, token=None).status_code == 403
-    assert _upload(client, data, token="otro").status_code == 403
+    assert _upload(client, data, token="other").status_code == 403
 
 
-def test_uploads_are_refused_when_server_has_no_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uploads_are_open_when_server_has_no_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LIVE_AUDIT_TOKEN")
-    assert _upload(client, _zip_of_sample(), token="lo-que-sea").status_code == 503
+    response = _upload(client, _zip_of_sample(), token=None)
+    assert response.status_code == 202
+    job_id = response.json()["id"]
+    # Reachable through its job id without a token, but never listed publicly.
+    assert _wait_done(client, job_id)["job"]["status"] == "done"
+    assert client.get(f"/api/audits/{job_id}").status_code == 200
+    assert job_id not in {job["id"] for job in client.get("/api/audits").json()}
 
 
 def test_rejects_non_zip_and_unsafe_zip(client: TestClient) -> None:
-    assert _upload(client, b"no soy un zip").status_code == 400
+    assert _upload(client, b"not a zip").status_code == 400
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr("../escape.py", "x = 1")
     job = _upload(client, buffer.getvalue()).json()
     detail = _wait_done(client, job["id"])
     assert detail["job"]["status"] == "failed"
-    assert "ZipSlip" in detail["job"]["error"] or "no permitida" in detail["job"]["error"]
+    assert "ZipSlip" in detail["job"]["error"] or "not allowed" in detail["job"]["error"]
 
 
 def test_upload_runs_live_audit_and_returns_validated_dossier(client: TestClient) -> None:
@@ -94,7 +100,7 @@ def test_upload_runs_live_audit_and_returns_validated_dossier(client: TestClient
     assert job["execution_mode"] == "live"
     detail = _wait_done(client, job["id"])
     assert detail["job"]["status"] == "done"
-    # El expediente refleja el modo de la respuesta de Bob; aquí es la grabación real, por eso "imported".
+    # The dossier reflects the mode of Bob's reply; here it is the real recording, hence "imported".
     assert detail["dossier"]["stats"]["evidence_valid_ratio"] == 1.0
 
 
@@ -164,12 +170,12 @@ def test_private_jobs_cannot_displace_public_showcase_from_limited_list(client: 
 
 
 def test_defaults_are_real_only(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Sin las banderas de desarrollo: sin /api/jobs, sin example/imported y con token siempre."""
+    """Without the development flags: no /api/jobs, no example/imported and, with a token set, live requires it."""
     monkeypatch.delenv("ALLOW_NON_LIVE_MODES")
     app = create_app(artifacts_dir=tmp_path / "strict", frontend_dist=tmp_path / "no-dist")
     with TestClient(app) as strict:
         assert strict.post("/api/jobs", json={"source_type": "demo"}).status_code in {404, 405}
         assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "example"}).status_code == 403
-        # La vitrina imported usa una respuesta real grabada y no consume bobcoins.
+        # The imported showcase uses a real recorded reply and spends no bobcoins.
         assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "imported"}).status_code == 202
         assert strict.post("/api/audits", json={"sample": "facturaya-v1", "execution_mode": "live"}).status_code == 403

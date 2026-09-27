@@ -1,8 +1,8 @@
-"""Valida `.bob/` con las mismas reglas que aplica Bob Shell 2.x al cargarlo.
+"""Validates `.bob/` with the same rules Bob Shell 2.x applies when it loads it.
 
-Bob descarta en silencio un subagente con `model:` o frontmatter mal formado, y
-regenera `.bob/skills/<nombre>` a partir de `.bob/commands/*.md` (pisando skills
-con el mismo nombre). Estas pruebas evitan que eso vuelva a pasar sin que nadie lo note.
+Bob silently drops a subagent with `model:` or malformed frontmatter, and
+regenerates `.bob/skills/<name>` from `.bob/commands/*.md` (overwriting skills
+with the same name). These tests keep that from happening again without anyone noticing.
 """
 
 import re
@@ -19,14 +19,14 @@ SUBAGENT_KEYS = {"name", "description", "groups", "modelTier", "maxTurns", "rawP
                  "allowForkContext", "allowTools", "denyTools"}
 MODEL_TIERS = {"fast", "premium", "ultra", "explorer"}
 SKILL_NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-# Subagentes que leen código no confiable: nunca con shell (AGENTS.md).
+# Subagents that read untrusted code: never with a shell (AGENTS.md).
 READ_ONLY_AUDITORS = {"legacy-archaeologist", "legacy-sql-auditor", "legacy-route-mapper",
                       "legacy-security-scanner", "legacy-dependency-tracer", "legacy-db-inspector"}
 _FRONTMATTER = re.compile(r"^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$")
 
 
 def _parse_like_bob(frontmatter: str) -> dict[str, object]:
-    """Réplica del parser línea a línea que Bob usa para `.bob/agents/*.md`."""
+    """Replica of the line-by-line parser Bob uses for `.bob/agents/*.md`."""
     data: dict[str, object] = {}
     key = ""
     for line in frontmatter.split("\n"):
@@ -60,21 +60,21 @@ def test_no_commands_dir_that_bob_would_regenerate_into_skills() -> None:
 @pytest.mark.parametrize("path", AGENT_FILES, ids=lambda p: p.stem)
 def test_subagent_frontmatter_is_loadable_by_bob(path: Path) -> None:
     match = _FRONTMATTER.match(path.read_text(encoding="utf-8"))
-    assert match, "falta el bloque --- de frontmatter"
+    assert match, "the --- frontmatter block is missing"
     data = _parse_like_bob(match[1])
-    assert "model" not in data, "Bob rechaza 'model'; usa 'modelTier'"
+    assert "model" not in data, "Bob rejects 'model'; use 'modelTier'"
     assert set(data) <= SUBAGENT_KEYS, f"claves no soportadas: {set(data) - SUBAGENT_KEYS}"
     assert data.get("name") == path.stem
     description = data.get("description")
     assert isinstance(description, str) and len(description) > 20 and description not in {">", "|"}
     groups = data.get("groups")
     assert isinstance(groups, list) and set(groups) <= VALID_GROUPS
-    assert "subagent" not in groups, "un subagente no puede lanzar subagentes"
+    assert "subagent" not in groups, "a subagent cannot launch subagents"
     if "modelTier" in data:
         assert data["modelTier"] in MODEL_TIERS
     if path.stem in READ_ONLY_AUDITORS:
-        assert set(groups) == {"read"}, "los auditores no deben ejecutar ni editar"
-    assert match[2].strip(), "el cuerpo (system prompt) está vacío"
+        assert set(groups) == {"read"}, "auditors must not execute or edit"
+    assert match[2].strip(), "the body (system prompt) is empty"
 
 
 @pytest.mark.parametrize("path", SKILL_FILES, ids=lambda p: p.parent.name)
@@ -95,7 +95,7 @@ def test_custom_modes_use_valid_groups_and_known_references() -> None:
     for mode in modes:
         for group in mode["groups"]:
             name = group[0] if isinstance(group, list) else group
-            assert name in VALID_GROUPS, f"{mode['slug']}: grupo inválido {name!r}"
+            assert name in VALID_GROUPS, f"{mode['slug']}: invalid group {name!r}"
             if isinstance(group, list):
                 re.compile(group[1]["fileRegex"])
         text = mode.get("customInstructions", "")
@@ -108,4 +108,4 @@ def test_custom_modes_use_valid_groups_and_known_references() -> None:
 def test_edit_modes_are_path_restricted() -> None:
     modes = yaml.safe_load((BOB_DIR / "custom_modes.yaml").read_text(encoding="utf-8"))["customModes"]
     for mode in modes:
-        assert "edit" not in mode["groups"], f"{mode['slug']}: 'edit' sin fileRegex"
+        assert "edit" not in mode["groups"], f"{mode['slug']}: 'edit' without fileRegex"

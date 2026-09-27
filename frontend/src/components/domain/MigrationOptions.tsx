@@ -8,8 +8,8 @@ interface Props {
 }
 
 /**
- * Opciones propuestas por Bob (migration-architect). Las valida el código: sus hallazgos existen en el ranking
- * y no traen cifras. Los días, el riesgo y el radio no salen de aquí: se calculan aparte (PERT y ranking).
+ * Options proposed by Bob (migration-architect). Code validates them: their findings exist in the ranking
+ * and they carry no figures. Days, risk and radius do not come from here: they are computed separately (PERT and ranking).
  */
 export function MigrationOptions({ options, findings, onOpenFinding }: Props) {
   const byId = new Map(findings.map((finding) => [finding.id, finding]));
@@ -22,10 +22,10 @@ export function MigrationOptions({ options, findings, onOpenFinding }: Props) {
               <span className="font-mono">{option.id}</span>
               <span className="text-decor" aria-hidden>/</span>
               <span>{option.pattern}</span>
-              {option.recommended && <span className="font-semibold text-verified"><span aria-hidden>✓ </span>Recomendada</span>}
+              {option.recommended && <span className="font-semibold text-verified"><span aria-hidden>✓ </span>Recommended</span>}
             </p>
             <h3 className="mt-1 font-display text-title text-balance text-fg">{option.name}</h3>
-            <p className="mt-2 text-micro tracking-eyebrow text-subtle uppercase">Ataca</p>
+            <p className="mt-2 text-micro tracking-eyebrow text-subtle uppercase">Addresses</p>
             <ul className="mt-1 flex flex-wrap gap-1.5">
               {option.finding_ids.map((id) => {
                 const finding = byId.get(id);
@@ -48,10 +48,10 @@ export function MigrationOptions({ options, findings, onOpenFinding }: Props) {
           </div>
           <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2">
             <ul className="space-y-1.5 text-caption text-fg-2">
-              {option.pros.map((pro) => <li key={pro} className="grid grid-cols-[1rem_1fr] gap-1"><span aria-hidden className="text-verified">+</span><span><span className="sr-only">Ventaja: </span>{pro}</span></li>)}
+              {option.pros.map((pro) => <li key={pro} className="grid grid-cols-[1rem_1fr] gap-1"><span aria-hidden className="text-verified">+</span><span><span className="sr-only">Advantage: </span>{pro}</span></li>)}
             </ul>
             <ul className="space-y-1.5 text-caption text-fg-2">
-              {option.cons.map((con) => <li key={con} className="grid grid-cols-[1rem_1fr] gap-1"><span aria-hidden className="text-danger">−</span><span><span className="sr-only">Riesgo: </span>{con}</span></li>)}
+              {option.cons.map((con) => <li key={con} className="grid grid-cols-[1rem_1fr] gap-1"><span aria-hidden className="text-danger">−</span><span><span className="sr-only">Risk: </span>{con}</span></li>)}
             </ul>
           </div>
         </li>

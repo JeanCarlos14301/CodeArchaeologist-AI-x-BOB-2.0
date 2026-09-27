@@ -10,10 +10,10 @@ import { JobGate } from "./JobGate";
 type FileName = "dossier.json" | "bob-result.json" | "board_memo.docx" | "migration.diff";
 
 const FILES: { name: FileName; format: string; label: string; audience: string; description: string }[] = [
-  { name: "board_memo.docx", format: "DOCX", label: "Memorando para la junta", audience: "Dirección", description: "Riesgo, radio de impacto y rango PERT en lenguaje de negocio, calculados desde el expediente y el grafo." },
-  { name: "dossier.json", format: "JSON", label: "Expediente técnico validado", audience: "Ingeniería", description: "Hallazgos con evidencia por archivo y línea comprobada por código, métricas del validador, riesgo y PERT." },
-  { name: "migration.diff", format: "DIFF", label: "Parche del primer corte", audience: "Revisión de código", description: "Diff unificado de la implementación Strangler Fig probada, listo para revisión humana." },
-  { name: "bob-result.json", format: "JSON", label: "Respuesta cruda de IBM Bob", audience: "Auditoría", description: "Salida original de `bob run` antes de validar: permite reproducir y auditar el análisis." },
+  { name: "board_memo.docx", format: "DOCX", label: "Board memo", audience: "Leadership", description: "Risk, blast radius and PERT range in business language, computed from the dossier and the graph." },
+  { name: "dossier.json", format: "JSON", label: "Validated technical dossier", audience: "Engineering", description: "Findings with evidence by file and line checked by code, validator metrics, risk and PERT." },
+  { name: "migration.diff", format: "DIFF", label: "First cut patch", audience: "Code review", description: "Unified diff of the tested Strangler Fig implementation, ready for human review." },
+  { name: "bob-result.json", format: "JSON", label: "IBM Bob's raw reply", audience: "Audit", description: "The original output of `bob run` before validation: lets you reproduce and audit the analysis." },
 ];
 
 export function ReportsView() {
@@ -41,7 +41,7 @@ function Reports({ dossier }: { dossier: Dossier }) {
 
   return (
     <div className="px-6 py-6 @3xl:px-10">
-      <ScreenHeader eyebrow="Reportes · Entregables del análisis" title={`${available.length} archivos generados`} description="Todo lo que se descarga sale de este análisis concreto; ninguna cifra se añade al generar el documento." />
+      <ScreenHeader eyebrow="Reports · Analysis deliverables" title={`${available.length} files generated`} description="Everything you download comes from this specific analysis; no figure is added when the document is generated." />
       <Section>
         <ul className="divide-y divide-line border-y border-line">
           {available.map((file) => (
@@ -53,7 +53,7 @@ function Reports({ dossier }: { dossier: Dossier }) {
                 {errors[file.name] && <p role="alert" className="mt-1 text-caption text-danger">✗ {errors[file.name]}</p>}
               </div>
               <Button size="sm" disabled={busy !== null} onClick={() => void download(file.name)} icon={<Download size={14} aria-hidden />}>
-                {busy === file.name ? "Descargando…" : `Descargar ${file.name}`}
+                {busy === file.name ? "Downloading…" : `Download ${file.name}`}
               </Button>
             </li>
           ))}

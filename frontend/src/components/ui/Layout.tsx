@@ -1,11 +1,11 @@
 import type { KeyboardEvent, ReactNode } from "react";
 
-/** Eyebrow: kicker en mayúsculas sobre un título (DESIGN.md §2.3, text-micro). */
+/** Eyebrow: uppercase kicker above a title (DESIGN.md §2.3, text-micro). */
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <p className={`text-micro font-medium tracking-eyebrow text-subtle uppercase ${className}`}>{children}</p>;
 }
 
-/** Cabecera de pantalla: objeto principal + pregunta que responde + acciones. */
+/** Screen header: main object + the question it answers + actions. */
 export function ScreenHeader({ eyebrow, title, description, meta, actions }: {
   eyebrow: string;
   title: ReactNode;
@@ -26,7 +26,7 @@ export function ScreenHeader({ eyebrow, title, description, meta, actions }: {
   );
 }
 
-/** Sección separada por hairline: la unidad de layout por defecto (no tarjetas). */
+/** Section separated by a hairline: the default layout unit (not cards). */
 export function Section({ eyebrow, title, aside, children, className = "", id }: {
   eyebrow?: string;
   title?: ReactNode;
@@ -51,12 +51,12 @@ export function Section({ eyebrow, title, aside, children, className = "", id }:
   );
 }
 
-/** Panel para objetos reales o superficies de herramienta (inspector, árbol, visor). */
+/** Panel for real objects or tool surfaces (inspector, tree, viewer). */
 export function Panel({ children, className = "", as: Tag = "div" }: { children: ReactNode; className?: string; as?: "div" | "section" | "aside" | "article" }) {
   return <Tag className={`rounded-panel border border-line bg-surface ${className}`}>{children}</Tag>;
 }
 
-/** Filas clave–valor densas para datos técnicos. */
+/** Dense key–value rows for technical data. */
 export function DataList({ rows, className = "" }: { rows: { label: ReactNode; value: ReactNode; hint?: ReactNode }[]; className?: string }) {
   return (
     <dl className={`divide-y divide-line-subtle ${className}`}>
@@ -73,7 +73,7 @@ export function DataList({ rows, className = "" }: { rows: { label: ReactNode; v
   );
 }
 
-/** Barra de medida de 4px con valor tabular. El relleno usa un color semántico explícito. */
+/** 4px measure bar with a tabular value. The fill uses an explicit semantic color. */
 export function Meter({ label, value, max, tone = "bg-fg", detail }: { label: string; value: number; max: number; tone?: string; detail?: string }) {
   const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   return (
@@ -90,7 +90,7 @@ export function Meter({ label, value, max, tone = "bg-fg", detail }: { label: st
   );
 }
 
-/** Segmentado accesible (radiogroup) en píldora. */
+/** Accessible segmented control (radiogroup) as a pill. */
 export function Segmented<T extends string>({ value, options, onChange, label }: {
   value: T;
   options: { value: T; label: ReactNode; disabled?: boolean; hint?: string }[];

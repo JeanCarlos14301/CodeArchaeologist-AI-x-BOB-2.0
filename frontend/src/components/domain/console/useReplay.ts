@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { PipelineEvent } from "../../../types";
 
-/** Duración objetivo de una reproducción: la sesión real se comprime a este tiempo. */
+/** Target duration of a replay: the real session is compressed to this time. */
 const REPLAY_SECONDS = 26;
 const TICK_MS = 80;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
@@ -16,24 +16,24 @@ const prefersReducedMotion = (): boolean => window.matchMedia?.(REDUCED_MOTION).
 
 export interface Replay {
   visible: PipelineEvent[];
-  /** Segundos de sesión mostrados; null = todo (en vivo o reproducción terminada). */
+  /** Seconds of the session shown; null = everything (live or replay finished). */
   playhead: number | null;
   playing: boolean;
   progress: number;
   duration: number;
-  /** false con movimiento reducido: la reproducción es una animación y se muestra la sesión completa. */
+  /** false with reduced motion: the replay is an animation, so the full session is shown. */
   available: boolean;
   start: () => void;
   stop: () => void;
 }
 
-/** Reproduce una sesión terminada respetando el ritmo real de los eventos (acelerado). */
+/** Replays a finished session keeping the real pace of the events (sped up). */
 export function useReplay(events: PipelineEvent[], autoplay: boolean): Replay {
   const duration = useMemo(() => events.reduce((max, event) => Math.max(max, event.t), 0), [events]);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
   const [cursor, setCursor] = useState<number | null>(null);
   const autoplayed = useRef(false);
-  // Derivado en el render (no en un efecto): con movimiento reducido nunca se pinta una sesión a medias.
+  // Derived during render (not in an effect): with reduced motion a half session is never painted.
   const playhead = reducedMotion ? null : cursor;
   const playing = playhead !== null;
 

@@ -1,48 +1,50 @@
-# Decisiones
+# Decisions
 
-| ID | Decisión |
+| ID | Decision |
 |----|----------|
-| D1 | El valor es expediente validado + primer corte probado, no un informe libre. |
-| D2 | Somos la capa de decisión previa; complementamos los paquetes de modernización de IBM, no competimos. |
-| D3 | Primer corte = mejor relación valor/riesgo: `GET /invoices/{id}`. |
-| D4 | Migración P0 sobre el repo demo; P1 sobre ZIP arbitrarios. |
-| D5 | DOCX es P0; PPTX de 6 diapositivas es P1, desde el mismo JSON. |
-| D6 | Orquestador determinista en Python; Bob en modos acotados con subagentes. |
-| D7 | Ninguna cifra sin medición; riesgo = impacto × incertidumbre con criterios. |
-| D8 | Modo de ejecución siempre visible: `live`, `imported`, `example`. |
-| D9 | Repos de muestra preparados antes y declarados; producto desde el kickoff. |
-| D10 | Solo Python 3 + Flask + SQLite para el MVP P0 inicial; arquitectura ampliada a políglota para P1. |
-| D11 | Un contenedor: FastAPI sirve API y build de React. Plan B: túnel. |
-| D12 | Si Bob no corre en servidor: modo asistido importando JSON. |
-| D13 | **Reemplazada por el Estudio de modernización** (D37): la persona elige destinos como NestJS, Spring Boot o Express y Bob implementa el plan sobre una copia; no hay matrices de traducción de conceptos. Propuesta original: Extensibilidad políglota: soporte de migraciones cruzadas (FastAPI → NestJS, Express, Spring Boot) usando matrices de traducción de conceptos y contratos de caracterización. |
-| D14 | **Descartada, no implementada** (ver D38). Propuesta original: Shift-Left Risk Gating: simulador de radio de explosión (`blast-radius-simulator`) previo a PR, analizando grafos de llamadas transitivos y mutaciones de BD sin mutar código. |
-| D15 | **Descartada, no implementada** (ver D38). Propuesta original: Tribunal adversarial multi-agente: dialéctica formal Arquitecto vs. Escéptico (`code-skeptic`) para desafiar suposiciones, condiciones de carrera y deuda oculta. |
-| D16 | **Descartada, no implementada** (ver D38). Propuesta original: Minería forense de git y AST: integración de PyDriller (hotspots de churn vs. bugs) y Tree-sitter/AST para cartografía estructural y diagramas ER en Mermaid. |
-| D17 | **Descartada, no implementada** (ver D38). Propuesta original: Inyección de telemetría externa FastMCP: conector a DuckDB, SQLite en modo lectura y GitHub para enriquecer hallazgos estáticos con métricas de tráfico y fallos en producción. |
-| D18 | Adoptado el [template oficial IBM Hackathon](https://github.com/watsonxhackathon/ibm-hackathon-template): `.bobignore`, patrones de seguridad de `.gitignore` y `SECURITY.md` no se modifican ni se eliminan. |
-| D19 | Ajuste de reglas (2026-09-25): video de envío ≤ 3:00 (antes ≤ 4:00), con ≥ 90 s de demo en vivo obligatoria; ver `docs/entrega/guion-video.md`. |
-| D20 | Ajuste de reglas (2026-09-25): el repo debe incluir capturas del resumen de sesión de Bob de cada integrante, en `bob-sessions/<persona>/`; ver `SECURITY.md` sobre cómo tomarlas sin exponer credenciales. |
-| D21 | Ajuste de reglas (2026-09-25): el formulario de envío añade "Long Description" e "IBM Bob Usage Statement", ambos con tope de 500 palabras; ver `docs/entrega/README.md`. |
-| D22 | Las auditorías originadas en ZIP son privadas: listado y toda lectura derivada exigen `X-Live-Token`; las muestras registradas permanecen públicas. |
-| D23 | La vitrina pública usa la grabación versionada de FacturaYa de las 13:50. La corrida de las 15:22 no se anuncia como reproducible porque sus artefactos no están en el repositorio. |
-| D24 | El memorando se genera primero con narrativa basada solo en datos. Una narrativa de `board-narrator` solo podrá entrar cuando un validador rechace cualquier cifra ausente del JSON. |
-| D25 | Riesgo = peso de severidad × (1 + llamadores transitivos). PERT depende de rutas, funciones, líneas citadas y complejidad afectada, con fórmula y supuestos visibles. |
-| D26 | El primer corte es implementación de referencia del equipo y se ejecuta solo sobre muestras registradas. Para ZIP de usuarios se informa `not_run`; nunca se ejecuta su código. |
-| D27 | La API pública es `/api/audits`; el motor histórico `/api/jobs` permanece apagado y no se documenta como capacidad entregada. |
-| D28 | Todo lo que se publica sobre un análisis (feed de actividad, error del job) se trata como público: las rutas absolutas del servidor se reducen a su nombre final y los fallos de Bob llegan con un motivo genérico y accionable; stderr y el detalle quedan solo en el log del servidor. |
-| D29 | El registro de actividad tiene tope (5 000 eventos por análisis; por encima solo se escriben los eventos de etapa y cierre) y el arranque de auditorías live es atómico (comprobar y crear bajo un candado): nunca dos sesiones de Bob a la vez. |
-| D30 | El ranking de rutas y roadmap por olas es determinista: score = (valor × facilidad) / riesgo (ampliado en D34); PERT por ola y corte con aviso heurístico explícito ("Estimación heurística, no calibrada"); el motor legado /api/jobs se elimina por completo. Ver `docs/motor-de-migracion.md`. |
-| D31 | Cada sesión de Bob queda aislada de forma determinista (`backend/app/adapters/bob_workspace.py`): los modos que editan llevan en `fileRegex` el marcador `__WORK_ROOT__`, que falla cerrado hasta sustituirse por la ruta absoluta del workspace (Bob compara con rutas absolutas) y rechaza segmentos `..`; a los workspaces solo viajan subagentes de solo lectura; el proceso de Bob no recibe los secretos de la app (solo `BOB_*`). |
-| D32 | Las respuestas del servidor llevan CSP (`script-src 'self'`, sin `unsafe-eval`), `X-Frame-Options: DENY`, `nosniff` y `Referrer-Policy: no-referrer`. Las subidas para «solo modernización» (`modernize:`) son tan privadas como las de auditoría: no aparecen en el listado público. |
-| D33 | Mientras Bob trabaja, la interfaz muestra lo que hace de verdad (lecturas, búsquedas, skills, subagentes) desde su stream: en la consola del análisis, en el Estudio y en el chat (`GET /api/audits/{id}/ask/{request_id}/progress`). Nunca progreso simulado. |
-| D34 | El puntaje de ruta incluye un factor de datos de negocio: `valor × facilidad × datos / riesgo`, con `datos = 1` si el alcance lee o escribe alguna tabla y `0,5` si no. Aplica D3 (primer corte visible para negocio): sin él, `POST /logout` quedaba primera por contener la línea de evidencia del CSRF. En la vitrina, el motor recomienda `GET /invoices`; el corte de referencia ejecutado sigue siendo `GET /invoices/{id}` (D3, D26) y la interfaz y el memo muestran la diferencia. |
-| D35 | `migration-architect` redacta solo la lectura cualitativa de los 3 mejores candidatos del ranking. Un validador en código exige un endpoint del ranking por opción, hallazgos que ese candidato mitiga, cero cifras y que la opción recomendada sea la del motor; si falla, no hay opciones (nunca plantillas). Tope: 6 turnos, 1 bobcoin, sin subagentes. |
-| D36 | La vitrina importada se reutiliza: abrirla varias veces devuelve el mismo análisis mientras no haya fallado. Evita que visitas repetidas llenen el disco o la CPU del servidor público. |
-| D37 | El Estudio de modernización tiene tope por implementación además del tope por paso: `MODERNIZE_MAX_STEPS` (8 por defecto) y `MODERNIZE_TOTAL_MAX_COST` (6 bobcoins por defecto). Los pasos que no caben quedan `skipped` con el motivo. |
-| D38 | Material previo que no describe el producto (manifiesto `agent.yaml`, contextos de pilares descartados, planes por hora, reporte de la primera integración) se archiva en `docs/archivo/` en lugar de borrarse. |
-| D39 | Documentación de entrega primero en español (`docs/entrega/`); la copia en inglés para el formulario de lablab.ai se hace al final, a partir de esos textos. |
+| D1 | The value is a validated dossier + a tested first cut, not a free-form report. |
+| D2 | We are the decision layer that comes first; we complement IBM's modernization packages, we do not compete with them. |
+| D3 | First cut = best value/risk ratio: `GET /invoices/{id}`. |
+| D4 | P0 migration on the demo repo; P1 on arbitrary ZIP files. |
+| D5 | DOCX is P0; a 6-slide PPTX is P1, from the same JSON. |
+| D6 | Deterministic orchestrator in Python; Bob in bounded modes with subagents. |
+| D7 | No figure without a measurement; risk = impact × uncertainty with criteria. |
+| D8 | Execution mode always visible: `live`, `imported`, `example`. |
+| D9 | Sample repos prepared beforehand and declared; product from the kickoff. |
+| D10 | Only Python 3 + Flask + SQLite for the initial P0 MVP; architecture widened to polyglot for P1. |
+| D11 | One container: FastAPI serves the API and the React build. Plan B: a tunnel. |
+| D12 | If Bob does not run on the server: assisted mode importing JSON. |
+| D13 | **Replaced by the Modernization Studio** (D37): the person picks targets such as NestJS, Spring Boot or Express and Bob implements the plan on a copy; there are no concept translation matrices. Original proposal: polyglot extensibility, cross migrations (FastAPI → NestJS, Express, Spring Boot) using concept translation matrices and characterization contracts. |
+| D14 | **Discarded, not implemented** (see D38). Original proposal: shift-left risk gating, a blast radius simulator (`blast-radius-simulator`) before the PR, analyzing transitive call graphs and DB mutations without mutating code. |
+| D15 | **Discarded, not implemented** (see D38). Original proposal: a multi-agent adversarial tribunal, a formal Architect vs. Skeptic (`code-skeptic`) dialectic to challenge assumptions, race conditions and hidden debt. |
+| D16 | **Discarded, not implemented** (see D38). Original proposal: forensic git and AST mining, integrating PyDriller (churn hotspots vs. bugs) and Tree-sitter/AST for structural cartography and ER diagrams in Mermaid. |
+| D17 | **Discarded, not implemented** (see D38). Original proposal: FastMCP external telemetry injection, a connector to DuckDB, read-only SQLite and GitHub to enrich static findings with production traffic and failure metrics. |
+| D18 | Adopted the [official IBM Hackathon template](https://github.com/watsonxhackathon/ibm-hackathon-template): `.bobignore`, the security patterns in `.gitignore` and `SECURITY.md` are neither modified nor removed. |
+| D19 | Rules update (2026-09-25): submission video ≤ 3:00 (previously ≤ 4:00), with ≥ 90 s of mandatory live demo; see `docs/submission/video-script.md`. |
+| D20 | Rules update (2026-09-25): the repo must include screenshots of each team member's Bob session summary, in `bob-sessions/<person>/`; see `SECURITY.md` on how to take them without exposing credentials. |
+| D21 | Rules update (2026-09-25): the submission form adds "Long Description" and "IBM Bob Usage Statement", both capped at 500 words; see `docs/submission/README.md`. |
+| D22 | Audits that come from a ZIP are private: they never show up in the public listing. In locked mode (D40), the listing and every derived read require `X-Live-Token`; registered samples stay public. |
+| D23 | The public showcase uses the versioned FacturaYa recording. The 15:22 run is not advertised as reproducible because its artifacts are not in the repository. |
+| D24 | The memo is generated first with a narrative based only on data. A `board-narrator` narrative can only come in once a validator rejects any figure missing from the JSON. |
+| D25 | Risk = severity weight × (1 + transitive callers). PERT depends on routes, functions, cited lines and affected complexity, with a visible formula and assumptions. |
+| D26 | The first cut is a team reference implementation and only runs on registered samples. For user ZIP files `not_run` is reported; their code never runs. |
+| D27 | The public API is `/api/audits`; the historical `/api/jobs` engine stays off and is not documented as a delivered capability. |
+| D28 | Everything published about an analysis (activity feed, job error) is treated as public: absolute server paths are reduced to their final name and Bob failures arrive with a generic, actionable reason; stderr and the detail stay only in the server log. |
+| D29 | The activity log is capped (5,000 events per analysis; above that only stage and closing events are written) and starting live audits is atomic (check and create under a lock): never two Bob sessions at once. |
+| D30 | The route ranking and the roadmap by waves are deterministic: score = (value × testability) / risk (extended in D34); PERT per wave and per cut with an explicit heuristic warning ("Uncalibrated heuristic estimate"); the legacy /api/jobs engine is removed entirely. See `docs/migration-engine.md`. |
+| D31 | Each Bob session is isolated deterministically (`backend/app/adapters/bob_workspace.py`): the modes that edit carry the `__WORK_ROOT__` marker in `fileRegex`, which fails closed until it is replaced with the workspace's absolute path (Bob matches against absolute paths) and rejects `..` segments; only read-only subagents travel to the workspaces; the Bob process never receives the app's secrets (only `BOB_*`). |
+| D32 | Server responses carry CSP (`script-src 'self'`, no `unsafe-eval`), `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy: no-referrer`. "Modernization only" uploads (`modernize:`) are as private as audit uploads: they never show up in the public listing. |
+| D33 | While Bob works, the interface shows what it really does (reads, searches, skills, subagents) from its stream: in the analysis console, in the Studio and in the chat (`GET /api/audits/{id}/ask/{request_id}/progress`). Never simulated progress. |
+| D34 | The route score includes a business-data factor: `value × testability × data / risk`, with `data = 1` if the scope reads or writes any table and `0.5` otherwise. It applies D3 (a first cut visible to the business): without it, `POST /logout` came first because it held the CSRF evidence line. On the showcase, the engine recommends `GET /invoices`; the reference cut that runs is still `GET /invoices/{id}` (D3, D26), and the interface and the memo show the difference. |
+| D35 | `migration-architect` only writes the qualitative reading of the ranking's top 3 candidates. A code validator requires one ranking endpoint per option, findings that candidate mitigates, zero figures and that the recommended option is the engine's; if it fails, there are no options (never templates). Cap: 6 turns, 1 bobcoin, no subagents. |
+| D36 | The imported showcase is reused: opening it several times returns the same analysis as long as it has not failed. This keeps repeated visits from filling the public server's disk or CPU. |
+| D37 | The Modernization Studio has a cap per implementation on top of the cap per step: `MODERNIZE_MAX_STEPS` (8 by default) and `MODERNIZE_TOTAL_MAX_COST` (6 bobcoins by default). Steps that do not fit are `skipped` with the reason. |
+| D38 | Earlier material that does not describe the product (the `agent.yaml` manifest, contexts of discarded pillars, hourly plans, the first integration report) is archived in `docs/archive/` instead of being deleted. |
+| D39 | Submission documents were written first in Spanish; superseded by D41. |
+| D40 | `LIVE_AUDIT_TOKEN` is optional. Unset (the public demo): anyone can run live audits, Ask Bob and the Studio, so the judges need no token; spending is bounded by the per-run caps, one live audit and one question at a time, and the Bob account budget. Set: every Bob call and every read of an upload requires `X-Live-Token` (the kill switch). The frontend reads `live_requires_token` from `/api/bob/status` and only then shows token fields. An optional daily guard, `BOB_DAILY_SPEND_LIMIT` (15 on Render), pauses live features once the server has spent that many bobcoins in a UTC day; the showcase keeps working. |
+| D41 | Product code, comments, UI, Bob prompts, tests, and current documentation are in English. The FacturaYa sample was synced with the English upstream repository while preserving the line structure, so recorded citations still validate. The recorded showcase originally ran in Spanish: its user-facing dossier was translated with ids, evidence, snippets, costs, and timings unchanged, while the raw recording remains historical input data. Replay processing exposes only sanitized English activity summaries, never the raw report bodies. |
 
-## Respuestas del kickoff (J-01)
-1. **Alcance técnico**: El núcleo arranca con Flask + SQLite a FastAPI, extensible inmediatamente a NestJS y microservicios mediante el catálogo de agentes especializados.
-2. **Seguridad de ejecución**: Código analizado es 100% data, nunca instrucciones (Prompt Defense Baseline activo en todos los agentes).
-3. **Métricas de riesgo**: Calculadas por código determinista en Python / AST, nunca inventadas por el modelo de lenguaje.
+## Kickoff answers (J-01)
+1. **Technical scope**: the core starts with Flask + SQLite to FastAPI, extensible right away to NestJS and microservices through the catalog of specialized agents.
+2. **Execution safety**: analyzed code is 100% data, never instructions (Prompt Defense Baseline active in every agent).
+3. **Risk metrics**: computed by deterministic code in Python / AST, never invented by the language model.

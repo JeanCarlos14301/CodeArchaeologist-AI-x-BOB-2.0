@@ -1,58 +1,57 @@
-# Capturas de sesiones de IBM Bob (entregable obligatorio)
+# IBM Bob session screenshots (required deliverable)
 
-Las reglas del hackatón piden que el repositorio público incluya capturas del **resumen de tarea de Bob
-(Task Session Summary) de cada integrante**, tomadas desde su propia cuenta. Esta carpeta está versionada y
-no aparece en `.gitignore`.
+The hackathon rules require the public repository to include a **Bob Task Session Summary screenshot from
+each team member**, captured from that member's own account. This directory is versioned and is not ignored by
+`.gitignore`.
 
-## Estado por integrante
+## Status by team member
 
-| Integrante | Carpeta | Estado |
+| Member | Directory | Status |
 |---|---|---|
-| Felipe | [felipe/](felipe/) | ✅ Cuatro *Task Summary* de `bob run` en terminal, cada uno con un modo distinto: `2026-09-26_F-15_bob-run-terminal.png` (`evidence-auditor`, 0,180 bobcoins, tarea `39094ee2b09c`), `2026-09-26_polyglot-architect.png` (0,251, tarea `eaacf5cf39db`), `2026-09-26_modernization-planner.png` (0,251, tarea `18f5ac81623b`) y `2026-09-26_board-narrator.png` (0,238, tarea `2c12a3e21954`). `2026-09-26_F-03_sesion-live-evidence-auditor.png`: la sesión live de la vitrina vista en la app (1,15 bobcoins). |
-| Jean | [jean/](jean/) | ⚠️ `EVIDENCE-USEBOB-001.PNG`: *Task Overview* de Bob Shell 2.0.5 (tarea `c54cdc15907f`, 25-09) con 0 bobcoins en esa tarea. Falta una captura de una tarea con costo. |
-| Daniel | [daniel/](daniel/) | ✅ `2026-09-26_blast-radius-guard01.png`, `2026-09-26_blast-radius-guard02.png`: `bob run --mode blast-radius-guard` en terminal de Bob IDE con *Task Summary* (0,068 bobcoins, 8,3 s, tarea `4a259689353b`). Trazado de impacto sobre `db.py` y módulos dependientes. |
-| Edgar | [edgar/](edgar/) | ❌ Carpeta vacía. Falta la captura. |
+| Felipe | [felipe/](felipe/) | ✅ Four terminal `bob run` Task Summaries, each with a different mode: `2026-09-26_F-15_bob-run-terminal.png` (`evidence-auditor`, 0.180 bobcoins, task `39094ee2b09c`), `2026-09-26_polyglot-architect.png` (0.251, task `eaacf5cf39db`), `2026-09-26_modernization-planner.png` (0.251, task `18f5ac81623b`), and `2026-09-26_board-narrator.png` (0.238, task `2c12a3e21954`). `2026-09-26_F-03_live-session-evidence-auditor.png` shows the showcase's live session in the app (1.15 bobcoins). |
+| Jean | [jean/](jean/) | ⚠️ `EVIDENCE-USEBOB-001.PNG`: Bob Shell 2.0.5 Task Overview (task `c54cdc15907f`, September 25) with zero bobcoins for that task. A screenshot from a task with nonzero cost is still required. |
+| Daniel | [daniel/](daniel/) | ⚠️ `2026-09-26_blast-radius-guard01.png` and `2026-09-26_blast-radius-guard02.png` show `bob run --mode blast-radius-guard` with a paid Task Summary (0.068 bobcoins, 8.3 s, task `4a259689353b`), but the run reached its three-turn limit with zero assistant messages. Rerun it with enough turns and capture Bob's final response. |
+| Edgar | [edgar/](edgar/) | ❌ The directory is empty. The screenshot is missing. |
 
-## Qué debe verse en cada captura
+## What every screenshot must show
 
-Lo que valida el jurado es que **cada integrante usó Bob desde su propia cuenta**. Cada captura debe mostrar:
+The judges need evidence that **each member used Bob from their own account**. Every screenshot must include:
 
-1. El comando `bob run --mode <modo> …` (o la sesión interactiva) con un **modo de este repo**.
-2. La respuesta de Bob sobre código real del proyecto.
-3. El bloque **Task Summary** completo: costo en bobcoins **mayor que 0**, duración y Task ID.
+1. The `bob run --mode <mode> …` command (or the interactive session), using a mode from this repository.
+2. Bob's response about real project code.
+3. The complete **Task Summary** block: a bobcoin cost **greater than zero**, duration, and Task ID.
 
-Una captura de pytest, del navegador o de una tarea con 0 bobcoins no cuenta como resumen de sesión.
+A pytest screenshot, browser screenshot, or task with zero bobcoins does not count as a session summary.
 
-## Qué captura toma cada integrante
+## Recommended session for each member
 
-Cada uno usa un modo distinto, ligado a su parte del trabajo, para que el conjunto muestre el uso real de los
-modos. Todos son de solo lectura y tienen tope de costo. Se ejecutan desde la raíz del repo.
+Each member uses a different read-only, cost-capped mode tied to their work so the combined evidence shows
+real use of the repository's modes. Run these commands from the repository root.
 
-| Integrante | Por qué este modo | Comando |
+| Member | Why this mode | Command |
 |---|---|---|
-| **Jean** (producto, despliegue, pitch) | El modo que decide qué migrar primero: el corazón del pitch. | `bob run --mode migration-architect --max-turns 6 --max-cost 0.6 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué ruta migrarías primero con el patrón Strangler Fig y por qué? Cita archivo y líneas."` |
-| **Daniel** (backend y contrato) | Radio de impacto: qué se rompe al tocar la capa de datos. | `bob run --mode blast-radius-guard --max-turns 5 --max-cost 0.5 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué rutas y funciones se rompen si cambio db.py? Cita archivo y líneas."` |
-| **Edgar** (frontend) | Revisión escéptica del código: cuestiona supuestos antes de migrar. | `bob run --mode code-skeptic --max-turns 4 --max-cost 0.4 --trust "Sin modificar archivos: revisa samples/facturaya-v1/billing.py y señala qué supuestos del cálculo de totales podrían ser falsos. Cita archivo y líneas."` |
-| **Felipe** (modos de Bob) | ✅ Ya están (`evidence-auditor`, `polyglot-architect`, `modernization-planner`, `board-narrator`). | — |
+| **Jean** (product, deployment, pitch) | It explains which cut should be migrated first—the core of the pitch. | `bob run --mode migration-architect --max-turns 6 --max-cost 0.6 --trust "Do not modify files. In samples/facturaya-v1, which route would you migrate first with the Strangler Fig pattern, and why? Cite files and lines."` |
+| **Daniel** (backend and contract) | Blast radius: what breaks when the data layer changes. | `bob run --mode blast-radius-guard --max-turns 6 --max-cost 0.5 --trust "Do not modify files. In samples/facturaya-v1, which routes and functions break if I change db.py? Cite files and lines, then give a concise final answer."` |
+| **Edgar** (frontend) | A skeptical code review that challenges assumptions before migration. | `bob run --mode code-skeptic --max-turns 4 --max-cost 0.4 --trust "Do not modify files. Review samples/facturaya-v1/billing.py and identify assumptions in total calculation that may be false. Cite files and lines."` |
+| **Felipe** (Bob modes) | ✅ Already complete (`evidence-auditor`, `polyglot-architect`, `modernization-planner`, and `board-narrator`). No repeat needed. | — |
 
-Si `bob run` no está disponible, sirve una sesión interactiva: ejecutar `bob`, elegir el modo con `/mode`,
-hacer la misma pregunta y cerrar la sesión para que aparezca el resumen.
+If `bob run` is unavailable, an interactive session is acceptable: run `bob`, choose the mode with `/mode`,
+ask the same question, and close the session so the summary appears.
 
-## Cómo guardarla
+## How to save it
 
-1. Capturar la terminal completa (comando, respuesta y Task Summary). Si la respuesta es larga, dos capturas:
-   el comando al inicio y el resumen al final.
-2. Guardarla como `bob-sessions/<integrante>/AAAA-MM-DD_<modo>.png`, p. ej.
+1. Capture the full terminal, including command, response, and Task Summary. If the response is long, use two
+   screenshots: one showing the command and one showing the summary.
+2. Save it as `bob-sessions/<member>/YYYY-MM-DD_<mode>.png`, for example
    `bob-sessions/daniel/2026-09-26_blast-radius-guard.png`.
-3. Añadir una fila en `docs/bob-usage.md` (fecha, integrante, modo, tarea, costo, Task ID).
-4. Actualizar la tabla de estado de arriba.
+3. Add a row to `docs/bob-usage.md` with the date, member, mode, task, cost, and Task ID.
+4. Update the status table above.
 
-## Antes de hacer commit de una captura
+## Before committing a screenshot
 
-Según [SECURITY.md](../SECURITY.md): recortar o difuminar todo lo que no sea el resumen de la sesión. En
-particular, **ninguna API key, token ni credencial visible** (tampoco el campo de token de la app ni el
-dashboard de Render). `.bobignore` evita que Bob *registre* credenciales, pero una captura puede mostrar una
-en pantalla: esa revisión es manual. Un correo electrónico visible no es una credencial, pero se puede
-difuminar si el integrante lo prefiere.
+Follow [SECURITY.md](../SECURITY.md): crop or blur anything outside the session summary. In particular, no API
+key, access token, or other credential may be visible, including fields in the app or Render dashboard.
+`.bobignore` prevents Bob from recording credential patterns, but screenshots still require manual review. A
+visible email address is not a credential, though the member may blur it for privacy.
 
-El registro completo de sesiones está en [docs/bob-usage.md](../docs/bob-usage.md).
+The full session log is in [docs/bob-usage.md](../docs/bob-usage.md).

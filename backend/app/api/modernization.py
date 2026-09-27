@@ -1,13 +1,13 @@
-"""Estudio de modernización: stack detectado, evaluación de viabilidad, plan detallado e implementación con Bob.
+"""Modernization Studio: detected stack, feasibility assessment, detailed plan and implementation with Bob.
 
-- GET  /api/audits/{id}/modernization           : estado (fase, evaluación, plan, implementación, actividad).
-- GET  /api/audits/{id}/modernization/stack     : stack medido (lenguajes, frameworks, datos, infraestructura, arquitectura).
-- POST /api/audits/{id}/modernization/assess    : Bob evalúa si conviene migrar y qué se sacrifica (solo lectura).
-- POST /api/audits/{id}/modernization/plan      : plan detallado por pasos y dependencias.
-- POST /api/audits/{id}/modernization/implement : Bob implementa el plan sobre una copia; exige `confirm: true`.
-- GET  /api/audits/{id}/modernization/download/{name} : ZIP del proyecto migrado o diff.
+- GET  /api/audits/{id}/modernization           : state (phase, assessment, plan, implementation, activity).
+- GET  /api/audits/{id}/modernization/stack     : measured stack (languages, frameworks, data, infrastructure, architecture).
+- POST /api/audits/{id}/modernization/assess    : Bob assesses whether migrating pays off and what is traded away (read-only).
+- POST /api/audits/{id}/modernization/plan      : detailed plan by steps and dependencies.
+- POST /api/audits/{id}/modernization/implement : Bob implements the plan on a copy; requires `confirm: true`.
+- GET  /api/audits/{id}/modernization/download/{name} : ZIP of the migrated project, or the diff.
 
-Las operaciones que invocan a Bob exigen SIEMPRE el token. El código subido nunca se ejecuta.
+Operations that invoke Bob require the token only in locked mode (LIVE_AUDIT_TOKEN set). Uploaded code never runs.
 """
 
 from pathlib import Path
@@ -49,7 +49,7 @@ def _studio(service: AuditService, job_id: str, token: str | None) -> Studio:
     name = job.sample.split(":", 1)[-1]
     studio = Studio(service.job_dir(job_id), project_name=name, adapter_factory=service.modernize_adapter_factory)
     try:
-        studio.source  # noqa: B018 - comprueba que el código sigue disponible
+        studio.source  # noqa: B018 - checks that the code is still available
     except StudioStateError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     return studio
@@ -101,7 +101,7 @@ def plan(job_id: str, service: Service, x_live_token: Token = None) -> StudioSta
 def implement(job_id: str, body: ImplementRequest, service: Service, x_live_token: Token = None) -> StudioState:
     require_upload_token(x_live_token)
     if not body.confirm:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Implementar exige confirmar de forma explícita.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Implementing requires explicit confirmation.")
     studio = _studio(service, job_id, x_live_token)
     try:
         studio.begin_implement()
@@ -118,5 +118,5 @@ def download(job_id: str, name: str, service: Service, x_live_token: Token = Non
     studio = _studio(service, job_id, x_live_token)
     path: Path | None = studio.artifact(name)
     if path is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Archivo no disponible.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not available.")
     return FileResponse(path, media_type=_MEDIA[name], filename=f"{job_id}-{name}")

@@ -8,7 +8,7 @@ import { parseRequirements, type DeclaredPackage } from "./stack";
 const POLL_INTERVAL_MS = 1500;
 const PANEL_KEY = "ca-ai-panel";
 
-/** Recursos derivados de un análisis terminado; se piden una vez por job y se cachean. */
+/** Resources derived from a finished analysis; requested once per job and cached. */
 interface Resources {
   architecture: ArchitectureData;
   graph: GraphData;
@@ -30,15 +30,15 @@ export interface AskEntry {
   status: "pending" | "done" | "error";
   answer?: AskAnswer;
   error?: string;
-  /** Lo que Bob va haciendo mientras responde (en vivo). */
+  /** What Bob is doing while it answers (live). */
   progress: AskStep[];
-  /** Instante (s epoch) en que se envió la pregunta. */
+  /** Moment (epoch s) the question was sent. */
   startedAt: number;
 }
 
 const ASK_PROGRESS_MS = 900;
 
-/** Identificador aleatorio de la pregunta para seguir su progreso (formato que acepta el backend). */
+/** Random question identifier used to follow its progress (in the format the backend accepts). */
 function newRequestId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID().replace(/-/g, "");
   return Array.from({ length: 24 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
@@ -50,6 +50,10 @@ interface WorkspaceValue {
   go: (section: Section, extra?: Partial<Route>) => void;
   token: string;
   setToken: (token: string) => void;
+  /** The server is in locked mode (LIVE_AUDIT_TOKEN set): Bob calls and uploads need the token. */
+  tokenRequired: boolean;
+  /** Bob can be called right now: open mode, or locked mode with a token entered. */
+  hasAccess: boolean;
   bob: BobStatus | null;
   offline: boolean;
   jobs: FlowJob[];
@@ -69,7 +73,7 @@ interface WorkspaceValue {
   setPaletteOpen: (open: boolean) => void;
   aiContext: AskContext;
   askHistory: AskEntry[];
-  /** Actividad de cada etapa del análisis actual (se sondea mientras corre). */
+  /** Activity of each stage of the current analysis (polled while it runs). */
   activity: PipelineEvent[];
   activityReady: boolean;
   ask: (question: string, context: AskContext) => Promise<void>;
@@ -82,14 +86,14 @@ const WorkspaceContext = createContext<WorkspaceValue | null>(null);
 
 export function useWorkspace(): WorkspaceValue {
   const value = useContext(WorkspaceContext);
-  if (!value) throw new Error("useWorkspace debe usarse dentro de <WorkspaceProvider>");
+  if (!value) throw new Error("useWorkspace must be used inside <WorkspaceProvider>");
   return value;
 }
 
-/** Suscribe una vista a un recurso del análisis actual y lo pide si aún no está cargado. */
+/** Subscribes a view to a resource of the current analysis and requests it if it is not loaded yet. */
 export function useResource<K extends ResourceKind>(kind: K): ResourceState<Resources[K]> & { retry: () => void } {
   const { resource, requestResource, flow } = useWorkspace();
-  // Los proyectos subidos solo para modernizar no tienen auditoría: no hay arquitectura ni grafo que pedir.
+  // Projects uploaded only for modernization have no audit: there is no architecture or graph to request.
   const done = flow?.status === "done" && flow.purpose !== "modernization";
   useEffect(() => {
     if (done) requestResource(kind);
@@ -98,7 +102,7 @@ export function useResource<K extends ResourceKind>(kind: K): ResourceState<Reso
 }
 
 function readPanelPreference(): boolean {
-  // En pantallas pequeñas el panel es un cajón modal: empieza cerrado para no tapar el trabajo.
+  // On small screens the panel is a modal drawer: it starts closed so it does not cover the work.
   if (!window.matchMedia("(min-width: 1024px)").matches) return false;
   try {
     return localStorage.getItem(PANEL_KEY) !== "closed";
@@ -165,10 +169,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     refreshJobs();
   }, [refreshJobs]);
 
-  // El historial de preguntas pertenece al análisis: se reinicia al cambiar de job, no al cambiar el token.
+  // The question history belongs to the analysis: it resets when the job changes, not when the token changes.
   useEffect(() => setAskHistory([]), [jobId]);
 
-  // Actividad por etapas: cursor por `seq`; mientras el análisis corre se sondea, al terminar se completa.
+  // Activity by stage: cursor by `seq`; polled while the analysis runs, completed when it finishes.
   const [activity, setActivity] = useState<PipelineEvent[]>([]);
   const [activityReady, setActivityReady] = useState(false);
   const running = !!flow && isActive(flow);
@@ -208,7 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [jobId, token, running, finished]);
 
-  // Carga y sondea el análisis seleccionado en la URL hasta que termine.
+  // Loads and polls the analysis selected in the URL until it finishes.
   useEffect(() => {
     setFlow(null);
     setDossier(null);
@@ -243,7 +247,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [jobId, token, refreshJobs]);
 
-  // El token forma parte de la clave: una respuesta pedida sin token (403) nunca bloquea la pedida con token.
+  // The token is part of the key: a response requested without a token (403) never blocks the one with a token.
   const resource = useCallback(<K extends ResourceKind>(kind: K): ResourceState<Resources[K]> => {
     const key = `${jobId}:${token}:${kind}`;
     return (resources[key] as ResourceState<Resources[K]> | undefined) ?? { data: null, error: null, loading: false };
@@ -289,7 +293,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       const job = await api.imported();
       refreshJobs();
-      // La vitrina abre la sesión grabada de Bob reproduciéndose.
+      // The showcase opens Bob's recorded session, playing.
       openJob(job.id, "session", true);
     } catch (err) {
       fail(err as Error);
@@ -301,7 +305,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(PANEL_KEY, open ? "open" : "closed");
     } catch {
-      // sin persistencia: la preferencia dura la sesión
+      // no persistence: the preference lasts for the session
     }
   }, []);
 
@@ -316,7 +320,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const update = (change: (entry: AskEntry) => AskEntry) =>
       setAskHistory((history) => history.map((entry) => (entry.id === id ? change(entry) : entry)));
 
-    // Mientras Bob responde se muestra lo que hace de verdad (lecturas, búsquedas, skills).
+    // While Bob answers, what it really does is shown (reads, searches, skills).
     let answered = false;
     let after = 0;
     let timer: number | undefined;
@@ -328,7 +332,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           update((entry) => ({ ...entry, progress: [...entry.progress, ...page.steps] }));
         }
       } catch {
-        // El progreso es opcional: la respuesta llega igual por la petición principal.
+        // Progress is optional: the answer arrives anyway through the main request.
       }
       if (!answered) timer = window.setTimeout(poll, ASK_PROGRESS_MS);
     };
@@ -351,8 +355,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setComposerSeed({ text, nonce: Date.now() });
   }, [setAiOpen]);
 
+  const tokenRequired = bob?.live_requires_token ?? false;
   const value: WorkspaceValue = {
-    route, navigate, go, token, setToken, bob, offline, jobs, flow, dossier, accessDenied, jobError,
+    route, navigate, go, token, setToken, tokenRequired, hasAccess: !tokenRequired || token.trim().length > 0,
+    bob, offline, jobs, flow, dossier, accessDenied, jobError,
     notice, dismissNotice: () => setNotice(null), startUpload, openShowcase, resource, requestResource,
     aiOpen, setAiOpen, paletteOpen, setPaletteOpen, aiContext, askHistory, ask, composerSeed, seedComposer, clearComposerSeed,
     activity, activityReady,
@@ -361,7 +367,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
-/** El contexto que ve la IA es el objeto que la persona inspecciona en la URL. */
+/** The context the AI sees is the object the person is inspecting in the URL. */
 function deriveContext(route: Route, dossier: Dossier | null, graph: GraphData | null): AskContext {
   if (route.finding && dossier) {
     const finding = [...dossier.findings, ...dossier.rejected_findings].find((item) => item.id === route.finding);

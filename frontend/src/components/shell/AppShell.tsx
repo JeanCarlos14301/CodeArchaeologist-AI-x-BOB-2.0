@@ -20,7 +20,7 @@ function useIsDesktop(): boolean {
   return desktop;
 }
 
-/** Shell de herramienta: barra superior · navegación · workspace · panel de Bob · barra de estado (DESIGN.md §3). */
+/** Tool shell: top bar · navigation · workspace · Bob panel · status bar (DESIGN.md §3). */
 export function AppShell({ children }: { children: ReactNode }) {
   const { aiOpen, setAiOpen, paletteOpen, setPaletteOpen, route } = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // shell as containing block, so they are clipped here instead of growing the document height.
     <div className="relative grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-clip bg-canvas">
       <a href="#workspace" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-pill focus:bg-overlay focus:px-3 focus:py-1.5 focus:text-caption">
-        Saltar al contenido
+        Skip to content
       </a>
       <TopBar onOpenNav={() => setNavOpen(true)} />
 
@@ -79,12 +79,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <StatusBar />
 
       {!desktop && navOpen && (
-        <Drawer side="left" label="Navegación" onClose={() => setNavOpen(false)}>
+        <Drawer side="left" label="Navigation" onClose={() => setNavOpen(false)}>
           <NavRail onNavigate={() => setNavOpen(false)} />
         </Drawer>
       )}
       {!desktop && aiOpen && (
-        <Drawer side="right" label="Asistente IBM Bob" onClose={() => setAiOpen(false)}>
+        <Drawer side="right" label="IBM Bob assistant" onClose={() => setAiOpen(false)}>
           <AIPanel onClose={() => setAiOpen(false)} />
         </Drawer>
       )}

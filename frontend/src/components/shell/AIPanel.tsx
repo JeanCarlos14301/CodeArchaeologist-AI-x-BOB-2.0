@@ -10,29 +10,29 @@ import { Eyebrow } from "../ui/Layout";
 const BOTTOM_SLACK_PX = 96;
 
 const KIND_LABEL: Record<AskContext["kind"], string> = {
-  project: "Proyecto",
-  finding: "Hallazgo",
-  file: "Archivo",
-  function: "Función",
-  module: "Módulo",
+  project: "Project",
+  finding: "Finding",
+  file: "File",
+  function: "Function",
+  module: "Module",
 };
 
 function suggestions(context: AskContext): string[] {
-  const label = context.label ?? "esto";
+  const label = context.label ?? "this";
   switch (context.kind) {
     case "finding":
       return [
-        `¿Por qué ${context.finding_id} es un riesgo y qué evidencia lo respalda?`,
-        `¿Qué podría romperse si corrijo ${context.finding_id}?`,
-        "¿Qué pruebas debería ejecutar después de ese cambio?",
+        `Why is ${context.finding_id} a risk, and what evidence backs it?`,
+        `What could break if I fix ${context.finding_id}?`,
+        "Which tests should I run after that change?",
       ];
     case "file":
-      return [`¿Qué hace ${label} y quién depende de él?`, `¿Qué riesgos hay en ${label}?`];
+      return [`What does ${label} do, and what depends on it?`, `What risks are there in ${label}?`];
     case "function":
     case "module":
-      return [`¿Quién depende de ${label}?`, `¿Qué impacto tendría modificar ${label}?`];
+      return [`What depends on ${label}?`, `What would changing ${label} impact?`];
     default:
-      return ["¿Qué debería migrar primero y por qué?", "Explica la arquitectura de este sistema.", "¿Qué pruebas faltan para migrar con seguridad?"];
+      return ["What should I migrate first, and why?", "Explain this system's architecture.", "Which tests are missing to migrate safely?"];
   }
 }
 
@@ -42,8 +42,8 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
   const atBottom = useRef(true);
   const asked = useRef(askHistory.length);
 
-  // Solo se sigue el final si la persona ya estaba abajo o acaba de preguntar: si sube a releer
-  // mientras Bob trabaja, la vista no le salta cuando llega la respuesta.
+  // Only follow the bottom if the person was already there or just asked: if they scroll up to reread
+  // while Bob works, the view does not jump when the answer arrives.
   useEffect(() => {
     const el = scroller.current;
     const justAsked = askHistory.length > asked.current;
@@ -57,39 +57,39 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
   };
 
   const disabledReason = !route.jobId
-    ? "Abre un análisis para preguntar sobre su código."
+    ? "Open an analysis to ask about its code."
     : flow?.status !== "done"
-      ? "Disponible cuando el análisis termine."
+      ? "Available when the analysis finishes."
       : bob && !(bob.installed && bob.api_key_configured)
-        ? "Bob no está disponible en el servidor."
+        ? "Bob is not available on the server."
         : null;
 
   return (
-    <aside aria-label="Asistente IBM Bob" className="relative flex h-full flex-col overflow-hidden bg-surface">
+    <aside aria-label="IBM Bob assistant" className="relative flex h-full flex-col overflow-hidden bg-surface">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
         <span aria-hidden className="h-2 w-2 rounded-pill bg-fg-2" />
         <h2 className="font-display text-body text-fg">Bob</h2>
-        <span className="text-caption text-subtle">· contexto del workspace</span>
-        <IconButton label="Cerrar panel de Bob" className="ml-auto" onClick={onClose}>
+        <span className="text-caption text-subtle">· workspace context</span>
+        <IconButton label="Close the Bob panel" className="ml-auto" onClick={onClose}>
           <X size={16} aria-hidden />
         </IconButton>
       </header>
 
       <div ref={scroller} onScroll={onScroll} className="relative min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
-        <section aria-label="Contexto actual" className="rounded-inner border border-line px-3 py-2.5">
-          <Eyebrow>Contexto · {KIND_LABEL[aiContext.kind]}</Eyebrow>
-          <p className="mt-1 text-body text-pretty text-fg">{aiContext.label ?? (route.jobId ? "Este repositorio" : "Ningún proyecto abierto")}</p>
+        <section aria-label="Current context" className="rounded-inner border border-line px-3 py-2.5">
+          <Eyebrow>Context · {KIND_LABEL[aiContext.kind]}</Eyebrow>
+          <p className="mt-1 text-body text-pretty text-fg">{aiContext.label ?? (route.jobId ? "This repository" : "No project open")}</p>
           {aiContext.path && (
             <p className="mt-0.5 truncate font-mono text-caption text-subtle">
               {aiContext.path}{aiContext.line_start ? `:${lineRange(aiContext.line_start, aiContext.line_end ?? aiContext.line_start)}` : ""}
             </p>
           )}
-          <p className="mt-2 text-caption text-subtle">Bob lee el código de este análisis en modo solo lectura y cita archivo y líneas; cada cita se comprueba.</p>
+          <p className="mt-2 text-caption text-subtle">Bob reads this analysis's code in read-only mode and cites files and lines; every citation is checked.</p>
         </section>
 
         {!disabledReason && (
-          <section aria-label="Preguntas sugeridas">
-            <Eyebrow>Preguntar sobre esto</Eyebrow>
+          <section aria-label="Suggested questions">
+            <Eyebrow>Ask about this</Eyebrow>
             <ul className="mt-2 space-y-1">
               {suggestions(aiContext).map((text) => (
                 <li key={text}>
@@ -103,11 +103,11 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {askHistory.length > 0 && (
-          <section aria-label="Conversación" className="space-y-5">
+          <section aria-label="Conversation" className="space-y-5">
             {askHistory.map((entry) => (
               <article key={entry.id} className="space-y-2 border-t border-line pt-4">
                 <p className="text-micro tracking-eyebrow text-subtle uppercase">
-                  Pregunta · {KIND_LABEL[entry.context.kind]}{entry.context.finding_id ? ` ${entry.context.finding_id}` : ""}
+                  Question · {KIND_LABEL[entry.context.kind]}{entry.context.finding_id ? ` ${entry.context.finding_id}` : ""}
                 </p>
                 <p className="text-body text-fg">{entry.question}</p>
                 <AskAnswerView entry={entry} />

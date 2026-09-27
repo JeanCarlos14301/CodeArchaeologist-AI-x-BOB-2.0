@@ -1,1 +1,1 @@
-"""Jobs de auditoría: almacén SQLite y servicio que ejecuta el pipeline en segundo plano."""
+"""Audit jobs: SQLite store and the service that runs the pipeline in the background."""

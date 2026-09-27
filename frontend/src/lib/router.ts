@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * Router por hash: el estado navegable vive en la URL (se puede compartir y el botón atrás funciona).
- *   #/                                   Proyectos
+ * Hash router: the navigable state lives in the URL (it can be shared and the back button works).
+ *   #/                                   Projects
  *   #/p/<jobId>/<section>?f=F-1&file=app.py&line=78&node=<id>
  */
 export const SECTIONS = ["overview", "session", "architecture", "repository", "dependencies", "risks", "modernization", "reports"] as const;

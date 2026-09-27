@@ -40,26 +40,26 @@ export function CommandPalette() {
   const commands = useMemo<Command[]>(() => {
     const close = (fn: () => void) => () => { setPaletteOpen(false); fn(); };
     const list: Command[] = [
-      { id: "new", group: "Acciones", label: "Analizar un repositorio nuevo", hint: "Subir ZIP", run: close(() => navigate({ jobId: null })) },
-      { id: "showcase", group: "Acciones", label: "Abrir la auditoría real de FacturaYa", hint: "Grabada · no consume bobcoins", run: close(() => void openShowcase()) },
-      { id: "ai", group: "Acciones", label: aiOpen ? "Cerrar el panel de Bob" : "Abrir el panel de Bob", hint: "⌘J", run: close(() => setAiOpen(!aiOpen)) },
+      { id: "new", group: "Actions", label: "Analyze a new repository", hint: "Upload ZIP", run: close(() => navigate({ jobId: null })) },
+      { id: "showcase", group: "Actions", label: "Open the real FacturaYa audit", hint: "Recorded · spends no bobcoins", run: close(() => void openShowcase()) },
+      { id: "ai", group: "Actions", label: aiOpen ? "Close the Bob panel" : "Open the Bob panel", hint: "⌘J", run: close(() => setAiOpen(!aiOpen)) },
     ];
     if (route.jobId) {
-      list.push({ id: "ask", group: "Acciones", label: "Preguntar a Bob sobre este repositorio", hint: "Gasta bobcoins", run: close(() => seedComposer("")) });
-      for (const item of NAV) list.push({ id: `nav-${item.id}`, group: "Navegar", label: `Ir a ${item.label}`, hint: item.question, run: close(() => go(item.id)) });
+      list.push({ id: "ask", group: "Actions", label: "Ask Bob about this repository", hint: "Spends bobcoins", run: close(() => seedComposer("")) });
+      for (const item of NAV) list.push({ id: `nav-${item.id}`, group: "Navigate", label: `Go to ${item.label}`, hint: item.question, run: close(() => go(item.id)) });
     }
     for (const finding of [...(dossier?.findings ?? [])].sort(bySeverity)) {
       const severity = SEVERITY[finding.severity];
       list.push({
-        id: `f-${finding.id}`, group: "Hallazgos", label: finding.title, hint: finding.id,
+        id: `f-${finding.id}`, group: "Findings", label: finding.title, hint: finding.id,
         prefix: severity.glyph, prefixTone: severity.text, run: close(() => go("risks", { finding: finding.id })),
       });
     }
     for (const file of collectFiles(architecture, dossier)) {
-      list.push({ id: `file-${file.path}`, group: "Archivos", label: file.path, hint: `${file.functions} funciones · ${file.findings.length} hallazgos`, run: close(() => go("repository", { file: file.path })) });
+      list.push({ id: `file-${file.path}`, group: "Files", label: file.path, hint: `${file.functions} functions · ${file.findings.length} findings`, run: close(() => go("repository", { file: file.path })) });
     }
     for (const job of jobs.slice(0, 8)) {
-      list.push({ id: `job-${job.id}`, group: "Análisis recientes", label: jobLabel(job.label), hint: `${job.status} · ${formatDate(job.created_at)}`, run: close(() => navigate({ jobId: job.id, section: "overview" })) });
+      list.push({ id: `job-${job.id}`, group: "Recent analyses", label: jobLabel(job.label), hint: `${job.status} · ${formatDate(job.created_at)}`, run: close(() => navigate({ jobId: job.id, section: "overview" })) });
     }
     return list;
   }, [route.jobId, dossier, architecture, jobs, aiOpen, go, navigate, openShowcase, seedComposer, setAiOpen, setPaletteOpen]);
@@ -98,7 +98,7 @@ export function CommandPalette() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Paleta de comandos"
+        aria-label="Command palette"
         onMouseDown={(event) => event.stopPropagation()}
         className="w-full max-w-xl animate-enter overflow-hidden rounded-panel border border-line-strong bg-overlay shadow-pop"
       >
@@ -113,14 +113,14 @@ export function CommandPalette() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={onKey}
-            placeholder="Busca un hallazgo, archivo, sección o acción…"
+            placeholder="Search a finding, file, section or action…"
             className="h-12 flex-1 bg-transparent text-body text-fg placeholder:text-subtle focus:outline-none"
           />
           <Kbd>Esc</Kbd>
         </div>
-        <p aria-live="polite" className="sr-only">{results.length === 0 ? "Sin resultados" : `${results.length} resultados`}</p>
-        <ul id="palette-list" role="listbox" aria-label="Resultados" className="max-h-[60vh] overflow-y-auto p-1.5">
-          {results.length === 0 && <li className="px-3 py-6 text-center text-body text-muted">Nada coincide con “{query}”.</li>}
+        <p aria-live="polite" className="sr-only">{results.length === 0 ? "No results" : `${results.length} results`}</p>
+        <ul id="palette-list" role="listbox" aria-label="Results" className="max-h-[60vh] overflow-y-auto p-1.5">
+          {results.length === 0 && <li className="px-3 py-6 text-center text-body text-muted">Nothing matches “{query}”.</li>}
           {results.map((command, index) => {
             const header = command.group !== lastGroup ? command.group : null;
             lastGroup = command.group;

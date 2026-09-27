@@ -1,1 +1,1 @@
-"""Extractores de inventario del repo analizado: rutas Flask, SQL, grafo de dependencias y complejidad (D-03)."""
+"""Inventory extractors for the analyzed repo: Flask routes, SQL, dependency graph and complexity (D-03)."""

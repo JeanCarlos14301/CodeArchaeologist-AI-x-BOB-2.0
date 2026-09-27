@@ -8,11 +8,11 @@ const AGENT_X = 404;
 const AGENT_W = 208;
 const AGENT_H = 42;
 
-/** Resumen de un subagente: trabajando (con su reloj) o terminado (herramientas, coste, duración). */
+/** Summary of a subagent: working (with its clock) or finished (tools, cost, duration). */
 export function agentMeta(agent: AgentRun, now: number): string {
   const elapsed = formatClock((agent.status === "done" ? agent.endedAt ?? now : now) - agent.startedAt);
-  if (agent.status !== "done") return `trabajando · ${elapsed}`;
-  const tools = agent.toolUses != null ? `${agent.toolUses} herramientas` : "informe entregado";
+  if (agent.status !== "done") return `working · ${elapsed}`;
+  const tools = agent.toolUses != null ? `${agent.toolUses} tools` : "report delivered";
   const cost = agent.cost != null ? ` · ${agent.cost.toFixed(2)} bc` : "";
   const duration = agent.durationMs != null ? ` · ${formatClock(agent.durationMs / 1000)}` : "";
   return `✓ ${tools}${cost}${duration}`;
@@ -27,13 +27,13 @@ interface Props {
 }
 
 /**
- * Orquestador (evidence-auditor) y los subagentes en los que delega. Una arista discontinua en
- * movimiento = subagente trabajando; verde continua = terminó y devolvió su resultado.
+ * The orchestrator (evidence-auditor) and the subagents it delegates to. A moving dashed edge
+ * = subagent working; solid green = it finished and returned its result.
  */
 export function AgentConstellation({ agents, skills, now, orchestratorBusy, settled }: Props) {
   const height = Math.max(200, PAD_Y * 2 + Math.max(agents.length, 1) * ROW);
   const cy = height / 2;
-  const label = `Orquestador evidence-auditor con ${agents.length} subagentes: ${agents.map((agent) => `${agent.name} ${agent.status === "done" ? "terminó" : "trabajando"}`).join(", ") || "ninguno"}`;
+  const label = `evidence-auditor orchestrator with ${agents.length} subagents: ${agents.map((agent) => `${agent.name} ${agent.status === "done" ? "finished" : "working"}`).join(", ") || "none"}`;
 
   return (
     <svg viewBox={`0 0 ${W} ${height}`} role="group" aria-label={label} className="block h-auto w-full">
@@ -41,7 +41,7 @@ export function AgentConstellation({ agents, skills, now, orchestratorBusy, sett
         <style>{`
           @keyframes ac-flow { to { stroke-dashoffset: -18; } }
           .ac-flow { stroke-dasharray: 4 5; animation: ac-flow 0.9s linear infinite; }
-          /* La animación fija la opacidad: cada una lleva su propio rango sutil. */
+          /* The animation sets the opacity: each one carries its own subtle range. */
           @keyframes ac-halo { 0%,100% { opacity: .06; } 50% { opacity: .18; } }
           @keyframes ac-busy { 0%,100% { opacity: .02; } 50% { opacity: .08; } }
           .ac-halo { animation: ac-halo 1.8s ease-in-out infinite; }
@@ -69,12 +69,12 @@ export function AgentConstellation({ agents, skills, now, orchestratorBusy, sett
         );
       })}
 
-      <g role="img" aria-label={`evidence-auditor, orquestador${skills.length ? `; skills: ${skills.join(", ")}` : ""}`}>
+      <g role="img" aria-label={`evidence-auditor, orchestrator${skills.length ? `; skills: ${skills.join(", ")}` : ""}`}>
         {orchestratorBusy && !settled && <circle cx={ORCH_X} cy={cy} r="50" fill="var(--color-activity)" className="ac-halo" opacity="0.1" />}
         <circle cx={ORCH_X} cy={cy} r="40" fill="var(--color-canvas)" stroke="var(--color-fg)" strokeWidth="1.5" />
         <circle cx={ORCH_X} cy={cy} r="5" fill="var(--color-accent)" />
         <text x={ORCH_X} y={cy + 60} textAnchor="middle" fontSize="12" className="fill-fg font-mono">evidence-auditor</text>
-        <text x={ORCH_X} y={cy + 76} textAnchor="middle" fontSize="10.5" className="fill-subtle font-sans">orquestador · modo de Bob</text>
+        <text x={ORCH_X} y={cy + 76} textAnchor="middle" fontSize="10.5" className="fill-subtle font-sans">orchestrator · Bob mode</text>
         {skills.slice(0, 2).map((skill, i) => (
           <text key={skill} x={ORCH_X} y={cy - 52 - i * 15} textAnchor="middle" fontSize="10" className="fill-muted font-mono">
             ◇ {skill}
@@ -84,7 +84,7 @@ export function AgentConstellation({ agents, skills, now, orchestratorBusy, sett
 
       {agents.length === 0 && (
         <text x={AGENT_X} y={cy + 4} fontSize="12" className="fill-subtle font-sans">
-          {settled ? "No delegó: leyó el código directamente" : "Sin delegación todavía"}
+          {settled ? "It did not delegate: it read the code directly" : "No delegation yet"}
         </text>
       )}
 
@@ -98,11 +98,11 @@ export function AgentConstellation({ agents, skills, now, orchestratorBusy, sett
             transform={`translate(${AGENT_X},${y - AGENT_H / 2})`}
             tabIndex={0}
             role="img"
-            aria-label={[`${agent.name}: ${meta}`, agent.task && `Tarea: ${agent.task}`, agent.report && `Informe: ${agent.report}`].filter(Boolean).join(". ")}
+            aria-label={[`${agent.name}: ${meta}`, agent.task && `Task: ${agent.task}`, agent.report && `Report: ${agent.report}`].filter(Boolean).join(". ")}
             className="group outline-none"
           >
             <rect x="-4" y="-4" width={AGENT_W + 8} height={AGENT_H + 8} rx="12" fill="none" stroke="var(--color-focus)" strokeWidth="2" className="opacity-0 group-focus-visible:opacity-100" />
-            <title>{[agent.name, agent.task && `Tarea: ${agent.task}`, agent.report && `Informe: ${agent.report}`].filter(Boolean).join("\n")}</title>
+            <title>{[agent.name, agent.task && `Task: ${agent.task}`, agent.report && `Report: ${agent.report}`].filter(Boolean).join("\n")}</title>
             <rect width={AGENT_W} height={AGENT_H} rx="8.57" fill="var(--color-canvas)"
               stroke={done ? "var(--color-verified)" : "var(--color-line-strong)"} strokeOpacity={done ? 0.6 : 1} />
             {!done && <rect width={AGENT_W} height={AGENT_H} rx="8.57" fill="var(--color-activity)" className="ac-busy" opacity="0.04" />}
@@ -115,16 +115,16 @@ export function AgentConstellation({ agents, skills, now, orchestratorBusy, sett
   );
 }
 
-/** Versión en lista para contenedores estrechos (móvil): el grafo sería ilegible. */
+/** List version for narrow containers (mobile): the graph would be unreadable. */
 export function AgentList({ agents, skills, now, settled }: Omit<Props, "orchestratorBusy">) {
   return (
     <div className="space-y-3 px-2">
       <p className="text-caption text-fg-2">
-        <span className="font-mono text-fg">evidence-auditor</span> · orquestador
+        <span className="font-mono text-fg">evidence-auditor</span> · orchestrator
         {skills.length > 0 && <span className="text-subtle"> · {skills.join(", ")}</span>}
       </p>
       {agents.length === 0 ? (
-        <p className="text-caption text-subtle">{settled ? "No delegó: leyó el código directamente." : "Sin delegación todavía."}</p>
+        <p className="text-caption text-subtle">{settled ? "It did not delegate: it read the code directly." : "No delegation yet."}</p>
       ) : (
         <ul className="space-y-2 border-l border-line-strong pl-3">
           {agents.map((agent, index) => (

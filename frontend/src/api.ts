@@ -9,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-const NO_BACKEND = "No se pudo contactar con el servidor. ¿Está corriendo el backend?";
+const NO_BACKEND = "Could not reach the server. Is the backend running?";
 
 async function readError(response: Response): Promise<ApiError> {
   let detail = `Error ${response.status}`;
@@ -17,7 +17,7 @@ async function readError(response: Response): Promise<ApiError> {
     const body = (await response.json()) as { detail?: unknown };
     if (typeof body.detail === "string") detail = body.detail;
   } catch {
-    // cuerpo no JSON: se mantiene el mensaje genérico
+    // non-JSON body: the generic message stays
   }
   return new ApiError(detail, response.status);
 }
@@ -34,7 +34,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const enc = encodeURIComponent;
-const auth = (token?: string): HeadersInit | undefined => token ? { "X-Live-Token": token } : undefined;
+/** The token header only when there is a token: in open mode the server needs none. */
+const auth = (token?: string): Record<string, string> => (token ? { "X-Live-Token": token } : {});
 
 export const api = {
   bobStatus: () => request<BobStatus>("/api/bob/status"),
@@ -49,44 +50,44 @@ export const api = {
     const query = new URLSearchParams({ path, start: String(start), end: String(end) });
     return request<SourceExcerpt>(`/api/audits/${enc(id)}/source?${query}`, { headers: auth(token) });
   },
-  /** Abre la vitrina a partir de una respuesta real grabada; no invoca Bob ni consume bobcoins. */
+  /** Opens the showcase from a real recorded reply; it never invokes Bob or spends bobcoins. */
   imported: () => request<Job>("/api/audits", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sample: "facturaya-v1", execution_mode: "imported" }),
   }),
-  /** Sube el ZIP y lanza la auditoría real con Bob. El token es obligatorio. */
+  /** Uploads the ZIP and starts the real audit with Bob. The token is only needed in locked mode. */
   upload: (file: File, token: string, purpose: "audit" | "modernization" = "audit") => {
     const form = new FormData();
     form.set("zip_file", file);
     form.set("purpose", purpose);
-    return request<Job>("/api/audits/upload", { method: "POST", body: form, headers: { "X-Live-Token": token } });
+    return request<Job>("/api/audits/upload", { method: "POST", body: form, headers: auth(token) });
   },
   stack: (id: string, token?: string) => request<StackReport>(`/api/audits/${enc(id)}/modernization/stack`, { headers: auth(token) }),
   studio: (id: string, token?: string) => request<StudioState>(`/api/audits/${enc(id)}/modernization`, { headers: auth(token) }),
   studioAssess: (id: string, body: AssessRequest, token: string) =>
     request<StudioState>(`/api/audits/${enc(id)}/modernization/assess`, {
-      method: "POST", headers: { "Content-Type": "application/json", "X-Live-Token": token }, body: JSON.stringify(body),
+      method: "POST", headers: { "Content-Type": "application/json", ...auth(token) }, body: JSON.stringify(body),
     }),
   studioPlan: (id: string, token: string) =>
-    request<StudioState>(`/api/audits/${enc(id)}/modernization/plan`, { method: "POST", headers: { "X-Live-Token": token } }),
+    request<StudioState>(`/api/audits/${enc(id)}/modernization/plan`, { method: "POST", headers: auth(token) }),
   studioImplement: (id: string, token: string) =>
     request<StudioState>(`/api/audits/${enc(id)}/modernization/implement`, {
-      method: "POST", headers: { "Content-Type": "application/json", "X-Live-Token": token }, body: JSON.stringify({ confirm: true }),
+      method: "POST", headers: { "Content-Type": "application/json", ...auth(token) }, body: JSON.stringify({ confirm: true }),
     }),
   studioDownload: async (id: string, name: "modernized.zip" | "migration.diff", token?: string) => {
     const response = await fetch(`/api/audits/${enc(id)}/modernization/download/${name}`, { headers: auth(token) });
     if (!response.ok) throw await readError(response);
     return response.blob();
   },
-  /** Pregunta contextual a IBM Bob (modo ask, solo lectura). Siempre exige token: gasta bobcoins. */
+  /** Contextual question to IBM Bob (ask mode, read-only). Spends bobcoins; the token is only needed in locked mode. */
   ask: (id: string, question: string, context: AskContext, token: string, requestId?: string) =>
     request<AskAnswer>(`/api/audits/${enc(id)}/ask`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Live-Token": token },
+      headers: { "Content-Type": "application/json", ...auth(token) },
       body: JSON.stringify({ question, context, request_id: requestId }),
     }),
-  /** Lo que Bob está haciendo para responder (lecturas, búsquedas...). Se sondea mientras responde. */
+  /** What Bob is doing to answer (reads, searches...). Polled while it answers. */
   askProgress: (id: string, requestId: string, after: number, token: string) =>
     request<{ steps: AskStep[] }>(`/api/audits/${enc(id)}/ask/${enc(requestId)}/progress?after=${after}`, { headers: auth(token) }),
   download: async (id: string, name: "dossier.json" | "bob-result.json" | "board_memo.docx" | "migration.diff", token?: string) => {

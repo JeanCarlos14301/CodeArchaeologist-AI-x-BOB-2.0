@@ -1,13 +1,13 @@
-"""Motor determinista de recomendación de candidatos de migración y roadmap por olas (D3, D7).
+"""Deterministic engine that ranks migration candidates and builds the roadmap by waves (D3, D7).
 
-Evalúa todas las rutas Flask de un repositorio sin ejecutar código alguno:
-- Alcance: función de ruta + funciones que llama, directa o transitivamente (grafo de llamadas del AST).
-- Valor: 1 + suma de pesos de severidad de hallazgos verificados en el alcance.
-- Riesgo: 1 + funciones compartidas + 2 × tablas escritas + complejidad/5 + líneas/50 + 2 (circular).
-- Facilidad: 1.0 (GET JSON), 0.5 (GET HTML), 0.25 (POST / mutación).
-- Datos de negocio: 1.0 si el alcance lee o escribe alguna tabla; 0.5 si no (D3: visible para negocio).
-- Puntaje: valor × facilidad × datos de negocio / riesgo.
-- Salida: corte recomendado, 2 alternativas, 'no empezar por aquí', y olas con PERT.
+Scores every Flask route of a repository without running any code:
+- Scope: route function + the functions it calls, directly or transitively (AST call graph).
+- Value: 1 + sum of the severity weights of the verified findings in the scope.
+- Risk: 1 + shared functions + 2 × written tables + complexity/5 + lines/50 + 2 (circular).
+- Testability: 1.0 (GET JSON), 0.5 (GET HTML), 0.25 (POST / mutation).
+- Business data: 1.0 when the scope reads or writes any table; 0.5 otherwise (D3: visible to the business).
+- Score: value × testability × business data / risk.
+- Output: recommended cut, 2 alternatives, 'do not start here', and waves with PERT.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ SEVERITY_WEIGHT: dict[str, int] = {
     "low": 1,
 }
 
-PERT_DISCLAIMER = "Estimación heurística, no calibrada (0,5 días por punto de complejidad y acoplamiento)."
+PERT_DISCLAIMER = "Uncalibrated heuristic estimate (0.5 days per point of complexity and coupling)."
 
 
 def calculate_pert_for_scope(
@@ -56,7 +56,7 @@ def calculate_pert_for_scope(
     affected_complexity: int,
     scope_description: str,
 ) -> PertEstimate:
-    """Calcula la estimación PERT (O, M, P, E, Var) para un alcance de funciones y rutas."""
+    """Computes the PERT estimate (O, M, P, E, Var) for a scope of functions and routes."""
     points = (
         2 * affected_routes
         + affected_functions
@@ -69,15 +69,15 @@ def calculate_pert_for_scope(
     expected = round((optimistic + 4 * most_likely + pessimistic) / 6, 2)
     variance = round(((pessimistic - optimistic) / 6) ** 2, 2)
     formula = (
-        "M = (2×rutas + funciones + ceil(líneas/25) + ceil(complejidad/5)) × 0.5; "
+        "M = (2×routes + functions + ceil(lines/25) + ceil(complexity/5)) × 0.5; "
         "O = 0.6×M; P = 1.8×M; E = (O + 4M + P) / 6"
     )
     assumptions = [
         PERT_DISCLAIMER,
-        "Una persona desarrolladora familiarizada con Python, Flask, FastAPI y SQLite.",
-        f"Alcance evaluado: {scope_description}.",
-        "Incluye implementación del endpoint, validación de esquemas y pruebas de caracterización.",
-        "No incluye aprobaciones corporativas, despliegue productivo ni migración de otros endpoints.",
+        "One developer familiar with Python, Flask, FastAPI and SQLite.",
+        f"Scope assessed: {scope_description}.",
+        "Includes implementing the endpoint, schema validation and characterization tests.",
+        "Excludes corporate approvals, production deployment and migrating other endpoints.",
     ]
     return PertEstimate(
         affected_routes=affected_routes,
@@ -98,7 +98,7 @@ def analyze_route_candidates(
     workspace: Path,
     dossier: Dossier | None = None,
 ) -> MigrationRecommendation:
-    """Calcula el ranking determinista de candidatos de migración y organiza las olas."""
+    """Computes the deterministic ranking of migration candidates and organizes the waves."""
     functions = collect_functions(workspace)
     edges = resolve_edges(functions)
     inv = analyze_repository_inventory(workspace)
@@ -110,7 +110,7 @@ def analyze_route_candidates(
 
     route_functions = [fn for fn in functions if fn.get("route")]
     if not route_functions and inv.routes:
-        # Si no se detectaron directamente en callgraph, cruzar con inv.routes
+        # If they were not detected directly in the call graph, cross-check with inv.routes
         for route_info in inv.routes:
             for fn in functions:
                 if (
@@ -127,7 +127,7 @@ def analyze_route_candidates(
     if not route_functions:
         return MigrationRecommendation()
 
-    # Mapeo de hallazgos verificados a funciones del AST
+    # Map verified findings to AST functions
     findings_by_id = {f.id: f for f in (dossier.findings if dossier else [])}
     finding_origins: dict[str, set[str]] = {}
     for finding in findings_by_id.values():
@@ -138,7 +138,7 @@ def analyze_route_candidates(
                 origins.add(fn["id"])
         finding_origins[finding.id] = origins
 
-    # Alcance de cada ruta: función + funciones que llama transitivamente
+    # Scope of each route: function + the functions it calls transitively
     scopes: dict[str, set[str]] = {}
     for rf in route_functions:
         scope = {rf["id"]}
@@ -151,13 +151,13 @@ def analyze_route_candidates(
                     frontier.append(target)
         scopes[rf["id"]] = scope
 
-    # Conteo de funciones compartidas entre diferentes rutas
+    # Count of functions shared between different routes
     func_routes_count: dict[str, int] = {}
     for sc in scopes.values():
         for fid in sc:
             func_routes_count[fid] = func_routes_count.get(fid, 0) + 1
 
-    # Detección de consultas de escritura por función, y de cualquier tabla tocada (lectura o escritura)
+    # Detection of write queries per function, and of any table touched (read or write)
     write_tables_by_fn: dict[str, set[str]] = {}
     touched_tables_by_fn: dict[str, set[str]] = {}
     for q in inv.sql_queries:
@@ -168,7 +168,7 @@ def analyze_route_candidates(
         if q.query_type in ("INSERT", "UPDATE", "DELETE"):
             write_tables_by_fn.setdefault(fn["id"], set()).update(q.tables_referenced)
 
-    # Complejidad y líneas por función
+    # Complexity and lines per function
     complexity_by_fn: dict[str, int] = {}
     lines_by_fn: dict[str, int] = {}
     for fn in functions:
@@ -178,7 +178,7 @@ def analyze_route_candidates(
             if fn["file"] == cf.file_path and fn["name"] == cf.function_name:
                 complexity_by_fn[fn["id"]] = cf.complexity
 
-    # Archivos involucrados en dependencias circulares
+    # Files involved in circular dependencies
     circular_files: set[str] = set()
     for cycle in inv.circular_dependencies:
         circular_files.update(cycle)
@@ -188,14 +188,14 @@ def analyze_route_candidates(
         rid = rf["id"]
         sc = scopes[rid]
 
-        # 1. Valor: 1 + suma de pesos de severidad de hallazgos verificados
+        # 1. Value: 1 + sum of the severity weights of verified findings
         findings_in_scope: list[str] = []
         for fid, origins in finding_origins.items():
             if origins & sc:
                 findings_in_scope.append(fid)
         val = 1.0 + sum(SEVERITY_WEIGHT[findings_by_id[fid].severity] for fid in findings_in_scope)
 
-        # 2. Riesgo: 1 + compartidas + 2*tablas + cc/5 + líneas/50 + circular
+        # 2. Risk: 1 + shared + 2*tables + cc/5 + lines/50 + circular
         shared_funcs = sum(1 for fid in sc if func_routes_count.get(fid, 0) > 1 and fid != rid)
         tables_written: set[str] = set()
         for fid in sc:
@@ -216,7 +216,7 @@ def analyze_route_candidates(
             2,
         )
 
-        # 3. Facilidad de probar
+        # 3. Testability
         methods = rf["route"]["methods"]
         rule = rf["route"]["rule"]
         file_path = rf["file"]
@@ -236,7 +236,7 @@ def analyze_route_candidates(
         else:
             testability = 0.5
 
-        # 4. Datos de negocio: a route that touches no table (logout, index) is not a meaningful first cut,
+        # 4. Business data: a route that touches no table (logout, index) is not a meaningful first cut,
         # even if it is tiny and happens to hold the evidence line of a cross-cutting finding.
         touches_data = any(touched_tables_by_fn.get(fid) for fid in sc)
         business_factor = 1.0 if touches_data else 0.5
@@ -246,29 +246,29 @@ def analyze_route_candidates(
         method_str = ", ".join(methods)
         endpoint = f"{method_str} {rule}"
         formula_str = (
-            f"score = (valor {val} × facilidad {testability} × datos {business_factor}) / riesgo {risk} = {score} "
-            f"[mitiga {len(findings_in_scope)} hallazgos; {shared_funcs} funciones compartidas, "
-            f"{num_written} tablas escritas, {total_complexity} cc, {total_lines} líneas]"
+            f"score = (value {val} × testability {testability} × data {business_factor}) / risk {risk} = {score} "
+            f"[mitigates {len(findings_in_scope)} findings; {shared_funcs} shared functions, "
+            f"{num_written} written tables, {total_complexity} cc, {total_lines} lines]"
         )
 
         why_parts = []
         if testability == 1.0:
-            why_parts.append("Responde JSON puro con contrato formal")
+            why_parts.append("Returns pure JSON with a formal contract")
         elif testability == 0.5:
-            why_parts.append("Endpoint de solo lectura que renderiza vista")
+            why_parts.append("Read-only endpoint that renders a view")
         else:
-            why_parts.append("Endpoint con mutación o método POST")
+            why_parts.append("Endpoint with a mutation or a POST method")
 
         if num_written == 0:
-            why_parts.append("sin escrituras en base de datos")
+            why_parts.append("no database writes")
         else:
-            why_parts.append(f"con escrituras en {num_written} tabla(s): {', '.join(sorted(tables_written))}")
+            why_parts.append(f"writes to {num_written} table(s): {', '.join(sorted(tables_written))}")
 
         if not touches_data:
-            why_parts.append("no lee ni escribe datos de negocio (puntaje a la mitad)")
+            why_parts.append("reads and writes no business data (score halved)")
 
         if findings_in_scope:
-            why_parts.append(f"mitiga {len(findings_in_scope)} hallazgo(s) ({', '.join(findings_in_scope)})")
+            why_parts.append(f"mitigates {len(findings_in_scope)} finding(s) ({', '.join(findings_in_scope)})")
 
         why_str = ", ".join(why_parts) + "."
 
@@ -297,25 +297,25 @@ def analyze_route_candidates(
             )
         )
 
-    # Ordenar candidatos descendentemente por score, luego por facilidad y menor riesgo
+    # Sort candidates by score descending, then by testability and lower risk
     candidates.sort(key=lambda c: (c.score, c.testability, -c.risk), reverse=True)
 
     recommended = candidates[0] if candidates else None
     alternatives = candidates[1:3] if len(candidates) > 1 else []
-    # "No empezar por aquí": la ruta más acoplada y riesgosa (ej. POST /invoices/new)
+    # "Do not start here": the most coupled and risky route (e.g. POST /invoices/new)
     do_not_start_here = max(candidates, key=lambda c: (c.risk, -c.score)) if candidates else None
 
-    # Hoja de ruta Strangler Fig en 3 Olas
-    # Ola 1: Candidatos con facilidad >= 0.5 y bajo/medio riesgo
-    # Ola 2: Candidatos de lectura / HTML intermedios
-    # Ola 3: Candidatos transaccionales, escrituras o alto acoplamiento
+    # Strangler Fig roadmap in 3 waves
+    # Wave 1: candidates with testability >= 0.5 and low/medium risk
+    # Wave 2: intermediate read / HTML candidates
+    # Wave 3: transactional candidates, writes or high coupling
     wave1_cands = [c for c in candidates if c.testability == 1.0 or (c.testability == 0.5 and c.risk <= 5.0)]
     wave3_cands = [c for c in candidates if c.testability == 0.25 or c.risk > 15.0 or len(c.tables_written) > 0]
-    # Si coinciden, wave 3 tiene prioridad para escrituras
+    # When both apply, wave 3 wins for writes
     wave1_cands = [c for c in wave1_cands if c not in wave3_cands]
     wave2_cands = [c for c in candidates if c not in wave1_cands and c not in wave3_cands]
 
-    # Asegurar que ninguna ola quede vacía si hay suficientes candidatos
+    # Make sure no wave is empty when there are enough candidates
     by_rank = False
     if not wave1_cands and candidates:
         # No read-only, low-coupling route exists: waves follow the ranking instead of the route kind,
@@ -345,27 +345,27 @@ def analyze_route_candidates(
 
     if by_rank:
         wave_text = [
-            ("Ola 1 — Mejor candidato disponible",
-             "No hay endpoints de solo lectura con bajo acoplamiento: se empieza por la ruta de mayor puntaje.",
-             "Ola 1: ruta de mayor puntaje"),
-            ("Ola 2 — Siguientes en el ranking",
-             "Las dos rutas que siguen en el puntaje del ranking.",
-             "Ola 2: siguientes rutas del ranking"),
-            ("Ola 3 — Resto de rutas",
-             "Rutas restantes, de menor puntaje.",
-             "Ola 3: rutas restantes"),
+            ("Wave 1 — Best available candidate",
+             "There are no low-coupling read-only endpoints: start with the highest-scoring route.",
+             "Wave 1: highest-scoring route"),
+            ("Wave 2 — Next in the ranking",
+             "The next two routes by ranking score.",
+             "Wave 2: next routes in the ranking"),
+            ("Wave 3 — Remaining routes",
+             "Remaining, lower-scoring routes.",
+             "Wave 3: remaining routes"),
         ]
     else:
         wave_text = [
-            ("Ola 1 — Primeros cortes seguros (JSON y hojas)",
-             "Endpoints de lectura que responden JSON, o vistas de lectura con riesgo ≤ 5, sin escrituras en base de datos.",
-             "Ola 1: endpoints de lectura independientes"),
-            ("Ola 2 — Vistas y consultas intermedias",
-             "Vistas de lectura con riesgo mayor que 5 y hasta 15, sin escrituras en base de datos.",
-             "Ola 2: vistas y catálogos secundarios"),
-            ("Ola 3 — Dominio transaccional y escritura crítica",
-             "Rutas POST o con escrituras en base de datos, o con riesgo > 15.",
-             "Ola 3: mutaciones y reglas de negocio complejas"),
+            ("Wave 1 — First safe cuts (JSON and leaves)",
+             "Read endpoints that return JSON, or read views with risk ≤ 5, with no database writes.",
+             "Wave 1: independent read endpoints"),
+            ("Wave 2 — Intermediate views and queries",
+             "Read views with risk above 5 and up to 15, with no database writes.",
+             "Wave 2: secondary views and catalogs"),
+            ("Wave 3 — Transactional domain and critical writes",
+             "POST routes, routes that write to the database, or routes with risk > 15.",
+             "Wave 3: mutations and complex business rules"),
         ]
     waves: list[MigrationWave] = [
         MigrationWave(
@@ -378,7 +378,7 @@ def analyze_route_candidates(
         for index, ((name, description, scope), cands) in enumerate(zip(wave_text, (wave1_cands, wave2_cands, wave3_cands)))
     ]
 
-    # PERT del corte recomendado
+    # PERT of the recommended cut
     first_cut_pert = None
     if recommended:
         rf_match = next((fn for fn in route_functions if fn["file"] == recommended.file_path and fn["name"] == recommended.function_name), None)
@@ -390,7 +390,7 @@ def analyze_route_candidates(
             affected_functions=len(rec_scope),
             affected_lines=rec_lines,
             affected_complexity=rec_cc,
-            scope_description=f"Corte recomendado: {recommended.endpoint} ({recommended.function_name})",
+            scope_description=f"Recommended cut: {recommended.endpoint} ({recommended.function_name})",
         )
 
     # reference_comparison is filled only after a reference cut really runs (compare_with_reference).
@@ -428,20 +428,20 @@ def compare_with_reference(
         return recommendation.model_copy(update={"reference_comparison": None})
     reference_shape = _endpoint_shape(reference_endpoint)
     reference = next((c for c in recommendation.candidates if _endpoint_shape(c.endpoint) == reference_shape), None)
-    verdict = "pasaron" if reference_status == "passed" else "no pasaron"
+    verdict = "passed" if reference_status == "passed" else "did not pass"
     if reference is not None and reference.endpoint == recommended.endpoint:
         text = (
-            f"El motor eligió por sí solo {recommended.endpoint}, el mismo endpoint del primer corte de referencia "
-            f"que se ejecutó; sus pruebas de caracterización {verdict}."
+            f"The engine picked {recommended.endpoint} on its own, the same endpoint as the first reference cut "
+            f"that was run; its characterization tests {verdict}."
         )
     elif reference is not None:
         text = (
-            f"El motor recomienda {recommended.endpoint} (puntaje {recommended.score}), mientras que el primer corte "
-            f"de referencia ejecutado es {reference.endpoint} (puntaje {reference.score}); sus pruebas {verdict}."
+            f"The engine recommends {recommended.endpoint} (score {recommended.score}), while the first reference "
+            f"cut that was run is {reference.endpoint} (score {reference.score}); its tests {verdict}."
         )
     else:
         text = (
-            f"El motor recomienda {recommended.endpoint}; el primer corte de referencia ejecutado "
-            f"({reference_endpoint}) no aparece entre las rutas detectadas."
+            f"The engine recommends {recommended.endpoint}; the first reference cut that was run "
+            f"({reference_endpoint}) is not among the detected routes."
         )
     return recommendation.model_copy(update={"reference_comparison": text})

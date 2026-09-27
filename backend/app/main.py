@@ -1,11 +1,11 @@
-"""Punto de entrada principal de FastAPI para CodeArchaeologist (D-02, D11).
+"""Main FastAPI entry point for CodeArchaeologist (D-02, D11).
 
-Integra:
-- Motor determinista de 11 etapas (/api/jobs, /api/jobs/{id}/migrate, /api/jobs/{id}/artifacts).
-- API de auditorías y visor de fuentes para el frontend (/api/audits, /api/bob/status, /api/samples).
-- Configuración de CORS para desarrollo local y producción.
-- Inicialización de bases de datos y servicios en el ciclo de vida (lifespan).
-- Servidor de archivos estáticos para la SPA de React (frontend/dist).
+Wires together:
+- The audits API and source viewer for the frontend (/api/audits, /api/bob/status, /api/samples).
+- The Modernization Studio, the Ask Bob assistant and the activity feed.
+- CORS for local development only.
+- Database and service initialization in the lifespan.
+- The static file server for the React SPA (frontend/dist).
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -79,8 +79,8 @@ FRONTEND_DIST = Path(os.environ.get("FRONTEND_DIST", REPO_ROOT / "frontend" / "d
 DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
-# Cabeceras en toda respuesta (API y SPA). style-src admite estilos en línea: React fija `style` y los SVG
-# de la consola llevan su <style>; los scripts solo salen del propio origen (el build de Vite no tiene inline).
+# Headers on every response (API and SPA). style-src allows inline styles: React sets `style` and the
+# console SVGs carry their <style>; scripts only come from our own origin (the Vite build has no inline scripts).
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
@@ -96,7 +96,7 @@ SECURITY_HEADERS = {
 
 
 def _load_dotenv(path: Path = REPO_ROOT / ".env") -> None:
-    """Carga .env sin pisar variables ya definidas."""
+    """Loads .env without overriding variables that are already set."""
     if not path.is_file():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -111,41 +111,41 @@ def create_app(
     artifacts_dir: Path = ARTIFACTS_DIR,
     frontend_dist: Path = FRONTEND_DIST,
 ) -> FastAPI:
-    """Fábrica de aplicación FastAPI que inicializa ambos subsistemas."""
+    """FastAPI application factory that initializes both subsystems."""
     _load_dotenv()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        # Inicializar base de datos determinista SQLite con WAL
+        # Initialize the deterministic SQLite database with WAL
         init_db()
 
-        # Inicializar JobStore y AuditService para el frontend
+        # Initialize the JobStore and the AuditService for the frontend
         jobs_dir = artifacts_dir / "jobs"
         jobs_dir.mkdir(parents=True, exist_ok=True)
         store = JobStore(artifacts_dir / "jobs.db")
         store.fail_orphans()
-        recover_interrupted(jobs_dir)  # el Estudio no queda bloqueado en «evaluando» tras un reinicio
+        recover_interrupted(jobs_dir)  # the Studio is never stuck in "assessing" after a restart
         executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="audit")
         app.state.audit_service = AuditService(store, jobs_dir, executor)
-        # En segundo plano: el CLI de Bob tarda ~15 s en arrancar en Render y el arranque no lo espera.
+        # In the background: the Bob CLI takes ~15 s to start on Render and startup does not wait for it.
         threading.Thread(target=warm_bob_version, name="bob-version", daemon=True).start()
 
         yield
 
         stopped = terminate_active_sessions()
         if stopped:
-            logger.warning("Se terminaron %s sesiones de Bob en curso al apagar el servidor", stopped)
+            logger.warning("Terminated %s running Bob sessions while shutting down the server", stopped)
         executor.shutdown(wait=False, cancel_futures=True)
 
     app = FastAPI(
         title="CodeArchaeologist — Forensic Legacy Migration API",
-        description="Motor determinista de diagnóstico forense de repositorios, evaluación de radio de explosión y migración Strangler Fig con IBM Bob Shell 2.0.",
+        description="Forensic diagnosis of legacy repositories with IBM Bob Shell 2.0: verified evidence, blast radius and a Strangler Fig migration plan.",
         version="1.0.0",
         lifespan=lifespan,
     )
 
-    # CORS solo para el servidor de desarrollo de Vite; en producción el frontend se sirve
-    # desde el mismo origen (Dockerfile fija ENABLE_DEV_CORS=false).
+    # CORS only for the Vite dev server; in production the frontend is served from the
+    # same origin (the Dockerfile sets ENABLE_DEV_CORS=false).
     if os.environ.get("ENABLE_DEV_CORS", "true").lower() == "true":
         app.add_middleware(CORSMiddleware, allow_origins=DEV_ORIGINS, allow_methods=["GET", "POST"],
                            allow_headers=["Content-Type", "X-Live-Token"])
@@ -157,7 +157,7 @@ def create_app(
             response.headers.setdefault(name, value)
         return response
 
-    # Registro de routers principales de auditorías y diagnóstico
+    # Register the main audit and diagnostics routers
     app.include_router(live_router)
     app.include_router(modernization_router)
     app.include_router(assistant_router)
@@ -166,7 +166,7 @@ def create_app(
 
     @app.get("/health", tags=["health"])
     def health_check() -> Dict[str, Any]:
-        """Endpoint de verificación de estado y disponibilidad de Bob Shell."""
+        """Health check and Bob Shell availability."""
         cli_found = is_bob_cli_available()
         api_key_set = bool(get_bob_api_key())
         mode = determine_operational_mode()
@@ -181,7 +181,7 @@ def create_app(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-    # Servir archivos estáticos del frontend React/Vite
+    # Serve the React/Vite frontend's static files
     if frontend_dist.is_dir():
         app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
 

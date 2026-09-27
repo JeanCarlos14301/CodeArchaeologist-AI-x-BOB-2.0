@@ -25,7 +25,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
 }
 
-/** Botón píldora. `primary` es la acción principal: una por pantalla (DESIGN.md §4). */
+/** Pill button. `primary` is the main action: one per screen (DESIGN.md §4). */
 export function Button({ variant = "secondary", size = "md", icon, className = "", children, type = "button", ...rest }: ButtonProps) {
   return (
     <button type={type} className={`${BASE} ${VARIANT[variant]} ${SIZE[size]} ${className}`} {...rest}>
@@ -40,7 +40,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
 }
 
-/** Botón de icono de 32px con área táctil de 40px y etiqueta accesible obligatoria. */
+/** 32px icon button with a 40px touch target and a mandatory accessible label. */
 export function IconButton({ label, active = false, className = "", children, type = "button", ...rest }: IconButtonProps) {
   return (
     <button

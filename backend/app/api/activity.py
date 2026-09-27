@@ -1,7 +1,7 @@
-"""GET /api/audits/{job_id}/events: actividad de cada etapa del análisis, paginada por cursor.
+"""GET /api/audits/{job_id}/events: activity of each analysis stage, paginated by cursor.
 
-El frontend la sondea mientras el análisis corre (`after` = último `seq` recibido) y la reproduce
-cuando ya terminó. Mismo control de acceso que el resto de lecturas del job.
+The frontend polls it while the analysis runs (`after` = last `seq` received) and replays it
+once it has finished. Same access control as every other read of the job.
 """
 
 from typing import Annotated

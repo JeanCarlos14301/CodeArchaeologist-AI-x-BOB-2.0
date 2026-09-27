@@ -1,4 +1,4 @@
-"""Rutas HTTP de auditorías y diagnóstico de Bob. Los routers solo traducen HTTP ↔ servicio."""
+"""HTTP routes for audits and Bob diagnostics. Routers only translate HTTP <-> service."""
 
 import os
 from typing import Annotated
@@ -42,15 +42,15 @@ def get_service(request: Request) -> AuditService:
 
 
 def require_live_token(execution_mode: ExecutionMode, token: str | None) -> None:
-    """Si LIVE_AUDIT_TOKEN está definido (despliegue público), live exige ese token.
+    """When LIVE_AUDIT_TOKEN is set (locked public deployment), live requires that token.
 
-    Sin la variable (desarrollo local) live queda abierto. imported y example nunca lo piden.
+    Without the variable (open mode or local development) live is open. imported and example never ask for it.
     """
     expected = os.environ.get("LIVE_AUDIT_TOKEN", "")
     if execution_mode != "live" or not expected:
         return
     if not token_is_valid(token):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "El modo live requiere un token válido.")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Live mode requires a valid token.")
 
 
 Service = Annotated[AuditService, Depends(get_service)]
@@ -73,14 +73,14 @@ def start_audit(
     x_live_token: Annotated[str | None, Header(max_length=200)] = None,
 ) -> Job:
     if body.execution_mode == "imported" and body.sample in SAMPLES:
-        # Vitrina pública: reproduce una respuesta real ya grabada y no invoca Bob.
+        # Public showcase: replays a real recorded Bob response and never invokes Bob.
         pass
     elif os.environ.get("ALLOW_NON_LIVE_MODES", "").lower() == "true":
         require_live_token(body.execution_mode, x_live_token)
     else:
-        # Por defecto solo hay auditorías reales: modo live y token siempre obligatorio.
+        # By default only real audits run: live mode, token required only in locked mode.
         if body.execution_mode != "live":
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo se permiten auditorías live (datos reales).")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only live audits (real data) are allowed.")
         require_upload_token(x_live_token)
     try:
         return service.start(body.sample, body.execution_mode)

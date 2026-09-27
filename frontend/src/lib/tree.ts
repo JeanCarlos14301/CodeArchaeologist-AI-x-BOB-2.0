@@ -17,7 +17,7 @@ export interface TreeNode {
   findingCount: number;
 }
 
-/** Archivos conocidos del análisis: módulos medidos por AST + archivos citados como evidencia. */
+/** Files known to the analysis: modules measured by AST + files cited as evidence. */
 export function collectFiles(architecture: ArchitectureData | null, dossier: Dossier | null): FileInfo[] {
   const files = new Map<string, FileInfo>();
   const ensure = (path: string) => {

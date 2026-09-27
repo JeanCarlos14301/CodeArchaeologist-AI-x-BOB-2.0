@@ -1,1 +1,1 @@
-"""Modelos Pydantic del contrato de datos (fuente de `contracts/schema-v1.json`)."""
+"""Pydantic models of the data contract (source of `contracts/schema-v1.json`)."""

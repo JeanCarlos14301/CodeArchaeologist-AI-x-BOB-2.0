@@ -1,5 +1,5 @@
-"""Correcciones de la auditoría integral: privacidad del listado, límites de ingesta y lectura, cabeceras de
-seguridad, recuperación del Estudio tras un reinicio y manifiestos con BOM. No gasta bobcoins."""
+"""Fixes from the full audit: listing privacy, ingestion and read limits, security headers,
+Studio recovery after a restart and manifests with a BOM. Spends no bobcoins."""
 
 import io
 import json
@@ -21,7 +21,7 @@ from app.pipeline.ingestion import (
     validate_and_extract_zip,
 )
 
-TOKEN = "token-de-prueba"
+TOKEN = "test-token"
 
 
 @pytest.fixture
@@ -42,12 +42,12 @@ def test_public_listing_hides_every_private_upload(client: TestClient) -> None:
     store.create("upload:privado.zip", "live")
     store.create("modernize:tambien-privado.zip", "live")
     public = client.get("/api/audits").json()
-    assert not [job for job in public if ":" in job["sample"]], "sin token no se ve ninguna subida"
+    assert not [job for job in public if ":" in job["sample"]], "without a token no upload is visible"
     private = client.get("/api/audits", headers={"X-Live-Token": TOKEN}).json()
     assert {"upload:privado.zip", "modernize:tambien-privado.zip"} <= {job["sample"] for job in private}
 
 
-# --- Cabeceras de seguridad -------------------------------------------------------------------
+# --- Security headers --------------------------------------------------------------------------
 
 @pytest.mark.parametrize("path", ["/health", "/api/samples", "/"])
 def test_security_headers_on_api_and_spa(client: TestClient, path: str) -> None:
@@ -60,11 +60,11 @@ def test_security_headers_on_api_and_spa(client: TestClient, path: str) -> None:
     assert "unsafe-eval" not in csp
 
 
-# --- Ingesta y lectura acotadas ---------------------------------------------------------------
+# --- Bounded ingestion and reads ---------------------------------------------------------------
 
 def test_copy_counts_real_bytes_not_declared_sizes() -> None:
     assert copy_bounded(io.BytesIO(b"x" * 10), io.BytesIO(), budget=10) == 10
-    with pytest.raises(IngestionSecurityError, match="descomprimido"):
+    with pytest.raises(IngestionSecurityError, match="uncompressed"):
         copy_bounded(io.BytesIO(b"x" * 11), io.BytesIO(), budget=10)
 
 
@@ -78,7 +78,7 @@ def _zip_with(files: int) -> bytes:
 
 def test_modernization_uploads_accept_real_monorepos(tmp_path: Path) -> None:
     data = _zip_with(MAX_FILES_COUNT + 50)
-    with pytest.raises(IngestionSecurityError, match="demasiados archivos"):
+    with pytest.raises(IngestionSecurityError, match="too many files"):
         validate_and_extract_zip(data, tmp_path / "audit")
     validate_and_extract_zip(data, tmp_path / "modernize", max_files=MODERNIZE_MAX_FILES)
     assert len(list((tmp_path / "modernize" / "repo" / "src").iterdir())) == MAX_FILES_COUNT + 50
@@ -89,15 +89,15 @@ def test_source_viewer_refuses_huge_files(client: TestClient) -> None:
     job = service.store.create("facturaya-v1", "example")
     workspace = service.job_dir(job.id) / "workspace"
     workspace.mkdir(parents=True)
-    (workspace / "dump.sql").write_text("-- fila\n" * 400_000, encoding="utf-8")  # ~3 MB
-    (workspace / "app.py").write_text("print('hola')\n", encoding="utf-8")
+    (workspace / "dump.sql").write_text("-- row\n" * 400_000, encoding="utf-8")  # ~3 MB
+    (workspace / "app.py").write_text("print('hello')\n", encoding="utf-8")
     ok = client.get(f"/api/audits/{job.id}/source", params={"path": "app.py", "start": 1, "end": 1})
     assert ok.status_code == 200
     big = client.get(f"/api/audits/{job.id}/source", params={"path": "dump.sql", "start": 1, "end": 5})
-    assert big.status_code == 404 and "grande" in big.json()["detail"]
+    assert big.status_code == 404 and "too large" in big.json()["detail"]
 
 
-# --- Estudio de modernización -----------------------------------------------------------------
+# --- Modernization Studio ----------------------------------------------------------------------
 
 @pytest.mark.parametrize("phase", ["assessing", "planning", "implementing"])
 def test_interrupted_studio_operations_are_recovered_on_startup(tmp_path: Path, phase: str) -> None:
@@ -105,14 +105,14 @@ def test_interrupted_studio_operations_are_recovered_on_startup(tmp_path: Path, 
     state_file = jobs / "abc123" / "modernization" / "state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(json.dumps({"phase": phase}), encoding="utf-8")
-    (jobs / "sano" / "modernization").mkdir(parents=True)
-    (jobs / "sano" / "modernization" / "state.json").write_text(json.dumps({"phase": "planned"}), encoding="utf-8")
+    (jobs / "healthy" / "modernization").mkdir(parents=True)
+    (jobs / "healthy" / "modernization" / "state.json").write_text(json.dumps({"phase": "planned"}), encoding="utf-8")
 
     assert recover_interrupted(jobs) == 1
 
     recovered = Studio(jobs / "abc123").state()
-    assert recovered.phase == "failed" and "reinici" in (recovered.error or "")
-    assert Studio(jobs / "sano").state().phase == "planned", "lo terminado no se toca"
+    assert recovered.phase == "failed" and "restarted" in (recovered.error or "")
+    assert Studio(jobs / "healthy").state().phase == "planned", "finished work is left alone"
 
 
 def test_startup_recovers_the_studio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,10 +125,10 @@ def test_startup_recovers_the_studio(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert json.loads(state_file.read_text(encoding="utf-8"))["phase"] == "failed"
 
 
-# --- Manifiestos con BOM ----------------------------------------------------------------------
+# --- Manifests with a BOM ----------------------------------------------------------------------
 
 def test_manifests_with_a_byte_order_mark_are_read_whole(tmp_path: Path) -> None:
-    # Solo el manifiesto delata cada framework (ningún import en el código): así se mide su lectura.
+    # Only the manifest gives each framework away (no import in the code): that measures how it is read.
     backend = tmp_path / "backend"
     backend.mkdir()
     (backend / "requirements.txt").write_text("\ufefffastapi==0.135.1\nuvicorn==0.41.0\n", encoding="utf-8")
@@ -136,14 +136,14 @@ def test_manifests_with_a_byte_order_mark_are_read_whole(tmp_path: Path) -> None
     service = tmp_path / "service"
     service.mkdir()
     (service / "pyproject.toml").write_text('\ufeff[project]\nname = "svc"\ndependencies = ["django>=5.0"]\n', encoding="utf-8")
-    (service / "run.py").write_text("print('otro')\n", encoding="utf-8")
+    (service / "run.py").write_text("print('other')\n", encoding="utf-8")
     technologies = {tech.id: tech for tech in scan_stack(tmp_path).technologies}
-    assert "fastapi" in technologies, "la primera línea tras el BOM se pierde"
-    assert technologies["fastapi"].version == "==0.135.1"  # el especificador tal cual; la UI lo presenta
-    assert "django" in technologies, "un pyproject.toml con BOM no puede ignorarse entero"
+    assert "fastapi" in technologies, "the first line after the BOM is lost"
+    assert technologies["fastapi"].version == "==0.135.1"  # the specifier as is; the UI presents it
+    assert "django" in technologies, "a pyproject.toml with a BOM cannot be ignored whole"
 
 
-# --- Registro de actividad --------------------------------------------------------------------
+# --- Activity log ------------------------------------------------------------------------------
 
 def test_polling_reads_only_new_events_and_never_loses_a_half_written_line(tmp_path: Path) -> None:
     from app.pipeline.activity import EventLog, read_events
@@ -156,15 +156,15 @@ def test_polling_reads_only_new_events_and_never_loses_a_half_written_line(tmp_p
 
     complete = log.path.read_text(encoding="utf-8").splitlines()[0].replace('"seq":1', '"seq":4')
     with log.path.open("a", encoding="utf-8") as handle:
-        handle.write(complete[:25])  # otro hilo a mitad de escribir la línea
+        handle.write(complete[:25])  # another thread halfway through writing the line
     assert read_events(log.path, after=3) == []
     with log.path.open("a", encoding="utf-8") as handle:
         handle.write(complete[25:] + "\n")
     assert [event.seq for event in read_events(log.path, after=3)] == [4]
-    assert [event.seq for event in read_events(log.path, after=1)] == [2, 3, 4], "un cursor distinto relee desde el principio"
+    assert [event.seq for event in read_events(log.path, after=1)] == [2, 3, 4], "a different cursor rereads from the start"
 
 
-# --- Ingesta: ramas de seguridad ---------------------------------------------------------------
+# --- Ingestion: security branches --------------------------------------------------------------
 
 def _zip(entries: dict[str, bytes], symlink: str | None = None) -> bytes:
     buffer = io.BytesIO()
@@ -179,13 +179,13 @@ def _zip(entries: dict[str, bytes], symlink: str | None = None) -> bytes:
 
 
 def test_symlinks_in_the_zip_are_rejected(tmp_path: Path) -> None:
-    with pytest.raises(IngestionSecurityError, match="simbólico"):
-        validate_and_extract_zip(_zip({"repo/app.py": b"x = 1\n"}, symlink="repo/secreto"), tmp_path / "out")
+    with pytest.raises(IngestionSecurityError, match="Symbolic link"):
+        validate_and_extract_zip(_zip({"repo/app.py": b"x = 1\n"}, symlink="repo/secret"), tmp_path / "out")
 
 
 def test_oversized_compressed_upload_is_rejected(tmp_path: Path) -> None:
     import os
-    noise = os.urandom(6 * 1024 * 1024)  # incompresible: el ZIP supera 5 MB
+    noise = os.urandom(6 * 1024 * 1024)  # incompressible: the ZIP exceeds 5 MB
     with pytest.raises(IngestionSecurityError, match="5 MB"):
         validate_and_extract_zip(_zip({"repo/blob.txt": noise}), tmp_path / "out")
 
@@ -201,4 +201,4 @@ def test_sensitive_files_never_reach_the_workspace(tmp_path: Path) -> None:
     })
     out = validate_and_extract_zip(data, tmp_path / "out")
     kept = sorted(path.relative_to(out).as_posix() for path in out.rglob("*") if path.is_file())
-    assert kept == ["repo/app.py"], "credenciales, instrucciones para agentes y config de Bob se descartan"
+    assert kept == ["repo/app.py"], "credentials, agent instructions and Bob config are dropped"

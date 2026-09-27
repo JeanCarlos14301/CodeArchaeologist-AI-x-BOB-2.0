@@ -7,16 +7,16 @@ import { SeverityBadge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Eyebrow } from "../../ui/Layout";
 
-/** Etapa 1: controles de seguridad del ZIP e inventario del sandbox (qué contiene el repositorio). */
+/** Stage 1: the ZIP's security checks and the sandbox inventory (what the repository contains). */
 export function PreparingPanel({ model }: { model: ActivityModel }) {
   const inventory = model.inventory;
   const maxLanguage = Math.max(1, ...(inventory?.languages.map((item) => item.files) ?? [1]));
   return (
     <div className="space-y-6">
-      <section aria-label="Controles de seguridad">
-        <Eyebrow>Controles de seguridad</Eyebrow>
+      <section aria-label="Security checks">
+        <Eyebrow>Security checks</Eyebrow>
         {model.checks.length === 0 ? (
-          <p className="mt-2 text-body text-muted">Muestra registrada del equipo: se copia desde el servidor, sin ZIP que validar. El código nunca se ejecuta en esta etapa.</p>
+          <p className="mt-2 text-body text-muted">A registered team sample: it is copied from the server, with no ZIP to validate. The code never runs in this stage.</p>
         ) : (
           <ul className="mt-2 divide-y divide-line-subtle">
             {model.checks.map((check) => (
@@ -33,14 +33,14 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
       </section>
 
       {!inventory ? (
-        <p className="text-caption text-subtle">Copiando el repositorio al sandbox…</p>
+        <p className="text-caption text-subtle">Copying the repository into the sandbox…</p>
       ) : (
-        <section aria-label="Inventario del repositorio" className="space-y-5">
+        <section aria-label="Repository inventory" className="space-y-5">
           <dl className="grid grid-cols-3 gap-x-6">
             {[
-              ["Archivos", inventory.files.toLocaleString("es")],
-              ["Líneas Python", inventory.python_lines.toLocaleString("es")],
-              ["Tamaño", `${(inventory.bytes / 1024).toFixed(0)} KB`],
+              ["Files", inventory.files.toLocaleString("en")],
+              ["Python lines", inventory.python_lines.toLocaleString("en")],
+              ["Size", `${(inventory.bytes / 1024).toFixed(0)} KB`],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-micro tracking-eyebrow text-subtle uppercase">{label}</dt>
@@ -49,7 +49,7 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
             ))}
           </dl>
           <div>
-            <Eyebrow>Lenguajes por archivo</Eyebrow>
+            <Eyebrow>Languages by file</Eyebrow>
             <ul className="mt-2 space-y-1.5">
               {inventory.languages.map((language) => (
                 <li key={language.name} className="grid grid-cols-[6.5rem_1fr_2.5rem] items-center gap-3 text-caption">
@@ -64,7 +64,7 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
           </div>
           <div className="grid grid-cols-1 gap-5 @2xl:grid-cols-2">
             <div>
-              <Eyebrow>Carpetas principales</Eyebrow>
+              <Eyebrow>Main folders</Eyebrow>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {inventory.top_dirs.map((dir) => (
                   <li key={dir.name} className="rounded-pill border border-line px-2.5 py-0.5 font-mono text-caption text-fg-2">
@@ -74,7 +74,7 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
               </ul>
             </div>
             <div>
-              <Eyebrow>Fuera del sandbox</Eyebrow>
+              <Eyebrow>Outside the sandbox</Eyebrow>
               <p className="mt-2 font-mono text-caption text-subtle">{inventory.excluded.join(" · ")}</p>
             </div>
           </div>
@@ -85,7 +85,7 @@ export function PreparingPanel({ model }: { model: ActivityModel }) {
   );
 }
 
-/** Etapa 3: cada cita de Bob comprobada contra el código (archivo, líneas, fragmento). */
+/** Stage 3: every Bob citation checked against the code (file, lines, snippet). */
 export function ValidationPanel({ model }: { model: ActivityModel }) {
   const { checks, summary } = model.evidence;
   const valid = checks.filter((check) => check.status === "valid").length;
@@ -94,10 +94,10 @@ export function ValidationPanel({ model }: { model: ActivityModel }) {
     <div className="space-y-5">
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 @2xl:grid-cols-4">
         {[
-          ["Citas verificadas", <span key="v" className="text-verified">✓ {valid}</span>],
-          ["No coinciden", <span key="i" className={invalid ? "text-danger" : "text-subtle"}>✗ {invalid}</span>],
-          ["Hallazgos aceptados", summary ? summary.accepted : "…"],
-          ["Descartados", summary ? summary.rejected : "…"],
+          ["Citations verified", <span key="v" className="text-verified">✓ {valid}</span>],
+          ["Do not match", <span key="i" className={invalid ? "text-danger" : "text-subtle"}>✗ {invalid}</span>],
+          ["Findings accepted", summary ? summary.accepted : "…"],
+          ["Discarded", summary ? summary.rejected : "…"],
         ].map(([label, value]) => (
           <div key={String(label)}>
             <dt className="text-micro tracking-eyebrow text-subtle uppercase">{label}</dt>
@@ -106,9 +106,9 @@ export function ValidationPanel({ model }: { model: ActivityModel }) {
         ))}
       </dl>
       {checks.length === 0 ? (
-        <p className="text-body text-muted">Esperando las citas de Bob…</p>
+        <p className="text-body text-muted">Waiting for Bob's citations…</p>
       ) : (
-        <ul aria-label="Citas comprobadas" className="grid grid-cols-1 gap-x-6 @3xl:grid-cols-2">
+        <ul aria-label="Checked citations" className="grid grid-cols-1 gap-x-6 @3xl:grid-cols-2">
           {checks.map((check) => (
             <li key={check.seq} className="grid animate-enter grid-cols-[1rem_2.75rem_1fr] items-baseline gap-x-2 border-b border-line-subtle py-2 text-caption">
               <span aria-hidden className={check.status === "valid" ? "text-verified" : "text-danger"}>{check.status === "valid" ? "✓" : "✗"}</span>
@@ -123,34 +123,34 @@ export function ValidationPanel({ model }: { model: ActivityModel }) {
       )}
       {summary && (
         <p className="text-caption text-subtle">
-          Con la evidencia aceptada, Python calculó el riesgo de {plural(summary.riskScored, "hallazgo", "hallazgos")}
-          {summary.pertDays != null && <> y la estimación PERT del primer corte (<span className="font-mono text-fg-2">{summary.pertDays.toFixed(1)} días</span>)</>}.
+          With the accepted evidence, Python computed the risk of {plural(summary.riskScored, "finding", "findings")}
+          {summary.pertDays != null && <> and the first cut's PERT estimate (<span className="font-mono text-fg-2">{summary.pertDays.toFixed(1)} days</span>)</>}.
         </p>
       )}
     </div>
   );
 }
 
-/** Etapa 4: pruebas de caracterización del primer corte, o por qué no se ejecutan. */
+/** Stage 4: the first cut's characterization tests, or why they do not run. */
 export function TestsPanel({ model }: { model: ActivityModel }) {
   const { tests, skipped, summary } = model.migration;
   if (skipped) {
     return (
       <div className="rounded-panel border border-dashed border-line-strong px-5 py-5">
-        <p className="text-body text-fg">No se ejecutó un primer corte</p>
-        <p className="mt-1 text-body text-muted">{skipped} El corte probado existe para las muestras registradas del equipo.</p>
+        <p className="text-body text-fg">No first cut was run</p>
+        <p className="mt-1 text-body text-muted">{skipped} The tested cut exists for the team's registered samples.</p>
       </div>
     );
   }
-  if (tests.length === 0) return <p className="text-body text-muted">Preparando el sandbox de pruebas…</p>;
+  if (tests.length === 0) return <p className="text-body text-muted">Preparing the test sandbox…</p>;
   return (
     <div className="space-y-5">
       {(["legacy", "modern"] as const).map((target) => {
         const group = tests.filter((test) => test.target === target);
         if (group.length === 0) return null;
         return (
-          <section key={target} aria-label={target === "legacy" ? "Contra el legado" : "Contra el corte moderno"}>
-            <Eyebrow>{target === "legacy" ? "Contra el legado" : "Contra el corte moderno"}</Eyebrow>
+          <section key={target} aria-label={target === "legacy" ? "Against the legacy code" : "Against the modern cut"}>
+            <Eyebrow>{target === "legacy" ? "Against the legacy code" : "Against the modern cut"}</Eyebrow>
             <ul className="mt-2 divide-y divide-line-subtle">
               {group.map((test) => (
                 <li key={test.seq} className="grid animate-enter grid-cols-[1rem_1fr_auto] items-baseline gap-x-3 py-2 text-caption">
@@ -167,20 +167,20 @@ export function TestsPanel({ model }: { model: ActivityModel }) {
       })}
       {summary && (
         <p className={`text-body ${summary.status === "passed" ? "text-verified" : "text-danger"}`}>
-          {summary.status === "passed" ? "✓ Mismo comportamiento observable en legado y moderno" : "✗ El corte moderno no reproduce el comportamiento"} · <span className="font-mono">{summary.endpoint}</span>
+          {summary.status === "passed" ? "✓ Same observable behavior in legacy and modern" : "✗ The modern cut does not reproduce the behavior"} · <span className="font-mono">{summary.endpoint}</span>
         </p>
       )}
     </div>
   );
 }
 
-/** Etapa 5: el expediente y el siguiente paso. */
+/** Stage 5: the dossier and the next step. */
 export function ReadyPanel({ model, onOpenSummary, onOpenRisks }: { model: ActivityModel; onOpenSummary: () => void; onOpenRisks: () => void }) {
   const done = model.done;
-  if (!done) return <p className="text-body text-muted">El expediente aparecerá cuando termine la validación.</p>;
+  if (!done) return <p className="text-body text-muted">The dossier will appear when validation finishes.</p>;
   return (
     <div className="space-y-5">
-      <p className="font-display text-heading text-fg">{plural(done.findings, "hallazgo", "hallazgos")} con evidencia verificada</p>
+      <p className="font-display text-heading text-fg">{plural(done.findings, "finding", "findings")} with verified evidence</p>
       <ul className="flex flex-wrap gap-x-6 gap-y-2">
         {SEVERITY_ORDER.filter((severity) => done.bySeverity[severity]).map((severity) => (
           <li key={severity} className="flex items-center gap-2">
@@ -190,11 +190,11 @@ export function ReadyPanel({ model, onOpenSummary, onOpenRisks }: { model: Activ
         ))}
       </ul>
       <p className="font-mono text-caption text-subtle">
-        {done.evidenceValid}/{done.evidenceTotal} citas verificadas · IBM Bob {formatCost(done.cost)} · {formatSeconds(done.durationMs)}
+        {done.evidenceValid}/{done.evidenceTotal} citations verified · IBM Bob {formatCost(done.cost)} · {formatSeconds(done.durationMs)}
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={onOpenRisks} icon={<ArrowRight size={14} aria-hidden />}>Revisar los {done.findings} riesgos</Button>
-        <Button variant="ghost" onClick={onOpenSummary}>Abrir el resumen del sistema</Button>
+        <Button onClick={onOpenRisks} icon={<ArrowRight size={14} aria-hidden />}>Review the {done.findings} risks</Button>
+        <Button variant="ghost" onClick={onOpenSummary}>Open the system overview</Button>
       </div>
     </div>
   );

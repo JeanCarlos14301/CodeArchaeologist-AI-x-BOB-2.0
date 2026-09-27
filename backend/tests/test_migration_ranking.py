@@ -1,13 +1,13 @@
-"""Pruebas unitarias para el motor de recomendación de migración determinista (D3, D7).
+"""Unit tests for the deterministic migration recommendation engine (D3, D7).
 
-Verifica:
-1. Extracción y ranking determinista de las 10 rutas de FacturaYa.
-2. Desglose matemático: valor, riesgo, testabilidad, puntaje.
-3. Identificación de 'No empezar por aquí' (POST /invoices/new por alto riesgo/complejidad).
-4. Olas del Strangler Fig y PERT heurístico no calibrado.
-5. Análisis estático puro sin ejecución de código.
-6. Ausencia de textos fijos heredados ('80% de los proyectos').
-7. Exposición del endpoint GET /api/audits/{id}/migration.
+Checks:
+1. Deterministic extraction and ranking of FacturaYa's 10 routes.
+2. Mathematical breakdown: value, risk, testability, score.
+3. Identification of 'do not start here' (POST /invoices/new because of high risk/complexity).
+4. Strangler Fig waves and the uncalibrated heuristic PERT.
+5. Pure static analysis with no code execution.
+6. No leftover hardcoded texts ('80% of projects').
+7. Exposure of the GET /api/audits/{id}/migration endpoint.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ FIXTURE_DOSSIER = REPO_ROOT / "contracts" / "fixtures" / "dossier-example.json"
 
 @pytest.fixture
 def facturaya_dossier() -> Dossier:
-    """Carga el dossier de referencia de FacturaYa si existe, o un dossier sintético completo."""
+    """Loads FacturaYa's reference dossier if it exists, or a complete synthetic dossier."""
     if FIXTURE_DOSSIER.is_file():
         data = json.loads(FIXTURE_DOSSIER.read_text(encoding="utf-8"))
         return Dossier.model_validate(data)
@@ -47,25 +47,25 @@ def facturaya_dossier() -> Dossier:
     findings = [
         Finding(
             id="F-1",
-            title="Inyección SQL",
+            title="SQL injection",
             category="security",
             subcategory="sql-injection",
             severity="critical",
             observed_or_inferred="observed",
             evidence=[{"path": "app.py", "line_start": 30, "line_end": 40, "snippet": "cursor.execute(query)"}],
-            explanation="Concatenación directa de parámetros en SQL.",
-            recommendation="Parametrizar las consultas con tuplas.",
+            explanation="Direct concatenation of parameters into SQL.",
+            recommendation="Parameterize the queries with tuples.",
         ),
         Finding(
             id="F-2",
-            title="Lógica de negocio en controlador",
+            title="Business logic in the controller",
             category="architecture",
             subcategory="monolithic-coupling",
             severity="medium",
             observed_or_inferred="observed",
             evidence=[{"path": "app.py", "line_start": 80, "line_end": 120, "snippet": "def get_invoice"}],
-            explanation="Cálculo de impuestos y subtotales acoplados a la ruta HTTP.",
-            recommendation="Extraer a un servicio de dominio.",
+            explanation="Tax and subtotal calculations coupled to the HTTP route.",
+            recommendation="Extract into a domain service.",
         ),
     ]
     return Dossier(
@@ -86,7 +86,7 @@ def facturaya_dossier() -> Dossier:
 
 
 def test_facturaya_candidates_ranking(facturaya_dossier: Dossier) -> None:
-    """Verifica que FacturaYa produce 10 candidatos ordenados deterministamente."""
+    """Checks that FacturaYa produces 10 deterministically ordered candidates."""
     recommendation = analyze_route_candidates(
         workspace=FACTURAYA_DIR,
         dossier=facturaya_dossier,
@@ -95,11 +95,11 @@ def test_facturaya_candidates_ranking(facturaya_dossier: Dossier) -> None:
     assert isinstance(recommendation, MigrationRecommendation)
     assert len(recommendation.candidates) == 10
 
-    # Verificar que están ordenados descendentemente por score
+    # Check they are sorted by score, descending
     scores = [c.score for c in recommendation.candidates]
     assert scores == sorted(scores, reverse=True)
 
-    # Cada candidato tiene contrato completo y justificación no vacía
+    # Each candidate has a complete contract and a non-empty justification
     for c in recommendation.candidates:
         assert c.rule.startswith("/")
         assert len(c.http_methods) > 0
@@ -107,48 +107,48 @@ def test_facturaya_candidates_ranking(facturaya_dossier: Dossier) -> None:
         assert c.value >= 1.0
         assert c.risk >= 1.0
         assert c.testability in (1.0, 0.5, 0.25)
-        # score = round((valor * testability * datos de negocio) / riesgo, 3)
+        # score = round((value * testability * business data) / risk, 3)
         business_factor = 1.0 if c.touches_business_data else 0.5
         expected_score = round((c.value * c.testability * business_factor) / c.risk, 3)
         assert c.score == expected_score
         assert len(c.why) > 10
 
-    # El candidato recomendado tiene puntuación positiva y justificación
+    # The recommended candidate has a positive score and a justification
     assert recommendation.recommended is not None
     assert recommendation.recommended.rule
     assert recommendation.recommended.score > 0
 
-    # Las alternativas contienen opciones viables
+    # The alternatives contain viable options
     assert len(recommendation.alternatives) in (1, 2)
     assert all(a.score > 0 for a in recommendation.alternatives)
 
-    # 'No empezar por aquí' es la ruta más riesgosa
+    # 'Do not start here' is the riskiest route
     no_start = recommendation.do_not_start_here
     assert no_start is not None
     assert no_start.rule in ("/invoices/new", "/invoices") or "new" in no_start.function_name
-    assert no_start.risk > 15.0, "La ruta de mayor riesgo debe tener un riesgo compuesto significativo"
+    assert no_start.risk > 15.0, "The highest-risk route must have a significant composite risk"
     assert "invoices" in no_start.tables_written or "invoice_items" in no_start.tables_written
     assert no_start.complexity > 20 or no_start.lines > 100
 
 
 def test_wave_planning_and_pert_heuristics(facturaya_dossier: Dossier) -> None:
-    """Verifica que las olas del Strangler Fig y el PERT cumplen la especificación."""
+    """Checks that the Strangler Fig waves and the PERT meet the specification."""
     recommendation = analyze_route_candidates(
         workspace=FACTURAYA_DIR,
         dossier=facturaya_dossier,
     )
 
-    # Debe haber 3 olas
+    # There must be 3 waves
     assert len(recommendation.waves) == 3
-    assert "Ola 1" in recommendation.waves[0].name
-    assert "Ola 2" in recommendation.waves[1].name
-    assert "Ola 3" in recommendation.waves[2].name
+    assert "Wave 1" in recommendation.waves[0].name
+    assert "Wave 2" in recommendation.waves[1].name
+    assert "Wave 3" in recommendation.waves[2].name
 
-    # Todas las 10 rutas deben estar distribuidas entre las 3 olas sin duplicación
+    # All 10 routes must be spread across the 3 waves without duplication
     all_wave_rules = []
     for w in recommendation.waves:
         all_wave_rules.extend([c.rule for c in w.candidates])
-        # Cada ola tiene PERT con el disclaimer obligatorio
+        # Each wave has a PERT with the mandatory disclaimer
         assert isinstance(w.pert, PertEstimate)
         assert w.pert.expected_days > 0
         assert w.pert.optimistic_days <= w.pert.most_likely_days <= w.pert.pessimistic_days
@@ -157,20 +157,20 @@ def test_wave_planning_and_pert_heuristics(facturaya_dossier: Dossier) -> None:
     assert len(all_wave_rules) == 10
     assert len(set(all_wave_rules)) == 10
 
-    # El PERT del primer corte recomendado también incluye el disclaimer
+    # The PERT of the recommended first cut also includes the disclaimer
     assert recommendation.first_cut_pert is not None
     assert recommendation.first_cut_pert.expected_days > 0
     assert any(PERT_DISCLAIMER in a for a in recommendation.first_cut_pert.assumptions)
 
 
 def test_pert_formula_calculation() -> None:
-    """Valida la fórmula de tres puntos O, M, P y desviación estándar en calculate_pert_for_scope."""
+    """Validates the three-point formula O, M, P and the standard deviation in calculate_pert_for_scope."""
     pert = calculate_pert_for_scope(
         affected_routes=1,
         affected_functions=2,
         affected_lines=50,
         affected_complexity=10,
-        scope_description="Ruta de prueba",
+        scope_description="Test route",
     )
     assert pert.optimistic_days <= pert.most_likely_days <= pert.pessimistic_days
     # expected_days = round((O + 4M + P)/6, 2)
@@ -181,10 +181,10 @@ def test_pert_formula_calculation() -> None:
 
 
 def test_static_analysis_never_executes_code(tmp_path: Path) -> None:
-    """Verifica que el análisis estático NUNCA importa ni ejecuta el código del repositorio."""
+    """Checks that the static analysis NEVER imports or runs the repository's code."""
     malicious_code = '''
-# Si este código se importa o ejecuta, lanzará una excepción
-raise RuntimeError("FATAL: Código de usuario fue ejecutado en el servidor!")
+# If this code is imported or run, it raises an exception
+raise RuntimeError("FATAL: user code was executed on the server!")
 
 from flask import Flask
 app = Flask(__name__)
@@ -196,7 +196,7 @@ def test_endpoint():
     target_file = tmp_path / "app.py"
     target_file.write_text(malicious_code, encoding="utf-8")
 
-    # El análisis de ranking debe correr sobre tmp_path sin lanzar RuntimeError
+    # The ranking analysis must run on tmp_path without raising RuntimeError
     rec = analyze_route_candidates(
         workspace=tmp_path,
         dossier=None,
@@ -207,17 +207,17 @@ def test_endpoint():
 
 
 def test_no_legacy_hardcoded_strings_in_backend() -> None:
-    """Garantiza que no quedan textos simulados ('80% de los proyectos') ni archivos obsoletos."""
+    """Guarantees there are no simulated texts ('80% of projects') or obsolete files left."""
     backend_app = REPO_ROOT / "backend" / "app"
 
-    # Archivos borrados que NUNCA deben existir
+    # Deleted files that must NEVER exist
     deleted_files = ["worker.py", "api/jobs.py", "api/migrate.py", "api/artifacts.py"]
     for rel_path in deleted_files:
-        assert not (backend_app / rel_path).exists(), f"El archivo legado {rel_path} no debe existir"
+        assert not (backend_app / rel_path).exists(), f"The legacy file {rel_path} must not exist"
 
-    # Búsqueda de strings simuladas en todo backend/app
+    # Search for simulated strings across backend/app
     forbidden_terms = [
-        "80% de los proyectos",
+        "80% of projects",
         "plan_architecture_stage_4",
         "generate_narrative_stage_10",
         "audit_evidence_stage_2",
@@ -225,11 +225,11 @@ def test_no_legacy_hardcoded_strings_in_backend() -> None:
     for py_file in backend_app.rglob("*.py"):
         content = py_file.read_text(encoding="utf-8", errors="replace")
         for term in forbidden_terms:
-            assert term not in content, f"Encontrado término prohibido '{term}' en {py_file.name}"
+            assert term not in content, f"Found forbidden term '{term}' in {py_file.name}"
 
 
 def test_migration_api_endpoint_structure(tmp_path: Path) -> None:
-    """Valida la respuesta del endpoint GET /api/audits/{id}/migration."""
+    """Validates the response of the GET /api/audits/{id}/migration endpoint."""
     from app.main import create_app
 
     artifacts_dir = tmp_path / "artifacts"
@@ -239,18 +239,24 @@ def test_migration_api_endpoint_structure(tmp_path: Path) -> None:
         assert res.status_code in (200, 202)
         job_id = res.json()["id"]
 
-        deadline = time.monotonic() + 30
+        # The imported pipeline renders the dossier, reference cut and board memo. On slower
+        # Windows runners that can exceed 30 seconds even though the job is healthy.
+        deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             poll = client.get(f"/api/audits/{job_id}").json()
             if poll["job"]["status"] in ("done", "failed"):
                 break
             time.sleep(0.05)
+        else:
+            pytest.fail("The imported audit did not finish within 90 seconds")
+
+        assert poll["job"]["status"] == "done", poll["job"]["error"]
 
         response = client.get(f"/api/audits/{job_id}/migration")
         assert response.status_code == 200
         data = response.json()
 
-        # Campos nuevos
+        # New fields
         assert "recommendation" in data
         assert "candidates" in data
         assert len(data["candidates"]) == 10
@@ -261,7 +267,7 @@ def test_migration_api_endpoint_structure(tmp_path: Path) -> None:
         assert len(data["waves"]) == 3
         assert "first_cut_pert" in data
 
-        # Compatibilidad con frontend previo
+        # Compatibility with the previous frontend
         assert "result" in data
         assert "legacy_code" in data
         assert "modern_code" in data
@@ -276,4 +282,4 @@ def test_first_cut_is_a_business_route_not_a_trivial_one(facturaya_dossier: Doss
     assert recommendation.recommended.touches_business_data
     assert "logout" not in recommendation.recommended.rule
     logout = next(c for c in recommendation.candidates if c.rule == "/logout")
-    assert not logout.touches_business_data and "datos de negocio" in logout.why
+    assert not logout.touches_business_data and "business data" in logout.why

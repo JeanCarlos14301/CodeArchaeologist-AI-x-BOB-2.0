@@ -1,64 +1,72 @@
-# Despliegue (J-02 / J-03)
+# Deployment (J-02 / J-03)
 
-Un solo contenedor (D11) construido desde el `Dockerfile` y desplegado en **Render**. Cada push a
-`main` dispara el CI (`.github/workflows/ci.yml`); si pasa, Render reconstruye y publica la
-misma URL (`render.yaml` → `autoDeployTrigger: checksPass`).
+A single container (D11) built from the `Dockerfile` and deployed on **Render**. Every push to
+`main` triggers CI (`.github/workflows/ci.yml`); if it passes, Render rebuilds and publishes the
+same URL (`render.yaml` → `autoDeployTrigger: checksPass`).
 
 ```
-push a main ──► CI: pytest + build frontend + build y prueba de humo de la imagen
-                    │ pasa
-                    ▼
-               Render reconstruye el Dockerfile ──► https://<servicio>.onrender.com
+push to main ──► CI: pytest + frontend build + image build and smoke test
+                     │ passes
+                     ▼
+                Render rebuilds the Dockerfile ──► https://<service>.onrender.com
 ```
 
-## Primera vez (≈10 min, lo hace Jean una sola vez)
+## First time (≈10 min, done once by Jean)
 
-1. Fusionar a `main` las ramas que ya estén aprobadas; Render despliega solo desde `main`.
-2. Entrar a <https://dashboard.render.com> con la cuenta de GitHub que tenga acceso al repo.
-3. **New → Blueprint**, elegir el repo. Render lee `render.yaml` y propone el servicio
-   `codearchaeologist` (plan free, runtime Docker).
-4. Cuando pida `BOB_API_KEY`, pegar la API key de Bob (scope *Inference*). Solo se guarda en
-   Render, nunca en el repo (SECURITY.md).
-5. **Apply**. El primer build tarda varios minutos (instala Python, Node 24 y Bob Shell).
-6. En **Environment**, copiar el valor de `LIVE_AUDIT_TOKEN` (Render lo generó al azar) y
-   compartirlo solo por canal privado. Cómo entregarlo al jurado: `docs/entrega/app-publica.md`.
-7. Recomendado: en GitHub → *Settings → Branches*, proteger `main` exigiendo los checks
-   `backend`, `frontend` y `docker` del CI. Así nadie rompe la URL pública con un push directo.
+1. Merge the approved branches into `main`; Render deploys only from `main`.
+2. Sign in to <https://dashboard.render.com> with the GitHub account that has access to the repo.
+3. **New → Blueprint**, pick the repo. Render reads `render.yaml` and proposes the
+   `codearchaeologist` service (free plan, Docker runtime).
+4. When it asks for `BOB_API_KEY`, paste the Bob API key (*Inference* scope). It is stored only in
+   Render, never in the repo (SECURITY.md).
+5. **Apply**. The first build takes several minutes (it installs Python, Node 24 and Bob Shell).
+6. Access mode: the blueprint does not define `LIVE_AUDIT_TOKEN`, so the app runs in **open mode** and the judges
+   need no token (D40). If an earlier blueprint created `LIVE_AUDIT_TOKEN`, delete it in **Environment**: removing a
+   variable from `render.yaml` does not delete it from an existing service. How the app is published:
+   `docs/submission/public-app.md`.
+7. Recommended: in GitHub → *Settings → Branches*, protect `main` by requiring the `backend`, `frontend` and
+   `docker` CI checks. That way nobody breaks the public URL with a direct push.
 
-## Verificar un despliegue
+## Check a deployment
 
 ```bash
-curl https://<servicio>.onrender.com/health          # {"status":"ok"}
-curl https://<servicio>.onrender.com/api/bob/status  # installed, api_key_configured y live_requires_token en true
+curl https://<service>.onrender.com/health          # {"status":"ok"}
+curl https://<service>.onrender.com/api/bob/status  # installed and api_key_configured true; live_requires_token false (open mode)
 ```
 
-En la interfaz, **Ver auditoría real de FacturaYa** (vitrina importada) funciona para cualquiera y no
-consume bobcoins. Auditar en vivo, subir un ZIP, preguntarle a Bob y el Estudio de modernización piden
-el `LIVE_AUDIT_TOKEN` correcto. El modo `example` está apagado salvo `ALLOW_NON_LIVE_MODES=true`.
+In the interface, the FacturaYa showcase (imported) works for anyone and spends no bobcoins. Live audits, ZIP
+uploads, Ask Bob and the Modernization Studio call Bob for real and spend bobcoins from the configured account,
+within the caps in `render.yaml`. The `example` mode is off unless `ALLOW_NON_LIVE_MODES=true`.
 
-## Local, igual que en Render
+## Kill switch
+
+If someone abuses the public URL, add `LIVE_AUDIT_TOKEN` with a long random value in Render → **Environment** and
+save. Render restarts the service in about a minute; from then on every Bob call and every read of an upload
+requires the token, and the interface shows the token fields. The showcase keeps working without a token.
+
+## Locally, the same as on Render
 
 ```bash
-docker compose up --build        # http://127.0.0.1:8000, lee .env si existe
+docker compose up --build        # http://127.0.0.1:8000, reads .env if it exists
 ```
 
-Sin `LIVE_AUDIT_TOKEN` en `.env`, el servidor rechaza toda operación que invoca a Bob (503); la
-vitrina importada sigue funcionando.
+Without `LIVE_AUDIT_TOKEN` in `.env`, the server runs in open mode; with it, locked mode.
 
-## Límites del plan free
+## Free plan limits
 
-- **Se duerme tras 15 min sin tráfico**: la primera visita tarda ~1 min. Abrir la URL un par
-  de minutos antes de grabar el video o de que la pruebe el jurado.
-- **512 MB de RAM**: la vitrina importada va sobrada. Una auditoría **Live** lanza Bob Shell
-  dentro del contenedor y **aún no está probada con ese límite**; si falla por memoria, las
-  opciones son subir de plan en Render o grabar la parte live desde un PC (Plan B de D11/D12).
-- **Disco efímero**: el historial de jobs (`artifacts/`) se borra en cada despliegue o reinicio.
-  Para la demo no importa: la vitrina importada siempre está disponible.
+- **It sleeps after 15 min without traffic**: the first visit takes ~1 min. Open the URL a couple of minutes before
+  recording the video or before the judges try it, or keep it awake with an uptime monitor (see
+  `docs/submission/public-app.md`).
+- **512 MB of RAM**: the imported showcase fits easily. A **live** audit launches Bob Shell inside the container; if
+  it fails for lack of memory, the options are a paid Render plan or recording the live part from a PC (plan B of
+  D11/D12).
+- **Ephemeral disk**: the job history (`artifacts/`) is wiped on every deploy or restart. For the demo it does not
+  matter: the imported showcase is always available.
 
-## Si algo sale mal
+## If something goes wrong
 
-- **Deshacer un despliegue**: Render → *Deploys* → *Rollback* sobre el último que funcionaba,
-  o `git revert` del commit y push a `main`.
-- **`A license agreement is required`**: falta `BOB_ACCEPT_LICENSE=true` en Environment.
-- **`Falta BOB_API_KEY`**: la variable está vacía en Environment.
-- **El build falla en el CI**: Render no despliega; la URL sigue sirviendo la versión anterior.
+- **Undo a deployment**: Render → *Deploys* → *Rollback* on the last one that worked, or `git revert` the commit and
+  push to `main`.
+- **`A license agreement is required`**: `BOB_ACCEPT_LICENSE=true` is missing in Environment.
+- **`BOB_API_KEY is missing from the environment`**: the variable is empty in Environment.
+- **The build fails in CI**: Render does not deploy; the URL keeps serving the previous version.

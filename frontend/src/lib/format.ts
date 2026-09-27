@@ -1,6 +1,6 @@
-const DATE = new Intl.DateTimeFormat("es", { dateStyle: "medium", timeStyle: "short" });
-const PERCENT = new Intl.NumberFormat("es", { style: "percent", maximumFractionDigits: 0 });
-const DECIMAL = new Intl.NumberFormat("es", { maximumFractionDigits: 1 });
+const DATE = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+const PERCENT = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 0 });
+const DECIMAL = new Intl.NumberFormat("en", { maximumFractionDigits: 1 });
 
 export const formatDate = (iso: string) => {
   const time = Date.parse(iso);
@@ -17,8 +17,8 @@ export const plural = (count: number, one: string, many: string) => `${count} ${
 
 export const lineRange = (start: number, end: number) => (end !== start ? `${start}–${end}` : `${start}`);
 
-/** Etiqueta legible de un job: las subidas llevan el prefijo `upload:`. */
+/** Readable job label: uploads carry the `upload:` prefix. */
 export const jobLabel = (sample: string) => sample.replace(/^(upload|modernize):/, "");
 
-/** Versión tal como la declara el proyecto, sin el operador de igualdad de pip (`==3.1.0` -> `3.1.0`). */
+/** Version as the project declares it, without pip's equality operator (`==3.1.0` -> `3.1.0`). */
 export const cleanVersion = (version: string | null) => (version ? version.replace(/^==\s*/, "") : null);

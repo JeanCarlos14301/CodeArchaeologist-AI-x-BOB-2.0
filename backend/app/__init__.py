@@ -1,1 +1,1 @@
-"""Paquete principal del backend de CodeArchaeologist."""
+"""Main package of the CodeArchaeologist backend."""

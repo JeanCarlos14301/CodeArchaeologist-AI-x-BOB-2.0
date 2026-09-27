@@ -1,4 +1,4 @@
-"""Genera `contracts/schema-v1.json` desde los modelos Pydantic: `python -m app.contracts.export`."""
+"""Generates `contracts/schema-v1.json` from the Pydantic models: `python -m app.contracts.export`."""
 
 import json
 from pathlib import Path
@@ -21,7 +21,7 @@ def build_schema_document() -> dict:
 def main() -> None:
     target = CONTRACTS_DIR / "schema-v1.json"
     target.write_text(json.dumps(build_schema_document(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"Esquema escrito en {target}")
+    print(f"Schema written to {target}")
 
 
 if __name__ == "__main__":

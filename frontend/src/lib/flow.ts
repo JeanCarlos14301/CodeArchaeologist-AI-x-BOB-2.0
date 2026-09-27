@@ -1,12 +1,12 @@
 import type { FlowJob, Job } from "../types";
 
-/** Etapas reales del pipeline (backend/app/pipeline/evidence_audit.py), con lenguaje de producto. */
+/** Real pipeline stages (backend/app/pipeline/evidence_audit.py), in product language. */
 const STAGES = [
-  { id: "preparing", label: "Repositorio indexado", running: "Indexando repositorio", detail: "Extracción segura en un sandbox; el código nunca se ejecuta." },
-  { id: "auditing", label: "Auditoría de IBM Bob", running: "Bob analiza el código", detail: "evidence-auditor recorre el código y delega en subagentes especializados." },
-  { id: "validating", label: "Evidencia verificada", running: "Verificando evidencia", detail: "Python comprueba archivo, líneas y fragmento de cada hallazgo." },
-  { id: "migration", label: "Primer corte probado", running: "Probando primer corte", detail: "Pruebas de caracterización contra el legado y el corte moderno (solo muestras registradas)." },
-  { id: "done", label: "Expediente listo", running: "Generando expediente", detail: "Solo quedan hallazgos cuya evidencia coincide con el código." },
+  { id: "preparing", label: "Repository indexed", running: "Indexing repository", detail: "Safe extraction into a sandbox; the code never runs." },
+  { id: "auditing", label: "IBM Bob audit", running: "Bob analyzes the code", detail: "evidence-auditor walks the code and delegates to specialized subagents." },
+  { id: "validating", label: "Evidence verified", running: "Verifying evidence", detail: "Python checks the file, lines and snippet of every finding." },
+  { id: "migration", label: "First cut tested", running: "Testing the first cut", detail: "Characterization tests against the legacy code and the modern cut (registered samples only)." },
+  { id: "done", label: "Dossier ready", running: "Generating the dossier", detail: "Only findings whose evidence matches the code remain." },
 ] as const;
 
 export function jobToFlow(job: Job): FlowJob {
@@ -38,10 +38,10 @@ export function jobToFlow(job: Job): FlowJob {
 export const isActive = (job: { status: string } | null | undefined) => job?.status === "queued" || job?.status === "running";
 
 export function statusLabel(flow: FlowJob): string {
-  if (flow.status === "queued") return "En cola";
-  if (flow.status === "failed") return "Análisis fallido";
-  if (flow.status === "done") return "Análisis completo";
-  return flow.stages.find((stage) => stage.state === "running")?.label ?? "Analizando";
+  if (flow.status === "queued") return "Queued";
+  if (flow.status === "failed") return "Analysis failed";
+  if (flow.status === "done") return "Analysis complete";
+  return flow.stages.find((stage) => stage.state === "running")?.label ?? "Analyzing";
 }
 
 export function elapsedSeconds(flow: FlowJob): number {

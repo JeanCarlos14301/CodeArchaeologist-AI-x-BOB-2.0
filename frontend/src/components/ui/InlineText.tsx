@@ -1,8 +1,8 @@
 const INLINE = /(`[^`\n]+`|\*\*[^*\n]+\*\*)/g;
 
 /**
- * Texto de Bob con su formato en línea: `código` en mono y **énfasis**. Se construyen nodos de React
- * (nunca HTML), así que un texto con etiquetas se muestra tal cual y no se interpreta.
+ * Bob's text with its inline formatting: `code` in mono and **emphasis**. React nodes are built
+ * (never HTML), so text with tags is shown as is and never interpreted.
  */
 export function InlineText({ text }: { text: string }) {
   return (

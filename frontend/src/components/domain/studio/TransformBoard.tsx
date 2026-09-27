@@ -8,7 +8,7 @@ import type { DetectedTech, Priority, StackReport, StackTarget } from "../../../
 
 export interface Draft {
   mode: "chosen" | "recommend";
-  /** tecnología actual -> destino elegido */
+  /** current technology -> chosen target */
   mappings: Record<string, string>;
   business_context: string;
   priorities: Priority[];
@@ -18,15 +18,15 @@ export const EMPTY_DRAFT: Draft = { mode: "chosen", mappings: {}, business_conte
 
 const MIGRATABLE = ["backend", "frontend", "database", "orm", "testing", "build"];
 const KIND_LABEL: Record<string, string> = {
-  backend: "Backend", frontend: "Frontend", database: "Datos", orm: "Acceso a datos", testing: "Pruebas", build: "Construcción",
+  backend: "Backend", frontend: "Frontend", database: "Data", orm: "Data access", testing: "Testing", build: "Build",
 };
 const PRIORITIES: { id: Priority; label: string }[] = [
-  { id: "security", label: "Seguridad" },
-  { id: "performance", label: "Rendimiento" },
-  { id: "cost", label: "Costo" },
-  { id: "time", label: "Tiempo de entrega" },
-  { id: "team", label: "Curva del equipo" },
-  { id: "compatibility", label: "Compatibilidad" },
+  { id: "security", label: "Security" },
+  { id: "performance", label: "Performance" },
+  { id: "cost", label: "Cost" },
+  { id: "time", label: "Time to delivery" },
+  { id: "team", label: "Team learning curve" },
+  { id: "compatibility", label: "Compatibility" },
 ];
 const MAX_CONTEXT = 1500;
 const MAX_PRIORITIES = 4;
@@ -37,13 +37,14 @@ interface Props {
   onChange: (draft: Draft) => void;
   onSubmit: () => void;
   busy: boolean;
+  /** The server requires the access token (locked mode): show its field and require it. */
   needsToken: boolean;
   token: string;
   onToken: (token: string) => void;
   resetsWork: boolean;
 }
 
-/** Flecha entre la tecnología actual y su destino: hairline con punta, blanca cuando hay destino elegido. */
+/** Arrow between the current technology and its target: a hairline with a tip, white when a target is chosen. */
 function Connector({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 56 12" aria-hidden className={`hidden h-3 w-14 shrink-0 @xl:block ${active ? "text-fg" : "text-decor"}`}>
@@ -56,12 +57,12 @@ function Connector({ active }: { active: boolean }) {
 export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsToken, token, onToken, resetsWork }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const migratable = stack.technologies.filter((tech) => MIGRATABLE.includes(tech.kind));
-  // Una fila por tecnología (si aparece en varios servicios, se decide una vez para todo el proyecto).
+  // One row per technology (if it shows up in several services, it is decided once for the whole project).
   const rows = [...new Map(migratable.map((tech) => [tech.id, tech])).values()].filter((tech) => (stack.targets[tech.id] ?? []).length > 0);
   const chosen = Object.entries(draft.mappings).filter(([from, to]) => from && to);
   const ready = draft.mode === "recommend" || chosen.length > 0;
   const picker = useRef<HTMLDivElement>(null);
-  // Disparador de cada fila ("Elegir destino" o el destino elegido): recibe el foco al cerrar el selector.
+  // Trigger of each row ("Choose target" or the chosen target): it gets the focus back when the picker closes.
   const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
   const focusTrigger = (id: string) => requestAnimationFrame(() => triggers.current[id]?.focus());
 
@@ -97,22 +98,22 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Segmented<Draft["mode"]>
-          label="Quién elige los destinos"
+          label="Who chooses the targets"
           value={draft.mode}
           onChange={(mode) => set({ mode })}
-          options={[{ value: "chosen", label: "Elijo yo los destinos" }, { value: "recommend", label: "Que Bob los recomiende" }]}
+          options={[{ value: "chosen", label: "I choose the targets" }, { value: "recommend", label: "Let Bob recommend them" }]}
         />
         <p className="text-caption text-subtle">
-          {draft.mode === "chosen" ? "Pulsa el destino de cada tecnología que quieras cambiar." : "Bob propondrá destinos del catálogo según tu proyecto y tu negocio."}
+          {draft.mode === "chosen" ? "Click the target for each technology you want to change." : "Bob will propose targets from the catalog based on your project and your business."}
         </p>
       </div>
 
       <div className="mt-5 hidden items-center gap-x-4 border-b border-line-subtle pb-2 text-micro text-subtle tracking-eyebrow uppercase @md:grid @md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <span>Actual</span><span className="hidden w-14 @xl:block" aria-hidden /><span>Objetivo</span>
+        <span>Current</span><span className="hidden w-14 @xl:block" aria-hidden /><span>Target</span>
       </div>
 
       {rows.length === 0 ? (
-        <p className="py-6 text-body text-muted">No se detectó ninguna tecnología con destinos posibles en el catálogo. Si el proyecto usa otras, Bob puede evaluarlas en modo recomendación.</p>
+        <p className="py-6 text-body text-muted">No technology with possible targets in the catalog was detected. If the project uses others, Bob can assess them in recommendation mode.</p>
       ) : (
         <ul>
           {rows.map((tech) => {
@@ -138,31 +139,31 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
                   <Connector active={!!target || draft.mode === "recommend"} />
                   <div className="flex min-w-0 items-center gap-2">
                     {draft.mode === "recommend" ? (
-                      <span className="text-caption text-subtle">Bob propondrá un destino si conviene.</span>
+                      <span className="text-caption text-subtle">Bob will propose a target if it pays off.</span>
                     ) : target ? (
                       <>
                         <button type="button" ref={(el) => { triggers.current[tech.id] = el; }} onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
-                          aria-label={`Destino de ${tech.name}: ${target.name}. Cambiar`}
+                          aria-label={`Target for ${tech.name}: ${target.name}. Change`}
                           className="inline-flex h-9 min-w-0 items-center gap-2.5 rounded-pill border border-line-strong bg-raised pr-4 pl-3 text-body text-fg transition-[border-color] duration-150 ease-out hover:border-fg/40">
                           <TechIcon slug={target.icon} name={target.name} size={18} />
                           <span className="truncate">{target.name}</span>
                         </button>
-                        <button type="button" aria-label={`Quitar el destino de ${tech.name}`} onClick={() => choose(tech.id, null)}
+                        <button type="button" aria-label={`Remove the target for ${tech.name}`} onClick={() => choose(tech.id, null)}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-pill text-subtle hover:bg-raised hover:text-fg"><X size={14} aria-hidden /></button>
                       </>
                     ) : (
                       <button type="button" ref={(el) => { triggers.current[tech.id] = el; }} onClick={() => setOpen(expanded ? null : tech.id)} aria-expanded={expanded} aria-controls={`picker-${tech.id}`}
-                        aria-label={`Elegir destino para ${tech.name}`}
+                        aria-label={`Choose a target for ${tech.name}`}
                         className="inline-flex h-9 items-center gap-2 rounded-pill border border-dashed border-line-strong px-4 text-caption text-muted transition-[border-color,color] duration-150 ease-out hover:border-fg/40 hover:text-fg">
-                        Elegir destino <ArrowRight size={13} aria-hidden />
+                        Choose target <ArrowRight size={13} aria-hidden />
                       </button>
                     )}
                   </div>
                 </div>
 
                 {expanded && draft.mode === "chosen" && (
-                  <div id={`picker-${tech.id}`} ref={picker} role="group" aria-label={`Destinos posibles para ${tech.name}`} className="mt-3 rounded-panel border border-line bg-surface p-4">
-                    {[{ title: "Mismo lenguaje", items: same }, { title: same.length ? "Otro lenguaje o ecosistema" : "Destinos posibles", items: other }].map((group) => group.items.length > 0 && (
+                  <div id={`picker-${tech.id}`} ref={picker} role="group" aria-label={`Possible targets for ${tech.name}`} className="mt-3 rounded-panel border border-line bg-surface p-4">
+                    {[{ title: "Same language", items: same }, { title: same.length ? "Another language or ecosystem" : "Possible targets", items: other }].map((group) => group.items.length > 0 && (
                       <div key={group.title} className="mb-3 last:mb-0">
                         <Eyebrow>{group.title}</Eyebrow>
                         <ul className="mt-2 grid grid-cols-2 gap-2 @lg:grid-cols-3 @3xl:grid-cols-4">
@@ -192,20 +193,20 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
 
       <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <label className="block">
-          <Eyebrow>Contexto de tu negocio</Eyebrow>
-          <span className="mt-1 mb-1.5 block text-caption text-muted">Qué hace el sistema, quién lo usa y qué no puede fallar. Con esto Bob pesa seguridad frente a velocidad para TU caso.</span>
+          <Eyebrow>Your business context</Eyebrow>
+          <span className="mt-1 mb-1.5 block text-caption text-muted">What the system does, who uses it and what cannot fail. With this, Bob weighs security against speed for YOUR case.</span>
           <textarea
             value={draft.business_context}
             maxLength={MAX_CONTEXT}
             rows={4}
             onChange={(event) => set({ business_context: event.target.value })}
-            placeholder="Ej.: facturación electrónica para pymes; no puede perder datos ni exponer facturas de otro cliente; picos a fin de mes."
+            placeholder="E.g.: e-invoicing for small businesses; it cannot lose data or expose another customer's invoices; peaks at month end."
             className="w-full resize-y rounded-inner border border-line bg-control px-3 py-2 text-body text-fg placeholder:text-subtle focus:border-focus focus:outline-none"
           />
           <span className="mt-1 block text-right font-mono text-micro text-subtle">{draft.business_context.length}/{MAX_CONTEXT}</span>
         </label>
         <fieldset>
-          <legend><Eyebrow>Qué priorizas (hasta {MAX_PRIORITIES})</Eyebrow></legend>
+          <legend><Eyebrow>What you prioritize (up to {MAX_PRIORITIES})</Eyebrow></legend>
           <ul className="mt-2 flex flex-wrap gap-2">
             {PRIORITIES.map((priority) => {
               const on = draft.priorities.includes(priority.id);
@@ -220,7 +221,7 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
               );
             })}
           </ul>
-          <p className="mt-3 text-caption text-pretty text-subtle">Toda migración cambia un equilibrio: ganar velocidad puede costar seguridad y al revés. Bob te lo explica antes de tocar nada.</p>
+          <p className="mt-3 text-caption text-pretty text-subtle">Every migration shifts a balance: gaining speed can cost security and vice versa. Bob explains it to you before touching anything.</p>
         </fieldset>
       </div>
 
@@ -238,16 +239,16 @@ export function TransformBoard({ stack, draft, onChange, onSubmit, busy, needsTo
           )}
           {needsToken && (
             <label className="mt-2 block">
-              <span className="mb-1 block text-caption text-muted">Token de acceso (Bob consume bobcoins)</span>
+              <span className="mb-1 block text-caption text-muted">Access token (Bob spends bobcoins)</span>
               <input type="password" autoComplete="off" value={token} onChange={(event) => onToken(event.target.value)}
                 className="h-9 w-72 max-w-full rounded-pill border border-line bg-control px-4 font-mono text-caption text-fg focus:border-focus focus:outline-none" />
             </label>
           )}
-          {resetsWork && <p className="mt-2 text-caption text-warning">Evaluar de nuevo descarta la evaluación, el plan y la implementación actuales.</p>}
+          {resetsWork && <p className="mt-2 text-caption text-warning">Assessing again discards the current assessment, plan and implementation.</p>}
         </div>
-        {/* Primaria solo antes de la primera evaluación: después la acción principal es la siguiente fase. */}
-        <Button variant={resetsWork ? "secondary" : "primary"} disabled={!ready || busy || !token.trim()} onClick={onSubmit} icon={<ArrowRight size={14} aria-hidden />}>
-          {busy ? "Bob está evaluando…" : resetsWork ? "Evaluar de nuevo con Bob" : "Evaluar impacto con Bob"}
+        {/* Primary only before the first assessment: afterwards the main action is the next phase. */}
+        <Button variant={resetsWork ? "secondary" : "primary"} disabled={!ready || busy || (needsToken && !token.trim())} onClick={onSubmit} icon={<ArrowRight size={14} aria-hidden />}>
+          {busy ? "Bob is assessing…" : resetsWork ? "Assess again with Bob" : "Assess the impact with Bob"}
         </Button>
       </div>
     </div>

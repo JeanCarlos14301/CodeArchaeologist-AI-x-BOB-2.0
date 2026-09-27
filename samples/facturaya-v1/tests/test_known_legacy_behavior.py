@@ -18,7 +18,7 @@ def test_legacy_search_accepts_sql_expression(client, login):
 def test_parameterized_customer_email_query(database):
     connection = connect(database)
     try:
-        assert customer_by_email(connection, "cliente01@example.invalid")["id"] == 1
+        assert customer_by_email(connection, "customer01@example.invalid")["id"] == 1
         assert customer_by_email(connection, "' OR 1=1 --") is None
     finally:
         connection.close()

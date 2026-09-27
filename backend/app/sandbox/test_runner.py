@@ -1,9 +1,9 @@
-"""Ejecutor de Pruebas Pytest en Sandbox Aislado (D-07).
+"""Pytest runner in an isolated sandbox (D-07).
 
-Ejecuta pytest en subproceso con:
-- Timeout estricto de 60 segundos.
-- Aislamiento de red (bloqueo de llamadas salientes mediante variables de entorno de proxy nulo).
-- Parseo determinista de resultados por caso de prueba (PASS, FAIL, SKIPPED, duraciones, errores).
+Runs pytest in a subprocess with:
+- A strict 60-second timeout.
+- Network isolation (outgoing calls blocked through null proxy environment variables).
+- Deterministic parsing of results per test case (PASS, FAIL, SKIPPED, durations, errors).
 """
 
 import os
@@ -23,7 +23,7 @@ def run_pytest_in_sandbox(
     target_endpoint: str = "GET /invoices/{id}",
     timeout_seconds: int = 60,
 ) -> CharacterizationTestReport:
-    """Ejecuta la suite de pruebas en el sandbox y extrae el reporte estructurado."""
+    """Runs the test suite in the sandbox and extracts the structured report."""
     cmd = [
         sys.executable,
         "-m",
@@ -39,9 +39,9 @@ def run_pytest_in_sandbox(
     if test_path:
         cmd.append(test_path)
 
-    # Entorno aislado sin acceso a red
+    # Isolated environment without network access
     env = os.environ.copy()
-    # El código bajo prueba nunca debe poder leer credenciales del servidor (BOB_API_KEY, tokens...).
+    # The code under test must never read server credentials (BOB_API_KEY, tokens...).
     for key in list(env):
         if any(marker in key.upper() for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
             del env[key]
@@ -80,7 +80,7 @@ def run_pytest_in_sandbox(
                     test_type="sandbox_execution",
                     status="FAIL",
                     duration_ms=timeout_seconds * 1000,
-                    error_message=f"Timeout de {timeout_seconds}s excedido durante la ejecución de pytest en sandbox.",
+                    error_message=f"Timeout of {timeout_seconds}s exceeded while running pytest in the sandbox.",
                 )
             ],
         )
@@ -98,12 +98,12 @@ def run_pytest_in_sandbox(
                     test_type="sandbox_execution",
                     status="FAIL",
                     duration_ms=0.0,
-                    error_message=f"Fallo al invocar pytest: {str(e)}",
+                    error_message=f"Failed to invoke pytest: {str(e)}",
                 )
             ],
         )
 
-    # Parsear salidas de pytest
+    # Parse pytest output
     # Ej: tests/test_invoice_contract.py::test_first_invoice_exact_contract PASSED
     test_cases: List[CharacterizationTestCase] = []
     lines = stdout.splitlines()
@@ -118,7 +118,7 @@ def run_pytest_in_sandbox(
             status = "PASS" if outcome == "PASSED" else ("FAIL" if outcome == "FAILED" else "SKIPPED")
             error_msg = None
             if status == "FAIL":
-                error_msg = f"Fallo en {test_short_name}: revisar salida del trace."
+                error_msg = f"Failure in {test_short_name}: check the trace output."
 
             test_type = "contract"
             if "security" in test_short_name or "auth" in test_short_name or "foreign" in test_short_name:
@@ -138,7 +138,7 @@ def run_pytest_in_sandbox(
             )
 
     if not test_cases:
-        # Fallback si pytest corrió pero no se pudo parsear por líneas
+        # Fallback when pytest ran but its output could not be parsed line by line
         status = "PASS" if exit_code == 0 else "FAIL"
         test_cases.append(
             CharacterizationTestCase(

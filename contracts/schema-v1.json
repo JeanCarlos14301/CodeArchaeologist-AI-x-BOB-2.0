@@ -1,25 +1,25 @@
 {
   "$defs": {
     "ArchitectureOption": {
-      "description": "Opción arquitectónica de modernización comparada.",
+      "description": "Compared modernization architecture option.",
       "properties": {
         "id": {
-          "description": "Identificador de la opción (ej. OPT-1, OPT-2)",
+          "description": "Option identifier (e.g. OPT-1, OPT-2)",
           "title": "Id",
           "type": "string"
         },
         "name": {
-          "description": "Nombre de la alternativa",
+          "description": "Name of the alternative",
           "title": "Name",
           "type": "string"
         },
         "pattern": {
-          "description": "Patrón de modernización (ej. Strangler Fig, Leaf Cut, Big Bang)",
+          "description": "Modernization pattern (e.g. Strangler Fig, Leaf Cut, Big Bang)",
           "title": "Pattern",
           "type": "string"
         },
         "pros": {
-          "description": "Ventajas clave",
+          "description": "Key advantages",
           "items": {
             "type": "string"
           },
@@ -27,7 +27,7 @@
           "type": "array"
         },
         "cons": {
-          "description": "Desventajas y riesgos",
+          "description": "Disadvantages and risks",
           "items": {
             "type": "string"
           },
@@ -35,12 +35,12 @@
           "type": "array"
         },
         "target_stack": {
-          "description": "Stack tecnológico de destino (ej. FastAPI + SQLite/PostgreSQL)",
+          "description": "Target technology stack (e.g. FastAPI + SQLite/PostgreSQL)",
           "title": "Target Stack",
           "type": "string"
         },
         "risk_level": {
-          "description": "Nivel de riesgo operativo",
+          "description": "Operational risk level",
           "enum": [
             "LOW",
             "MEDIUM",
@@ -50,14 +50,14 @@
           "type": "string"
         },
         "estimated_effort_days": {
-          "description": "Esfuerzo estimado en días hábiles",
+          "description": "Estimated effort in working days",
           "minimum": 0.0,
           "title": "Estimated Effort Days",
           "type": "number"
         },
         "recommended": {
           "default": false,
-          "description": "True si es la opción recomendada",
+          "description": "True if it is the recommended option",
           "title": "Recommended",
           "type": "boolean"
         }
@@ -74,25 +74,25 @@
       "type": "object"
     },
     "CharacterizationTestCase": {
-      "description": "Resultado individual de una prueba de caracterización.",
+      "description": "Individual result of a characterization test.",
       "properties": {
         "name": {
-          "description": "Nombre del test (ej. test_invoice_owner_access)",
+          "description": "Test name (e.g. test_invoice_owner_access)",
           "title": "Name",
           "type": "string"
         },
         "target_endpoint": {
-          "description": "Endpoint evaluado (ej. GET /invoices/{id})",
+          "description": "Endpoint under test (e.g. GET /invoices/{id})",
           "title": "Target Endpoint",
           "type": "string"
         },
         "test_type": {
-          "description": "Tipo de prueba (contract, security, business_rule)",
+          "description": "Test type (contract, security, business_rule)",
           "title": "Test Type",
           "type": "string"
         },
         "status": {
-          "description": "Veredicto de la prueba",
+          "description": "Test verdict",
           "enum": [
             "PASS",
             "FAIL",
@@ -103,7 +103,7 @@
         },
         "duration_ms": {
           "default": 0.0,
-          "description": "Duración en milisegundos",
+          "description": "Duration in milliseconds",
           "minimum": 0.0,
           "title": "Duration Ms",
           "type": "number"
@@ -118,7 +118,7 @@
             }
           ],
           "default": null,
-          "description": "Mensaje de error si falló",
+          "description": "Error message if it failed",
           "title": "Error Message"
         }
       },
@@ -132,7 +132,7 @@
       "type": "object"
     },
     "CharacterizationTestReport": {
-      "description": "Reporte de la suite de pruebas de caracterización ejecutada en sandbox.",
+      "description": "Report of the characterization test suite run in the sandbox.",
       "properties": {
         "total_tests": {
           "minimum": 0,
@@ -176,33 +176,33 @@
       "type": "object"
     },
     "EvidenceLocation": {
-      "description": "Ubicación física comprobable de evidencia en el código fuente.",
+      "description": "Verifiable physical location of evidence in the source code.",
       "properties": {
         "path": {
-          "description": "Ruta relativa normalizada del archivo en el repositorio",
+          "description": "Normalized relative path of the file in the repository",
           "title": "Path",
           "type": "string"
         },
         "line_start": {
-          "description": "Línea inicial (1-indexed)",
+          "description": "Start line (1-indexed)",
           "minimum": 1,
           "title": "Line Start",
           "type": "integer"
         },
         "line_end": {
-          "description": "Línea final (1-indexed)",
+          "description": "End line (1-indexed)",
           "minimum": 1,
           "title": "Line End",
           "type": "integer"
         },
         "fragment": {
-          "description": "Fragmento textual exacto del código en el rango",
+          "description": "Exact text fragment of the code in the range",
           "title": "Fragment",
           "type": "string"
         },
         "observed_or_inferred": {
           "default": "observed",
-          "description": "Indica si la evidencia fue observada directamente en código o inferida",
+          "description": "Whether the evidence was observed directly in the code or inferred",
           "enum": [
             "observed",
             "inferred"
@@ -221,25 +221,25 @@
       "type": "object"
     },
     "Finding": {
-      "description": "Hallazgo técnico o de negocio respaldado por evidencia física.",
+      "description": "Technical or business finding backed by physical evidence.",
       "properties": {
         "id": {
-          "description": "Identificador único del hallazgo (ej. EF-1, F-01)",
+          "description": "Unique finding identifier (e.g. EF-1, F-01)",
           "title": "Id",
           "type": "string"
         },
         "title": {
-          "description": "Título descriptivo del hallazgo",
+          "description": "Descriptive title of the finding",
           "title": "Title",
           "type": "string"
         },
         "category": {
-          "description": "Categoría taxonómica (ej. security/sql-injection, maintainability/large-function, business-rule/duplication)",
+          "description": "Taxonomic category (e.g. security/sql-injection, maintainability/large-function, business-rule/duplication)",
           "title": "Category",
           "type": "string"
         },
         "severity": {
-          "description": "Nivel de severidad técnica",
+          "description": "Technical severity level",
           "enum": [
             "CRITICAL",
             "HIGH",
@@ -251,7 +251,7 @@
           "type": "string"
         },
         "confidence": {
-          "description": "Nivel de certidumbre analítica",
+          "description": "Analytical certainty level",
           "enum": [
             "HIGH",
             "MEDIUM",
@@ -261,7 +261,7 @@
           "type": "string"
         },
         "priority": {
-          "description": "Prioridad de atención según valor/riesgo",
+          "description": "Attention priority by value/risk",
           "enum": [
             "P0",
             "P1",
@@ -272,12 +272,12 @@
         },
         "expected_detection": {
           "default": true,
-          "description": "True para hallazgos reales; False para controles negativos de prueba",
+          "description": "True for real findings; False for negative test controls",
           "title": "Expected Detection",
           "type": "boolean"
         },
         "evidence": {
-          "description": "Lista de citas físicas en código fuente",
+          "description": "List of physical citations in the source code",
           "items": {
             "$ref": "#/$defs/EvidenceLocation"
           },
@@ -285,25 +285,25 @@
           "type": "array"
         },
         "explanation": {
-          "description": "Explicación técnica del problema detectado",
+          "description": "Technical explanation of the detected problem",
           "title": "Explanation",
           "type": "string"
         },
         "verification_method": {
-          "description": "Método determinista para reproducir y comprobar el hallazgo",
+          "description": "Deterministic method to reproduce and verify the finding",
           "title": "Verification Method",
           "type": "string"
         },
         "blast_radius_score": {
           "default": 0.0,
-          "description": "Puntaje de radio de explosión sistémico calculado por grafo (0 a 100)",
+          "description": "Systemic blast radius score computed on the graph (0 to 100)",
           "maximum": 100.0,
           "minimum": 0.0,
           "title": "Blast Radius Score",
           "type": "number"
         },
         "transitive_impacted_symbols": {
-          "description": "Símbolos y funciones en cascada afectados transitivamente",
+          "description": "Symbols and functions affected transitively in cascade",
           "items": {
             "type": "string"
           },
@@ -312,7 +312,7 @@
         },
         "status": {
           "default": "accepted",
-          "description": "Estado asignado por el validador determinista de evidencia",
+          "description": "Status assigned by the deterministic evidence validator",
           "enum": [
             "accepted",
             "rejected",
@@ -336,56 +336,56 @@
       "type": "object"
     },
     "MigrationPhase": {
-      "description": "Fase del plan de migración con estimación estadística PERT.",
+      "description": "Migration plan phase with a PERT statistical estimate.",
       "properties": {
         "phase_number": {
-          "description": "Número secuencial de fase",
+          "description": "Sequential phase number",
           "minimum": 1,
           "title": "Phase Number",
           "type": "integer"
         },
         "name": {
-          "description": "Nombre de la fase",
+          "description": "Phase name",
           "title": "Name",
           "type": "string"
         },
         "description": {
-          "description": "Alcance y entregables de la fase",
+          "description": "Scope and deliverables of the phase",
           "title": "Description",
           "type": "string"
         },
         "optimistic_days": {
-          "description": "Escenario optimista (O)",
+          "description": "Optimistic scenario (O)",
           "minimum": 0.0,
           "title": "Optimistic Days",
           "type": "number"
         },
         "nominal_days": {
-          "description": "Escenario más probable (M)",
+          "description": "Most likely scenario (M)",
           "minimum": 0.0,
           "title": "Nominal Days",
           "type": "number"
         },
         "pessimistic_days": {
-          "description": "Escenario pesimista (P)",
+          "description": "Pessimistic scenario (P)",
           "minimum": 0.0,
           "title": "Pessimistic Days",
           "type": "number"
         },
         "pert_expected_days": {
-          "description": "Duración esperada PERT: (O + 4M + P) / 6",
+          "description": "PERT expected duration: (O + 4M + P) / 6",
           "minimum": 0.0,
           "title": "Pert Expected Days",
           "type": "number"
         },
         "pert_variance": {
-          "description": "Varianza PERT: ((P - O) / 6)^2",
+          "description": "PERT variance: ((P - O) / 6)^2",
           "minimum": 0.0,
           "title": "Pert Variance",
           "type": "number"
         },
         "assumptions": {
-          "description": "Supuestos explícitos no negociables",
+          "description": "Explicit non-negotiable assumptions",
           "items": {
             "type": "string"
           },
@@ -393,7 +393,7 @@
           "type": "array"
         },
         "prerequisites": {
-          "description": "Prerrequisitos técnicos requeridos",
+          "description": "Required technical prerequisites",
           "items": {
             "type": "string"
           },
@@ -401,7 +401,7 @@
           "type": "array"
         },
         "rollback_strategy": {
-          "description": "Estrategia de marcha atrás en caso de contingencia",
+          "description": "Rollback strategy in case of contingency",
           "title": "Rollback Strategy",
           "type": "string"
         }
@@ -421,15 +421,15 @@
       "type": "object"
     },
     "MigrationSummary": {
-      "description": "Resumen del primer corte de migración ejecutado con Strangler Fig.",
+      "description": "Summary of the first migration cut executed with Strangler Fig.",
       "properties": {
         "endpoint_migrated": {
-          "description": "Endpoint extraído (ej. GET /invoices/{id})",
+          "description": "Extracted endpoint (e.g. GET /invoices/{id})",
           "title": "Endpoint Migrated",
           "type": "string"
         },
         "modern_code_files": {
-          "description": "Archivos de código moderno creados en modern/",
+          "description": "Modern code files created in modern/",
           "items": {
             "type": "string"
           },
@@ -437,12 +437,12 @@
           "type": "array"
         },
         "facade_router_file": {
-          "description": "Archivo de enrutador fachada Strangler Fig",
+          "description": "Strangler Fig facade router file",
           "title": "Facade Router File",
           "type": "string"
         },
         "legacy_tests_verdict": {
-          "description": "Veredicto de las pruebas de caracterización contra el código legado",
+          "description": "Verdict of the characterization tests against the legacy code",
           "enum": [
             "PASS",
             "FAIL",
@@ -452,7 +452,7 @@
           "type": "string"
         },
         "modern_tests_verdict": {
-          "description": "Veredicto de las pruebas de caracterización contra el código modernizado",
+          "description": "Verdict of the characterization tests against the modernized code",
           "enum": [
             "PASS",
             "FAIL",
@@ -463,13 +463,13 @@
         },
         "repaired_count": {
           "default": 0,
-          "description": "Número de reparaciones automáticas aplicadas (máx. 1)",
+          "description": "Number of automatic repairs applied (max 1)",
           "minimum": 0,
           "title": "Repaired Count",
           "type": "integer"
         },
         "diff_patch": {
-          "description": "Parche unificado .diff generado",
+          "description": "Generated unified .diff patch",
           "title": "Diff Patch",
           "type": "string"
         }
@@ -486,20 +486,20 @@
       "type": "object"
     },
     "SnapshotMetadata": {
-      "description": "Metadatos del repositorio analizado.",
+      "description": "Metadata of the analyzed repository.",
       "properties": {
         "sample_id": {
-          "description": "Identificador de la muestra (ej. facturaya-v1)",
+          "description": "Sample identifier (e.g. facturaya-v1)",
           "title": "Sample Id",
           "type": "string"
         },
         "repo_name": {
-          "description": "Nombre del repositorio",
+          "description": "Repository name",
           "title": "Repo Name",
           "type": "string"
         },
         "snapshot_sha256": {
-          "description": "Hash SHA-256 del contenido del repositorio",
+          "description": "SHA-256 hash of the repository content",
           "title": "Snapshot Sha256",
           "type": "string"
         },
@@ -533,7 +533,7 @@
         },
         "execution_mode": {
           "default": "live",
-          "description": "Modo de ejecución del diagnóstico (regla D8)",
+          "description": "Execution mode of the diagnosis (rule D8)",
           "enum": [
             "live",
             "imported",
@@ -554,7 +554,7 @@
       "type": "object"
     },
     "ValidationReport": {
-      "description": "Reporte del validador determinista de evidencia.",
+      "description": "Report of the deterministic evidence validator.",
       "properties": {
         "total_references": {
           "minimum": 0,
@@ -572,7 +572,7 @@
           "type": "integer"
         },
         "fidelity_ratio": {
-          "description": "Tasa de referencias verificadas (1.0 = 100%)",
+          "description": "Share of verified references (1.0 = 100%)",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Fidelity Ratio",
@@ -596,16 +596,16 @@
       "type": "object"
     }
   },
-  "description": "Expediente técnico completo de diagnóstico y migración (Contrato v1).",
+  "description": "Complete technical diagnosis and migration dossier (contract v1).",
   "properties": {
     "schema_version": {
       "default": "1.0",
-      "description": "Versión del contrato de datos",
+      "description": "Data contract version",
       "title": "Schema Version",
       "type": "string"
     },
     "job_id": {
-      "description": "Identificador único del job de análisis",
+      "description": "Unique identifier of the analysis job",
       "title": "Job Id",
       "type": "string"
     },

@@ -1,4 +1,4 @@
-"""Contratos del Estudio de modernización: solicitud, evaluación, plan, implementación y estado."""
+"""Modernization Studio contracts: request, assessment, plan, implementation and state."""
 
 from typing import Literal
 
@@ -17,7 +17,7 @@ MAX_ANSWERS = 10
 
 
 class Mapping(BaseModel):
-    """Una migración elegida: tecnología actual -> tecnología destino."""
+    """One chosen migration: current technology -> target technology."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -27,7 +27,7 @@ class Mapping(BaseModel):
 
 
 class Answer(BaseModel):
-    """Respuesta de la persona a una pregunta que Bob dejó abierta en una evaluación anterior."""
+    """The person's answer to a question Bob left open in a previous assessment."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -36,7 +36,7 @@ class Answer(BaseModel):
 
 
 class AssessRequest(BaseModel):
-    """`chosen`: la persona eligió destinos. `recommend`: Bob propone destinos entre los del catálogo."""
+    """`chosen`: the person picked the targets. `recommend`: Bob proposes targets from the catalog."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -74,7 +74,7 @@ class Assessment(BaseModel):
     tradeoffs: list[Tradeoff] = Field(min_length=3, max_length=12)
     blockers: list[str] = Field(default_factory=list, max_length=6)
     questions: list[str] = Field(default_factory=list, max_length=5)
-    # Defectos y vulnerabilidades del código actual que Bob corregirá durante la migración, no portará.
+    # Defects and vulnerabilities in the current code that Bob will fix during the migration instead of porting them.
     fixes_during_migration: list[str] = Field(default_factory=list, max_length=12)
     recommended: list[Recommended] = Field(default_factory=list, max_length=MAX_MAPPINGS)
     bob_cost: float | None = None
@@ -131,12 +131,12 @@ class Implementation(BaseModel):
     lines_added: int
     lines_removed: int
     outside_plan: list[str]
-    not_executed: str = "El código generado no se ejecutó ni se probó: se comprobó solo su sintaxis."
+    not_executed: str = "The generated code was neither run nor tested: only its syntax was checked."
     bob_cost: float | None = None
 
 
 class StudioEvent(BaseModel):
-    """Actividad real de Bob o del backend durante una fase: qué lee, qué busca, en quién delega, qué edita."""
+    """Real activity of Bob or the backend during a phase: what it reads, searches, delegates and edits."""
 
     t: float
     phase: str

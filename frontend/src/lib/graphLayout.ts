@@ -18,8 +18,8 @@ function hash(text: string): number {
 }
 
 /**
- * Disposición por fuerzas (determinista): repulsión entre nodos, muelles en las llamadas y una
- * atracción hacia el centro de su archivo, con los archivos repartidos en un anillo.
+ * Force-directed layout (deterministic): repulsion between nodes, springs on the calls and an
+ * attraction toward the center of its file, with the files spread over a ring.
  */
 export function layoutCallGraph(graph: Pick<GraphData, "nodes" | "edges">): Record<string, Positioned> {
   const files = [...new Set(graph.nodes.map((node) => node.file))].sort();
@@ -90,7 +90,7 @@ export interface LayeredNode {
   row: number;
 }
 
-/** Aristas que cierran un ciclo (DFS): se ignoran al asignar capas para que un ciclo no alargue el diagrama. */
+/** Edges that close a cycle (DFS): ignored when assigning layers so a cycle does not stretch the diagram. */
 function backEdges(ids: string[], edges: { source: string; target: string }[]): Set<string> {
   const out = new Map(ids.map((id) => [id, [] as string[]]));
   for (const edge of edges) out.get(edge.source)?.push(edge.target);
@@ -106,7 +106,7 @@ function backEdges(ids: string[], edges: { source: string; target: string }[]): 
   };
   const indegree = new Map(ids.map((id) => [id, 0]));
   for (const edge of edges) indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1);
-  // Se empieza por las raíces (sin llamadores) para que las aristas "hacia atrás" sean las del ciclo.
+  // Start from the roots (no callers) so the "backward" edges are the cycle's.
   for (const id of [...ids].sort((a, b) => indegree.get(a)! - indegree.get(b)! || a.localeCompare(b))) {
     if (!state.get(id)) visit(id);
   }
@@ -114,8 +114,8 @@ function backEdges(ids: string[], edges: { source: string; target: string }[]): 
 }
 
 /**
- * Disposición por capas (izquierda → derecha) para el mapa de módulos: la capa de un nodo es la
- * longitud del camino más largo desde un nodo sin llamadores, sin contar las aristas de un ciclo.
+ * Layered layout (left → right) for the module map: a node's layer is the length of the
+ * longest path from a node with no callers, not counting the edges of a cycle.
  */
 export function layoutLayers(ids: string[], edges: { source: string; target: string }[]): LayeredNode[] {
   const known = new Set(ids);

@@ -1,15 +1,14 @@
-# Repositorios de muestra
+# Sample repositories
 
-Material de entrada preparado antes del evento y declarado en `docs/pre-event.md` (D9).
+Input material prepared before the event and declared in `docs/pre-event.md` (D9).
 
-- **`facturaya-v1/`**: repositorio demo de facturación (Python 3 + Flask + SQLite), deliberadamente
-  vulnerable y con datos sintéticos, tomado de [FacturaYa](https://github.com/JeanCarlos14301/FacturaYa)
-  (`samples/facturaya-v1/` de ese repo). Sobre él se garantiza el flujo completo, incluido el
-  primer corte `GET /invoices/{id}` (D3, D4). `evaluation/expected-findings.json` es la verdad de
-  referencia correspondiente.
+- **`facturaya-v1/`**: a deliberately vulnerable billing demo (Python 3 + Flask + SQLite) with synthetic data,
+  taken from [FacturaYa](https://github.com/JeanCarlos14301/FacturaYa) (`samples/facturaya-v1/` in that
+  repository). The complete workflow is supported for this sample, including the first `GET /invoices/{id}`
+  cut (D3, D4). `evaluation/expected-findings.json` is its corresponding ground truth.
 
-No se presenta un holdout: la variante anterior era una copia de FacturaYa y se retiró para no
-atribuirle independencia que no tenía. Una evaluación futura deberá usar un repositorio realmente
-distinto y documentar de antemano sus cambios ocultos.
+There is no holdout sample. The earlier variant was a copy of FacturaYa and was removed rather than being
+misrepresented as independent. A future evaluation must use a genuinely different repository and document
+its hidden changes in advance.
 
-Estos repos son **datos de entrada**, no parte del producto.
+These repositories are **input data**, not product code.

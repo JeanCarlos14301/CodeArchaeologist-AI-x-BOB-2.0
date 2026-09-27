@@ -44,7 +44,7 @@ def _wait_done(client: TestClient, job_id: str) -> dict:
         if body["job"]["status"] in {"done", "failed"}:
             return body
         time.sleep(0.05)
-    raise AssertionError("el job no terminó a tiempo")
+    raise AssertionError("the job did not finish in time")
 
 
 def _open_showcase(client: TestClient) -> str:
@@ -85,7 +85,7 @@ def test_reference_comparison_requires_an_executed_reference_cut() -> None:
 
     assert compare_with_reference(recommendation, "GET /invoices/{id}", "not_run").reference_comparison is None
     matched = compare_with_reference(recommendation, "GET /invoices/{id}", "passed").reference_comparison
-    assert matched and "mismo endpoint" in matched and "pasaron" in matched
+    assert matched and "same endpoint" in matched and "passed" in matched
 
 
 def test_reference_comparison_reports_a_different_engine_pick() -> None:
@@ -127,22 +127,22 @@ def test_memo_states_which_route_to_migrate_first(tmp_path: Path) -> None:
     tables = "\n".join(cell.text for table in memo.tables for row in table.rows for cell in row.cells)
     recommended = dossier.recommendation.recommended
 
-    assert "3 Recomendación de migración" in text
-    assert f"Autorizar el primer corte de migración sobre {recommended.endpoint}" in text
-    assert recommended.endpoint in tables and "Hoja de ruta por olas" in text
-    assert "hallazgo de mayor riesgo medido" not in text
+    assert "3 Migration recommendation" in text
+    assert f"Authorize the first migration cut on {recommended.endpoint}" in text
+    assert recommended.endpoint in tables and "Roadmap by waves" in text
+    assert "finding with the highest measured risk" not in text
 
 
 # --- 5. Modernization limits ---------------------------------------------------------------
 
 def _plan(steps: int) -> Plan:
     return Plan.model_validate({
-        "summary": "Plan de prueba con pasos encadenados.",
-        "rollback": "Se conserva el original.",
+        "summary": "Test plan with chained steps.",
+        "rollback": "The original is kept.",
         "steps": [
-            {"id": f"S{i}", "title": f"Paso {i}", "kind": "code", "why": "Motivo del paso de prueba.",
+            {"id": f"S{i}", "title": f"Step {i}", "kind": "code", "why": "Reason for the test step.",
              "depends_on": [f"S{i - 1}"] if i > 1 else [], "files": [{"path": f"m{i}.py", "action": "create"}],
-             "risk": "low", "complexity": "low", "validation": "Revisión.", "changes": "Crear el módulo del paso."}
+             "risk": "low", "complexity": "low", "validation": "Review.", "changes": "Create the step's module."}
             for i in range(1, steps + 1)
         ],
     })
@@ -165,7 +165,7 @@ def test_implementation_stops_at_the_step_limit(tmp_path: Path) -> None:
 
     assert bob.calls == 2
     assert [run.status for run in runs] == ["done", "done", "skipped", "skipped"]
-    assert "como máximo 2 pasos" in runs[2].note
+    assert "at most 2 steps" in runs[2].note
 
 
 def test_implementation_stops_at_the_bobcoin_budget(tmp_path: Path) -> None:
@@ -175,4 +175,4 @@ def test_implementation_stops_at_the_bobcoin_budget(tmp_path: Path) -> None:
     # Budget checked before each step: 0 -> run (2.0), 2.0 < 3 -> run (4.0), then stop.
     assert bob.calls == 2 and total == 4.0
     assert [run.status for run in runs] == ["done", "done", "skipped", "skipped"]
-    assert "presupuesto de 3 bobcoins" in runs[2].note
+    assert "3 bobcoin budget" in runs[2].note

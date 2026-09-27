@@ -17,8 +17,8 @@ interface Props {
 }
 
 /**
- * Grafo de llamadas real: nodo = función (AST), arista = llamada. Capas opcionales: hallazgos
- * (anillo con el color de la peor severidad) e impacto (origen en rojo, llamadores en amarillo).
+ * Real call graph: node = function (AST), edge = call. Optional layers: findings
+ * (a ring with the worst severity's color) and impact (origin in red, callers in yellow).
  */
 export function CallGraph({ graph, layers, selectedId, focusFindingId, onSelect }: Props) {
   const positions = useMemo(() => layoutCallGraph(graph), [graph]);
@@ -70,7 +70,7 @@ export function CallGraph({ graph, layers, selectedId, focusFindingId, onSelect 
     <svg
       viewBox={`0 0 ${GRAPH_W} ${GRAPH_H}`}
       role="group"
-      aria-label={`Grafo de llamadas: ${graph.nodes.length} funciones y ${graph.edges.length} llamadas`}
+      aria-label={`Call graph: ${graph.nodes.length} functions and ${graph.edges.length} calls`}
       className="block h-auto w-full"
       onClick={() => onSelect(null)}
     >
@@ -121,7 +121,7 @@ export function CallGraph({ graph, layers, selectedId, focusFindingId, onSelect 
         const isSelected = node.id === selectedId;
         const dim = selectedId !== null && !neighbors.has(node.id);
         const showLabel = !dim && (isSelected || neighbors.has(node.id) || !!node.route || !!worst || isOrigin);
-        const label = `${node.qualname} en ${node.file}:${node.line_start}${node.route ? `, ruta ${node.route.methods.join(",")} ${node.route.rule}` : ""}${worst ? `, hallazgo ${worst}` : ""}`;
+        const label = `${node.qualname} in ${node.file}:${node.line_start}${node.route ? `, route ${node.route.methods.join(",")} ${node.route.rule}` : ""}${worst ? `, finding ${worst}` : ""}`;
         return (
           <g
             key={node.id}

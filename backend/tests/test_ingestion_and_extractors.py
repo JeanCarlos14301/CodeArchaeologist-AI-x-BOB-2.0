@@ -1,4 +1,4 @@
-"""Pruebas de Ingesta Segura (anti-ZipSlip, límites) y Extractores de Código (D-03)."""
+"""Tests for safe ingestion (anti-ZipSlip, limits) and the code extractors (D-03)."""
 
 import io
 import zipfile
@@ -15,10 +15,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def test_zipslip_is_strictly_rejected(tmp_path: Path):
-    """Verifica que un archivo ZIP que intenta escapar del sandbox sea rechazado con error de seguridad."""
+    """Checks that a ZIP file that tries to escape the sandbox is rejected with a security error."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        # Miembro malicioso con ../
+        # Malicious member with ../
         zf.writestr("../../escape.txt", "contenido peligroso")
 
     buf.seek(0)
@@ -26,11 +26,11 @@ def test_zipslip_is_strictly_rejected(tmp_path: Path):
 
     with pytest.raises(IngestionSecurityError) as exc_info:
         validate_and_extract_zip(buf.getvalue(), dest)
-    assert "ZipSlip" in str(exc_info.value) or "Ruta no permitida" in str(exc_info.value)
+    assert "ZipSlip" in str(exc_info.value) or "Path not allowed" in str(exc_info.value)
 
 
 def test_dangerous_executable_extension_rejected(tmp_path: Path):
-    """Verifica que ejecutables binarios (.exe, .dll, .so) sean bloqueados."""
+    """Checks that executable binaries (.exe, .dll, .so) are blocked."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("trojan.exe", b"\x4d\x5a\x90\x00")
@@ -40,11 +40,11 @@ def test_dangerous_executable_extension_rejected(tmp_path: Path):
 
     with pytest.raises(IngestionSecurityError) as exc_info:
         validate_and_extract_zip(buf.getvalue(), dest)
-    assert "Extensión binaria o ejecutable no permitida" in str(exc_info.value)
+    assert "Binary or executable extension not allowed" in str(exc_info.value)
 
 
 def test_valid_zip_extraction(tmp_path: Path):
-    """Verifica la extracción limpia y sanitización de un archivo ZIP válido."""
+    """Checks the clean extraction and sanitization of a valid ZIP file."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("module.py", "def foo(): return 42\n")
@@ -55,32 +55,32 @@ def test_valid_zip_extraction(tmp_path: Path):
     validate_and_extract_zip(buf.getvalue(), dest)
 
     assert (dest / "module.py").exists()
-    # .env debe haber sido eliminado en la fase de sanitización
+    # .env must have been removed in the sanitization phase
     assert not (dest / ".env").exists()
 
 
 def test_code_inventory_on_facturaya():
-    """Verifica la extracción estática de rutas, SQL, radon y dependencias circulares en FacturaYa v1."""
+    """Checks the static extraction of routes, SQL, radon and circular dependencies on FacturaYa v1."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     report = analyze_repository_inventory(sample_dir)
 
-    # 1. Rutas Flask detectadas
+    # 1. Detected Flask routes
     rules = [r.rule for r in report.routes]
-    assert any("/invoices" in r for r in rules), f"Rutas detectadas: {rules}"
+    assert any("/invoices" in r for r in rules), f"Detected routes: {rules}"
 
-    # 2. Función monolítica detectada por radon
+    # 2. Monolithic function detected by radon
     fn_names = [f.function_name for f in report.complex_functions if f.is_monolithic]
-    assert "invoice_new" in fn_names, f"Monolito no detectado en: {fn_names}"
+    assert "invoice_new" in fn_names, f"Monolith not detected in: {fn_names}"
 
     # 3. Consultas SQL detectadas
     assert len(report.sql_queries) > 0
     sql_types = {q.query_type for q in report.sql_queries}
     assert "SELECT" in sql_types
 
-    # 4. Dependencia circular entre billing y customers
+    # 4. Circular dependency between billing and customers
     found_circ = False
     for pair in report.circular_dependencies:
         names = [Path(p).stem for p in pair]

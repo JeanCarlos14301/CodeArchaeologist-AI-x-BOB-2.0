@@ -2,7 +2,7 @@ import { useEffect, type RefObject } from "react";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Diálogo modal: enfoca al abrir, mantiene Tab dentro y devuelve el foco al cerrar. */
+/** Modal dialog: focuses on open, keeps Tab inside and returns focus on close. */
 export function useFocusTrap(ref: RefObject<HTMLElement | null>, active = true) {
   useEffect(() => {
     const root = ref.current;

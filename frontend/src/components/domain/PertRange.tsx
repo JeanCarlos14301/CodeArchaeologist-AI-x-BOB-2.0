@@ -3,21 +3,21 @@ import type { Dossier } from "../../types";
 
 type Pert = NonNullable<Dossier["first_cut_pert"]>;
 
-/** Rango PERT como regla: optimista · más probable · esperado · pesimista (todo calculado por código). */
+/** PERT range as a ruler: optimistic · most likely · expected · pessimistic (all computed by code). */
 export function PertRange({ pert }: { pert: Pert }) {
   const min = pert.optimistic_days;
   const span = Math.max(pert.pessimistic_days - min, 0.0001);
   const at = (value: number) => `${((value - min) / span) * 100}%`;
   const ticks = [
-    { label: "Optimista", value: pert.optimistic_days, align: "left" as const },
-    { label: "Más probable", value: pert.most_likely_days, align: "center" as const },
-    { label: "Pesimista", value: pert.pessimistic_days, align: "right" as const },
+    { label: "Optimistic", value: pert.optimistic_days, align: "left" as const },
+    { label: "Most likely", value: pert.most_likely_days, align: "center" as const },
+    { label: "Pessimistic", value: pert.pessimistic_days, align: "right" as const },
   ];
   return (
-    <figure aria-label={`Estimación PERT: esperado ${formatDecimal(pert.expected_days)} días, entre ${formatDecimal(min)} y ${formatDecimal(pert.pessimistic_days)}`}>
+    <figure aria-label={`PERT estimate: expected ${formatDecimal(pert.expected_days)} days, between ${formatDecimal(min)} and ${formatDecimal(pert.pessimistic_days)}`}>
       <div className="flex items-baseline gap-2">
         <span className="font-display text-heading text-fg tabular-nums">{formatDecimal(pert.expected_days)}</span>
-        <span className="text-body text-muted">días esperados</span>
+        <span className="text-body text-muted">expected days</span>
         <span className="ml-auto font-mono text-caption text-subtle">σ² = {formatDecimal(pert.variance)}</span>
       </div>
       <div className="relative mt-5 mb-9 h-px bg-line-strong">

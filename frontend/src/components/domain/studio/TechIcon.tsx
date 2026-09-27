@@ -3,13 +3,13 @@ import { TECH_ICONS } from "../../../lib/techIcons";
 interface Props {
   slug: string | null;
   name: string;
-  /** Tamaño en px del cuadrado del icono. */
+  /** Size in px of the icon's square. */
   size?: number;
 }
 
 /**
- * Icono monocromo de una tecnología (simple-icons). Hereda `currentColor`, así que el color lo decide
- * el contexto (DESIGN.md: color = significado). Sin icono conocido, muestra las iniciales en mono.
+ * Monochrome icon of a technology (simple-icons). It inherits `currentColor`, so the color is decided by
+ * the context (DESIGN.md: color = meaning). Without a known icon, it shows the initials in mono.
  */
 export function TechIcon({ slug, name, size = 20 }: Props) {
   const path = slug ? TECH_ICONS[slug] : undefined;
