@@ -48,8 +48,9 @@ Using the real recorded Bob reply (`contracts/fixtures/bob-evidence-auditor-fact
 against `samples/facturaya-v1` produces **6/6 and zero false positives**. The earlier **5/6** result above
 (job `02833a24a7a7`) is not reproducible because its `dossier.json` is not versioned.
 
-## TODO
+## Known gaps
 
-- [ ] Add the credential-free `dossier.json` from job `02833a24a7a7` to `contracts/fixtures/` so the 5/6 result can be reproduced.
-- [ ] Review why the second `F-5` snippet did not match `reports.py` and decide whether to adjust
-  `LINE_TOLERANCE` or ask Bob for one representative evidence line instead of snippets containing `...`.
+- The 5/6 result from job `02833a24a7a7` cannot be reproduced until its credential-free `dossier.json` is added to
+  `contracts/fixtures/`.
+- The second `F-5` snippet did not match `reports.py`; a future change could adjust `LINE_TOLERANCE` or ask Bob for
+  one representative evidence line instead of snippets containing `...`.

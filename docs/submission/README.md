@@ -1,59 +1,35 @@
 # IBM Bob 2.0 Hackathon submission
 
-Everything lablab.ai asks for, with its status and where it lives. **Deadline: Sunday, September 27, 2026,
-11:00 a.m. ET.**
+CodeArchaeologist's entry to the [IBM Bob 2.0 Hackathon](https://lablab.ai/ai-hackathons/ibm-bob-2-hackathon)
+on lablab.ai (September 25–27, 2026).
 
-## Documents in this folder
-
-| File | What for |
+| Field | Value |
 |---|---|
-| [submission-form.md](submission-form.md) | Every field of the form with its value and status |
-| [long-description.md](long-description.md) | *Long Description* (≤ 500 words) |
-| [bob-usage-statement.md](bob-usage-statement.md) | *IBM Bob Usage Statement* (≤ 500 words) |
-| [video-script.md](video-script.md) | Script of the 3:00 video with 130 s of demo |
-| [slides.md](slides.md) | Outline of the 9 slides |
-| [public-app.md](public-app.md) | How the app is published for the judges: API key, open access, bobcoin caps and smoke test |
+| **Project title** | CodeArchaeologist |
+| **Short description** | Audits legacy systems with IBM Bob, verifies every finding by file and line, calculates what to migrate first, and produces a board-ready decision memo. |
+| **Long description** | [long-description.md](long-description.md) |
+| **IBM Bob usage statement** | [bob-usage-statement.md](bob-usage-statement.md) |
+| **Technology tags** | IBM Bob, Python, FastAPI, React, TypeScript, Tailwind CSS, SQLite, Docker, Render |
+| **Category tags** | Developer Tools, Legacy Modernization, Code Analysis, Enterprise, AI Agents |
+| **Cover image** | [../media/cover.png](../media/cover.png) |
+| **Video presentation** | https://YOUR-VIDEO-LINK |
+| **Slide presentation** | [../media/slides.pdf](../media/slides.pdf) |
+| **Public repository** | https://github.com/JeanCarlos14301/CodeArchaeologist-AI-x-BOB-2.0 |
+| **Demo platform** | Render (single Docker container) |
+| **Application URL** | https://YOUR-APP.onrender.com |
+| **Bob session evidence** | [bob-sessions/](../../bob-sessions/) and [docs/bob-usage.md](../bob-usage.md) |
 
-## Checklist
+## Live-access note
 
-### Repository
-- [x] Public, MIT license (`LICENSE`), created from the [official template](https://github.com/watsonxhackathon/ibm-hackathon-template); `.gitignore` and `.bobignore` unmodified.
-- [x] `SECURITY.md` present; credentials only in environment variables.
-- [x] Product code, UI, Bob prompts, tests and current docs are in English; raw historical recordings are retained only as input evidence (D41).
-- [x] README: problem, solution, Bob usage, architecture, how to evaluate, security and limitations.
-- [x] Earlier material that does not describe the product, archived in [docs/archive/](../archive/).
-- [x] Decisions up to date (`docs/decisions.md`, up to D41) and Bob log (`docs/bob-usage.md`).
-- [ ] Final credential review: `git log -p | grep -iE "api[_-]?key|token|secret"` with no real values; screenshots with no sensitive data.
-- [ ] `main` holding the final version (merge this branch's PR) and the `develop` branch deleted or up to date.
+The recorded FacturaYa audit opens without credentials and spends no bobcoins. Judges can also upload a ZIP, run a
+live IBM Bob audit, ask Bob and use the Modernization Studio without an access token. Live actions use the server's
+Bob API key and are protected by per-run and daily spending limits.
 
-### Bob session screenshots (at least one per team member)
-- [x] Felipe: `bob-sessions/felipe/` (terminal with the task summary, and the live session in the app).
-- [x] Daniel: `bob-sessions/daniel/` (complete `blast-radius-guard` terminal session across 6 screenshots with full analysis, caller graphs, quantitative metrics CBRS=73.2, and task summary with 0.323 bobcoins).
-- [ ] Jean: the current screenshot shows a task with 0 bobcoins. Add one of a real session (with cost).
-- [ ] Edgar: empty folder. The screenshot is missing.
-
-How to take them: [bob-sessions/README.md](../../bob-sessions/README.md).
-
-### Public app
-- [ ] Render URL working and pasted in the README and in the form.
-- [ ] Daniel's `BOB_API_KEY` loaded in Render, and his account's budget checked.
-- [ ] `LIVE_AUDIT_TOKEN` deleted from Render → Environment if it was created by the earlier blueprint (open mode).
-- [ ] `render.yaml` caps applied (they sync when merging into `main`), including `BOB_DAILY_SPEND_LIMIT`.
-- [ ] Uptime monitor or Starter plan during judging.
-- [ ] The [public-app.md](public-app.md#7-smoke-test-before-submitting) smoke test passed from an incognito window.
-
-### Form material
-- [x] Title, short description, long description and Bob usage statement.
-- [ ] Cover image.
-- [ ] MP4 video ≤ 3:00, narrated, with ≥ 90 s of demo.
-- [ ] Slides (PDF).
-- [ ] Form submitted and checked from another account.
-
-## Judging criteria and where they show
+## Judging criteria
 
 | Criterion | Where it shows |
 |---|---|
-| Application of Technology | Bob in 5 product modes, parallel subagents, live activity, session rescue (`docs/bob-usage.md`) |
-| Presentation | Video, slides and the public showcase with no credentials |
-| Business Value | Board memo, migration recommendation with PERT, tested first cut |
-| Originality | The AI proposes and code decides: line-by-line validated evidence and an auditable deterministic ranking |
+| Application of Technology | Bob in 5 product modes, parallel subagents, live activity and session recovery ([docs/bob-usage.md](../bob-usage.md)) |
+| Presentation | Video, slides and a public showcase that needs no credentials |
+| Business Value | Board memo, migration recommendation with PERT effort and a tested first cut |
+| Originality | The AI proposes and code decides: line-verified evidence and an auditable deterministic ranking |

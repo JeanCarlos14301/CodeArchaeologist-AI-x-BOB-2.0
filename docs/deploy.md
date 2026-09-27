@@ -1,48 +1,64 @@
-# Deployment (J-02 / J-03)
+# Deployment
 
-A single container (D11) built from the `Dockerfile` and deployed on **Render**. Every push to
-`main` triggers CI (`.github/workflows/ci.yml`); if it passes, Render rebuilds and publishes the
-same URL (`render.yaml` → `autoDeployTrigger: checksPass`).
+A single container (D11) built from the `Dockerfile` and deployed on **Render**. Every push to `main` triggers CI
+(`.github/workflows/ci.yml`); if it passes, Render rebuilds and publishes the same URL
+(`render.yaml` → `autoDeployTrigger: checksPass`).
 
 ```
 push to main ──► CI: pytest + frontend build + image build and smoke test
                      │ passes
                      ▼
-                Render rebuilds the Dockerfile ──► https://<service>.onrender.com
+                Render rebuilds the Dockerfile ──► public URL
 ```
 
-## First time (≈10 min, done once by Jean)
+## First deployment
 
-1. Merge the approved branches into `main`; Render deploys only from `main`.
-2. Sign in to <https://dashboard.render.com> with the GitHub account that has access to the repo.
-3. **New → Blueprint**, pick the repo. Render reads `render.yaml` and proposes the
-   `codearchaeologist` service (free plan, Docker runtime).
-4. When it asks for `BOB_API_KEY`, paste the Bob API key (*Inference* scope). It is stored only in
-   Render, never in the repo (SECURITY.md).
-5. **Apply**. The first build takes several minutes (it installs Python, Node 24 and Bob Shell).
-6. Access mode: the blueprint does not define `LIVE_AUDIT_TOKEN`, so the app runs in **open mode** and the judges
-   need no token (D40). If an earlier blueprint created `LIVE_AUDIT_TOKEN`, delete it in **Environment**: removing a
-   variable from `render.yaml` does not delete it from an existing service. How the app is published:
-   `docs/submission/public-app.md`.
-7. Recommended: in GitHub → *Settings → Branches*, protect `main` by requiring the `backend`, `frontend` and
-   `docker` CI checks. That way nobody breaks the public URL with a direct push.
+1. Sign in to <https://dashboard.render.com> with a GitHub account that has access to the repository.
+2. **New → Blueprint** and pick the repository. Render reads `render.yaml` and proposes the `codearchaeologist`
+   service (Docker runtime).
+3. When it asks for `BOB_API_KEY`, paste a Bob API key (*Inference* scope). It is stored only in Render, never in the
+   repository ([SECURITY.md](../SECURITY.md)).
+4. **Apply**. The first build takes several minutes (it installs Python, Node 24 and Bob Shell).
+
+## Access: open mode with a kill switch
+
+The blueprint does not define `LIVE_AUDIT_TOKEN`, so the app runs in **open mode** (D40): anyone can open the
+showcase, upload a ZIP, ask Bob and use the Studio with no token. Uploaded analyses are never listed publicly; they
+are reachable only through their random job id.
+
+**Kill switch:** if someone abuses the public URL, add `LIVE_AUDIT_TOKEN` with a long random value in Render →
+**Environment** (`python -c "import secrets; print(secrets.token_urlsafe(32))"`). About a minute later every Bob call
+and every read of an upload requires the token, and the interface shows the token fields. The showcase keeps
+working. Remove the variable to reopen.
+
+## Bobcoin caps
+
+`render.yaml` sets these limits so a single session cannot drain the budget:
+
+| Variable | Value | What it caps |
+|---|---|---|
+| `BOB_MAX_COST` | 3 | Bobcoins per audit, rescue turn included |
+| `BOB_MAX_TURNS` | 30 | Orchestrator turns |
+| `BOB_TIMEOUT_S` | 600 | Seconds per session |
+| `MODERNIZE_PLAN_MAX_COST` | 1.5 | Studio assessment and plan |
+| `MODERNIZE_STEP_MAX_COST` | 2 | Each implemented step |
+| `MODERNIZE_TOTAL_MAX_COST` | 4 | A full implementation |
+| `MODERNIZE_MAX_STEPS` | 5 | Steps per implementation |
+| `BOB_DAILY_SPEND_LIMIT` | 15 | Bobcoins per UTC day; then live features pause until the next day |
+
+Fixed in code: `migration-architect` (1 bobcoin, 6 turns) and the chat (0.8 bobcoins, 12 turns). The server runs only
+one live audit, one Bob question and one Studio session at a time. Real runs cost far less than the caps: between
+0.57 and 1.44 bobcoins per FacturaYa audit and between 0.14 and 0.36 per question or step
+([docs/bob-usage.md](bob-usage.md)).
+
+Keep `ALLOW_NON_LIVE_MODES` unset in production so the `example` mode stays off.
 
 ## Check a deployment
 
 ```bash
-curl https://<service>.onrender.com/health          # {"status":"ok"}
-curl https://<service>.onrender.com/api/bob/status  # installed and api_key_configured true; live_requires_token false (open mode)
+curl https://<your-service>.onrender.com/health          # {"status":"ok"}
+curl https://<your-service>.onrender.com/api/bob/status  # installed and api_key_configured true; live_requires_token false
 ```
-
-In the interface, the FacturaYa showcase (imported) works for anyone and spends no bobcoins. Live audits, ZIP
-uploads, Ask Bob and the Modernization Studio call Bob for real and spend bobcoins from the configured account,
-within the caps in `render.yaml`. The `example` mode is off unless `ALLOW_NON_LIVE_MODES=true`.
-
-## Kill switch
-
-If someone abuses the public URL, add `LIVE_AUDIT_TOKEN` with a long random value in Render → **Environment** and
-save. Render restarts the service in about a minute; from then on every Bob call and every read of an upload
-requires the token, and the interface shows the token fields. The showcase keeps working without a token.
 
 ## Locally, the same as on Render
 
@@ -54,14 +70,12 @@ Without `LIVE_AUDIT_TOKEN` in `.env`, the server runs in open mode; with it, loc
 
 ## Free plan limits
 
-- **It sleeps after 15 min without traffic**: the first visit takes ~1 min. Open the URL a couple of minutes before
-  recording the video or before the judges try it, or keep it awake with an uptime monitor (see
-  `docs/submission/public-app.md`).
-- **512 MB of RAM**: the imported showcase fits easily. A **live** audit launches Bob Shell inside the container; if
-  it fails for lack of memory, the options are a paid Render plan or recording the live part from a PC (plan B of
-  D11/D12).
-- **Ephemeral disk**: the job history (`artifacts/`) is wiped on every deploy or restart. For the demo it does not
-  matter: the imported showcase is always available.
+- **It sleeps after 15 min without traffic**: the first visit takes about a minute. An uptime monitor that calls
+  `GET /health` every 10 minutes keeps it awake.
+- **512 MB of RAM**: the imported showcase fits easily. A live audit launches Bob Shell inside the container; if it
+  fails for lack of memory, use a paid plan.
+- **Ephemeral disk**: the job history (`artifacts/`) is wiped on every deploy or restart. The imported showcase is
+  always available.
 
 ## If something goes wrong
 
