@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
-# Contenedor único (D11): FastAPI (API + worker) + Bob Shell + build estático de React.
+# Single container (D11): FastAPI (API + worker) + Bob Shell + static React build.
 # Local:   docker compose up --build   → http://127.0.0.1:8000
-# Render:  ver render.yaml y docs/deploy.md
+# Render:  see render.yaml and docs/deploy.md
 
-# --- Etapa 1: build del frontend ---------------------------------------------------------
+# --- Stage 1: frontend build ------------------------------------------------------------
 FROM node:24-bookworm-slim AS frontend
 # Mirror the repo layout: src/fixtures/index.ts imports ../../../contracts/fixtures/*.json,
 # so the contract fixtures must sit next to frontend/ exactly as they do in the repo.
@@ -14,13 +14,13 @@ COPY contracts/fixtures /build/contracts/fixtures
 COPY frontend/ ./
 RUN npm run build
 
-# --- Etapa 2: Node 24 para Bob Shell (solo se copian sus binarios) -----------------------
+# --- Stage 2: Node 24 for Bob Shell (only its binaries are copied) ----------------------
 FROM node:24-bookworm-slim AS node
 
-# --- Etapa 3: runtime ---------------------------------------------------------------------
+# --- Stage 3: runtime ------------------------------------------------------------------
 FROM python:3.11-slim-bookworm
 
-# Versión probada por el equipo; el checksum sale de bob-shell/bobshell-<versión>.tgz.sha256.
+# Version tested by the team; the checksum comes from bob-shell/bobshell-<version>.tgz.sha256.
 ARG BOB_VERSION=2.0.5
 ARG BOB_SHA256=eff232eb1b69f34f984ddd295e6960470058ca922b1c751879c5a8d06199f566
 
@@ -38,7 +38,7 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
-# Bob Shell: mismo paquete que instala bobshell.sh, pero fijado y con checksum verificado.
+# Bob Shell: the same package bobshell.sh installs, but pinned and with a verified checksum.
 RUN curl -fsSL -o /tmp/bobshell.tgz \
         "https://s3.us-south.cloud-object-storage.appdomain.cloud/bob-shell/bobshell-${BOB_VERSION}.tgz" \
     && echo "${BOB_SHA256}  /tmp/bobshell.tgz" | sha256sum -c - \
@@ -52,7 +52,7 @@ WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install -r backend/requirements.txt
 
-# Mismo layout que el repo: REPO_ROOT (bob_adapter.py) resuelve a /app.
+# Same layout as the repo: REPO_ROOT (bob_adapter.py) resolves to /app.
 COPY .bob .bob
 COPY backend backend
 COPY contracts contracts
@@ -64,9 +64,9 @@ RUN useradd --create-home --uid 10001 app \
     && chown app:app /app/artifacts
 USER app
 
-# DATABASE_PATH: la base del motor de 11 etapas debe vivir en el único directorio escribible.
-# PYTHONPATH=/app: parte del backend se importa como `backend.app.*` (raíz del repo) y otra
-# como `app.*` (--app-dir backend en el CMD); ambos deben resolverse.
+# DATABASE_PATH: the pipeline database must live in the only writable directory.
+# PYTHONPATH=/app: part of the backend is imported as `backend.app.*` (repo root) and part
+# as `app.*` (--app-dir backend in the CMD); both must resolve.
 ENV PYTHONPATH=/app \
     ARTIFACTS_DIR=/app/artifacts \
     DATABASE_PATH=/app/artifacts/pipeline.db \
@@ -77,5 +77,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
 
-# Render inyecta PORT; en local queda 8000.
+# Render injects PORT; locally it stays 8000.
 CMD ["sh", "-c", "exec uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port ${PORT}"]

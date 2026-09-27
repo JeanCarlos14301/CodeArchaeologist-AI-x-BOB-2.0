@@ -17,7 +17,14 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.adapters.bob_adapter import CUSTOM_MODES_FILE, REPO_ROOT, BobRunSettings, load_custom_mode_slugs
+from app.adapters.bob_adapter import (
+    CUSTOM_MODES_FILE,
+    REPO_ROOT,
+    BobRunSettings,
+    daily_spend_limit,
+    load_custom_mode_slugs,
+    spent_today,
+)
 from app.contracts.schema_v1 import Dossier
 from app.jobs.store import ExecutionMode, Job, JobStore
 from app.pipeline.activity import EVENTS_FILE, EventLog, redact_paths
@@ -118,6 +125,8 @@ class BobStatus(BaseModel):
     max_cost_per_run: float
     timeout_s: int
     live_requires_token: bool
+    daily_spend_limit: float | None = None
+    spent_today: float = 0.0
 
 
 class AuditService:
@@ -380,4 +389,6 @@ def bob_status() -> BobStatus:
         max_cost_per_run=settings.max_cost,
         timeout_s=settings.timeout_s,
         live_requires_token=bool(os.environ.get("LIVE_AUDIT_TOKEN")),
+        daily_spend_limit=daily_spend_limit(),
+        spent_today=spent_today(),
     )

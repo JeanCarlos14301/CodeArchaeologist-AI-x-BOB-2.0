@@ -198,6 +198,7 @@ export function ProjectsView() {
                 { label: "Bob Shell", value: bob.installed ? <StatusDot tone="ok" label={bob.version ?? "installed"} /> : <StatusDot tone="bad" label="not installed" /> },
                 { label: "API key", value: bob.api_key_configured ? <StatusDot tone="ok" label="configured" /> : <StatusDot tone="bad" label="missing" /> },
                 { label: "Access", value: bob.live_requires_token ? "token required" : "open" },
+                ...(bob.daily_spend_limit ? [{ label: "Live spend today", value: `${(bob.spent_today ?? 0).toFixed(2)} of ${bob.daily_spend_limit} bc` }] : []),
                 { label: "Modes · subagents · skills", value: `${bob.custom_modes.length} · ${bob.subagents.length} · ${bob.skills.length}` },
                 { label: "Cap per analysis", value: `${bob.max_cost_per_run} bc · ${Math.round(bob.timeout_s / 60)} min` },
               ]} />

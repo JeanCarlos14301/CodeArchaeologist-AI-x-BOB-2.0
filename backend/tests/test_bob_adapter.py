@@ -161,4 +161,4 @@ def test_live_custom_mode_responds(tmp_path: Path) -> None:
         "evidence-auditor", "Answer only the word READY. Do not use tools."
     )
     assert result.execution_mode == "live"
-    assert "LISTO" in result.last_message.upper()
+    assert "READY" in result.last_message.upper()

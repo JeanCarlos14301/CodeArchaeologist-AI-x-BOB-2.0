@@ -1,50 +1,56 @@
 {
-  "_comment": "Fixture de la estructura esperada de migration_options. execution_mode=imported: NO proviene de una corrida live de Bob. Sin cifras numéricas en pros/cons.",
+  "_comment": "Fixture of the expected migration_options structure. execution_mode=imported: it does NOT come from a live Bob run. No numeric figures in pros/cons.",
   "execution_mode": "imported",
   "migration_options": [
     {
       "id": "OPT-1",
-      "name": "Strangler Fig incremental por endpoint",
+      "name": "Incremental Strangler Fig by endpoint",
       "pattern": "Strangler Fig",
-      "finding_ids": ["F-1"],
+      "finding_ids": [
+        "F-1"
+      ],
       "pros": [
-        "Bajo riesgo operativo: el monolito sigue corriendo mientras se migran endpoints uno a uno",
-        "Validación continua mediante suite de pruebas de caracterización golden-master",
-        "Rollback instantáneo sin tiempo de inactividad"
+        "Low operational risk: the monolith keeps running while endpoints are migrated one by one",
+        "Continuous validation through a golden-master characterization test suite",
+        "Instant rollback with no downtime"
       ],
       "cons": [
-        "Requiere mantener una fachada de enrutamiento temporal durante la transición",
-        "Coexistencia transitoria de dos stacks hasta completar la migración"
+        "Requires keeping a temporary routing facade during the transition",
+        "Two stacks coexist temporarily until the migration is complete"
       ],
       "recommended": true
     },
     {
       "id": "OPT-2",
-      "name": "Reescritura monolítica total (Big Bang)",
+      "name": "Full monolithic rewrite (Big Bang)",
       "pattern": "Big Bang Re-platforming",
-      "finding_ids": ["F-2"],
+      "finding_ids": [
+        "F-2"
+      ],
       "pros": [
-        "Eliminación total del código heredado de una sola vez",
-        "Homogeneidad tecnológica inmediata sin fachada de enrutamiento"
+        "Removes all the legacy code at once",
+        "Immediate technology homogeneity with no routing facade"
       ],
       "cons": [
-        "Riesgo crítico de fallo: históricamente la mayoría de proyectos big-bang sufren sobrecostos severos",
-        "Período prolongado a oscuras sin entregas a producción",
-        "Dificultad extrema para verificar equivalencia semántica de todas las reglas simultáneamente"
+        "Critical risk of failure: historically most big-bang projects suffer severe cost overruns",
+        "A long dark period with no production releases",
+        "Extreme difficulty verifying the semantic equivalence of every rule at the same time"
       ],
       "recommended": false
     },
     {
       "id": "OPT-3",
-      "name": "Extracción del núcleo transaccional",
+      "name": "Extraction of the transactional core",
       "pattern": "Core Domain Extraction",
-      "finding_ids": ["F-3"],
+      "finding_ids": [
+        "F-3"
+      ],
       "pros": [
-        "Ataca directamente la complejidad de la lógica de dominio más crítica"
+        "Goes straight at the complexity of the most critical domain logic"
       ],
       "cons": [
-        "Alto acoplamiento circular entre módulos dificulta el corte inicial",
-        "Requiere estabilizar contratos de datos antes de migrar la capa de presentación"
+        "High circular coupling between modules makes the first cut harder",
+        "Requires stabilizing the data contracts before migrating the presentation layer"
       ],
       "recommended": false
     }

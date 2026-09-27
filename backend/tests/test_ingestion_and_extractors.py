@@ -63,7 +63,7 @@ def test_code_inventory_on_facturaya():
     """Checks the static extraction of routes, SQL, radon and circular dependencies on FacturaYa v1."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     report = analyze_repository_inventory(sample_dir)
 

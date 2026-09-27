@@ -25,7 +25,7 @@ from typing import Any, Protocol
 
 import yaml
 
-from app.adapters.bob_adapter import BobError, BobResult
+from app.adapters.bob_adapter import BUDGET_MESSAGE, BobBudgetError, BobError, BobResult
 from app.adapters.bob_workspace import install_bob_assets
 from app.modernization.models import FileChange, FileCheck, Implementation, Plan, Step, StepRun
 from app.modernization.planner import PlannerError, topological_order
@@ -182,7 +182,8 @@ def run_steps(
                 result = runner.run(SURGEON_MODE, prompt)
         except BobError as exc:
             logger.warning("Bob failed on step %s: %s", step.id, exc)
-            runs.append(StepRun(step_id=step_id, status="failed", note="Bob could not complete this step."))
+            note = BUDGET_MESSAGE if isinstance(exc, BobBudgetError) else "Bob could not complete this step."
+            runs.append(StepRun(step_id=step_id, status="failed", note=note))
             on_event(f"Step {step.id} failed", step.id)
             failed = True
             continue

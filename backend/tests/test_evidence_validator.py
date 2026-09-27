@@ -16,7 +16,7 @@ def test_real_evidence_validation_on_facturaya():
     """Checks that the real citations on FacturaYa v1 reach 100% fidelity."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     findings = [
         Finding(
@@ -57,7 +57,7 @@ def test_real_evidence_validation_on_facturaya():
                     observed_or_inferred="observed",
                 )
             ],
-            explanation="Secret key hardcodeada.",
+            explanation="Hardcoded secret key.",
             verification_method="Static inspection.",
             blast_radius_score=40.0,
         ),
@@ -74,7 +74,7 @@ def test_hallucinated_evidence_is_detected_and_rejected():
     """Checks that a fictitious citation produced by an LLM hallucination is detected and rejected."""
     sample_dir = BASE_DIR / "samples" / "facturaya-v1"
     if not sample_dir.exists():
-        pytest.skip("Directorio samples/facturaya-v1 no disponible")
+        pytest.skip("samples/facturaya-v1 directory is unavailable")
 
     fake_findings = [
         Finding(

@@ -1,5 +1,5 @@
-# CI: mantiene main siempre desplegable (AGENTS.md). Render solo redespliega si esto pasa
-# (render.yaml → autoDeployTrigger: checksPass). No usa BOB_API_KEY: las pruebas `live` se omiten.
+# CI: keeps main always deployable (AGENTS.md). Render only redeploys if this passes
+# (render.yaml → autoDeployTrigger: checksPass). It does not use BOB_API_KEY: the `live` tests are skipped.
 name: CI
 
 on:
@@ -36,7 +36,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
-      # oxlint: reglas de hooks de React y accesibilidad (typescript-eslint aún no admite TypeScript 7).
+      # oxlint: React hooks and accessibility rules (typescript-eslint does not support TypeScript 7 yet).
       - run: npm run lint
         working-directory: frontend
       - run: npm run build

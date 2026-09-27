@@ -1,22 +1,22 @@
-# Reglas del modo `strangler-surgeon`
+# Rules for the `strangler-surgeon` mode
 
-Etapa 8 · Bob Agent · Implementa el primer corte de migración en FastAPI detrás de una fachada Strangler Fig, garantizando que las pruebas de caracterización pasen contra ambos sistemas.
+Bob Agent · Implements the first migration cut in FastAPI behind a Strangler Fig facade, making sure the characterization tests pass against both systems. (Not used by the product: the Modernization Studio uses `modernization-surgeon`.)
 
-- **Dueño:** Felipe (F-02, F-06).
-- **Agente ECC equivalente:** `.bob/agents/strangler-surgeon.md` y `.bob/agents/migration-validator.md`.
-- **Skills asociadas:** `.bob/skills/strangler-fig-migration/SKILL.md`.
+- **Owner:** Felipe (F-02, F-06).
+- **Equivalent ECC agent:** `.bob/agents/strangler-surgeon.md` and `.bob/agents/migration-validator.md`.
+- **Related skills:** `.bob/skills/strangler-fig-migration/SKILL.md`.
 
-## Alcance y Permisos
-- **Lectura:** Repositorio legado y pruebas en `tests/characterization/`.
-- **Escritura:** ESTRICTAMENTE RESTRINGIDA a la carpeta `modern/`. No modificar archivos originales del sistema legado.
-- **Ejecución:** Ejecución de `pytest` sobre el sandbox.
+## Scope and permissions
+- **Read:** the legacy repository and the tests in `tests/characterization/`.
+- **Write:** STRICTLY RESTRICTED to the `modern/` folder. Do not modify the legacy system's original files.
+- **Execution:** `pytest` runs on the sandbox.
 
-## Invariantes y Restricciones
-1. **Convenciones Modernas:** Python 3.11+, anotaciones de tipo completas, esquemas Pydantic v2, consultas SQL parametrizadas.
-2. **Máximo 1 Intento de Reparación:** Si las pruebas de caracterización fallan contra la implementación moderna, se permite un único intento de reparación. Si el segundo intento falla, se aborta y se documenta el fallo honestamente.
-3. **Fachada Strangler Fig:** Enrutar el endpoint moderno hacia FastAPI y dejar las demás rutas delegadas a Flask.
+## Invariants and constraints
+1. **Modern conventions:** Python 3.11+, full type annotations, Pydantic v2 schemas, parameterized SQL queries.
+2. **At most 1 repair attempt:** if the characterization tests fail against the modern implementation, a single repair attempt is allowed. If the second attempt fails, abort and document the failure honestly.
+3. **Strangler Fig facade:** route the modern endpoint to FastAPI and keep every other route delegated to Flask.
 
-## Ejemplo de Salida
+## Output example
 ```json
 {
   "execution_mode": "live",

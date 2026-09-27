@@ -18,7 +18,9 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.adapters.bob_adapter import (
+    BUDGET_MESSAGE,
     BobAdapter,
+    BobBudgetError,
     BobConfigError,
     BobError,
     BobExecutionError,
@@ -252,6 +254,8 @@ def _budget_error(result: BobResult, max_cost: float) -> AuditError:
 
 
 def _public_bob_error(exc: BobError) -> str:
+    if isinstance(exc, BobBudgetError):
+        return BUDGET_MESSAGE
     if isinstance(exc, BobTimeoutError):
         return "Bob exceeded the audit's time limit and the session could not be recovered."
     if isinstance(exc, BobNotInstalledError):

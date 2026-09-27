@@ -14,7 +14,7 @@ from typing import Any, Protocol
 
 from pydantic import ValidationError
 
-from app.adapters.bob_adapter import BobError, BobResult
+from app.adapters.bob_adapter import BUDGET_MESSAGE, BobBudgetError, BobError, BobResult
 from app.modernization.catalog import BY_ID, targets_for
 from app.modernization.models import (
     Assessment,
@@ -321,6 +321,8 @@ def _call(runner: Runner, prompt: str, sink: EventSink | None) -> BobResult:
         if sink is not None and hasattr(runner, "run_stream"):
             return runner.run_stream(PLANNER_MODE, prompt, sink)  # type: ignore[attr-defined, no-any-return]
         return runner.run(PLANNER_MODE, prompt)
+    except BobBudgetError as exc:
+        raise BobUnavailableError(BUDGET_MESSAGE) from exc
     except BobError as exc:
         logger.warning("Bob failed in %s: %s", PLANNER_MODE, exc)
         raise BobUnavailableError("Bob could not complete the reply. Try again in a few minutes.") from exc

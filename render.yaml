@@ -1,6 +1,6 @@
-# Blueprint de Render (J-03). Render construye el Dockerfile y redespliega en cada push a main,
-# solo cuando el workflow de CI (.github/workflows/ci.yml) pasa. Pasos: docs/deploy.md.
-# Plan para publicar la app al jurado (API key, token y topes): docs/entrega/app-publica.md.
+# Render Blueprint (J-03). Render builds the Dockerfile and redeploys on every push to main,
+# only when the CI workflow (.github/workflows/ci.yml) passes. Steps: docs/deploy.md.
+# How the app is published for the judges (API key, access and caps): docs/submission/public-app.md.
 services:
   - type: web
     name: codearchaeologist
@@ -11,21 +11,20 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
-      # Se cargan a mano en el dashboard de Render; nunca en este archivo.
+      # Set by hand in the Render dashboard; never in this file.
       - key: BOB_API_KEY
         sync: false
-      # Token que exige toda operación que invoca a Bob en la URL pública. Render genera un valor
-      # aleatorio; se consulta en el dashboard (Environment) y se comparte solo por canal privado.
-      - key: LIVE_AUDIT_TOKEN
-        generateValue: true
-      # El equipo ya aceptó la licencia de Bob Shell al instalarlo; sin esto `bob run` falla
-      # en un contenedor no interactivo.
+      # LIVE_AUDIT_TOKEN is intentionally absent: the public demo runs in open mode, so the judges can
+      # use every live feature without asking for a token. To lock it (kill switch), add LIVE_AUDIT_TOKEN
+      # with a long random value in the dashboard (Environment) and share it only privately.
+      # The team already accepted the Bob Shell license when installing it; without this, `bob run`
+      # fails in a non-interactive container.
       - key: BOB_ACCEPT_LICENSE
         value: "true"
       - key: ENABLE_DEV_CORS
         value: "false"
-      # Topes de gasto para la URL pública. Peor caso: ~4 bobcoins por auditoría live
-      # (3 de Bob + 1 del arquitecto) y ~9 por un recorrido completo del Estudio.
+      # Spending caps for the public URL. Worst case: ~4 bobcoins per live audit
+      # (3 from Bob + 1 from the architect), 0.8 per question and ~9 per full Studio run.
       - key: BOB_MAX_COST
         value: "3"
       - key: BOB_MAX_TURNS
@@ -40,3 +39,7 @@ services:
         value: "4"
       - key: MODERNIZE_MAX_STEPS
         value: "5"
+      # Daily guard for open mode: once the server has spent this many bobcoins today (UTC), live
+      # features pause until tomorrow; the showcase keeps working. Adjust it to the account's budget.
+      - key: BOB_DAILY_SPEND_LIMIT
+        value: "15"

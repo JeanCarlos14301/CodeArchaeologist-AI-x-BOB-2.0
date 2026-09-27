@@ -16,7 +16,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError
 
-from app.adapters.bob_adapter import BobAdapter, BobError, BobResult, BobRunSettings, BobTimeoutError
+from app.adapters.bob_adapter import BUDGET_MESSAGE, BobAdapter, BobBudgetError, BobError, BobResult, BobRunSettings, BobTimeoutError
 from app.pipeline.activity import BobActivity, redact_paths
 from app.validators.evidence import resolve_inside
 
@@ -261,6 +261,8 @@ def ask_bob(workspace: Path, request: AskRequest, runner: AskRunner | None = Non
                 result = bob.run_stream(ASK_MODE, build_prompt(request), sink)  # type: ignore[attr-defined]
             else:
                 result = bob.run(ASK_MODE, build_prompt(request))
+        except BobBudgetError as exc:
+            raise AssistantError(BUDGET_MESSAGE) from exc
         except BobTimeoutError as exc:
             logger.warning("Question to Bob timed out: %s", exc)
             raise AssistantError(f"Bob exceeded the {ASK_TIMEOUT_S} s time limit. Try a narrower question.") from exc

@@ -1,6 +1,6 @@
 ---
-name: Tarea
-about: Tarea del plan de la hackatón (docs/archivo/planificacion/tasks.md)
+name: Task
+about: A task from the hackathon plan (docs/archive/planning/tasks.md)
 title: "[ID] "
 labels: ""
 assignees: ""
@@ -8,10 +8,10 @@ assignees: ""
 
 **ID:** 
 
-**Ventana:** H?–H?
+**Window:** H?–H?
 
-## Descripción
+## Description
 
 
-## Criterio de aceptación
+## Acceptance criteria
 - [ ] 

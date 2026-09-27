@@ -1,6 +1,6 @@
-# Desarrollo local del contenedor único (mismo Dockerfile que Render).
+# Local development of the single container (same Dockerfile as Render).
 #   docker compose up --build   → http://127.0.0.1:8000
-# Lee BOB_API_KEY y demás variables de .env si existe (ver .env.example).
+# Reads BOB_API_KEY and the other variables from .env when it exists (see .env.example).
 services:
   app:
     build: .
@@ -10,8 +10,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Volumen con nombre: conserva jobs.db y los expedientes entre reinicios
-      # sin problemas de permisos del usuario no root del contenedor.
+      # Named volume: keeps jobs.db and the dossiers across restarts
+      # without permission problems for the container's non-root user.
       - artifacts:/app/artifacts
 
 volumes:

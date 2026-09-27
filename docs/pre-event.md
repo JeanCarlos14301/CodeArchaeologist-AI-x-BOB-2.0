@@ -1,16 +1,16 @@
-# Declaración de material preparado antes del evento
+# Statement of material prepared before the event
 
-**Fecha:** 24 de septiembre de 2026 (antes del kickoff del IBM Bob 2.0 Hackathon, 25–27 de septiembre de 2026).
+**Date:** September 24, 2026 (before the kickoff of the IBM Bob 2.0 Hackathon, September 25–27, 2026).
 
-Antes del evento, el equipo preparó únicamente:
+Before the event, the team prepared only:
 
-1. **La estructura vacía de este repositorio**: carpetas, configuración, plantillas y archivos
-   placeholder cuyo único contenido es un docstring o un comentario TODO.
-2. **Documentos de diseño**: `AGENTS.md`, `docs/decisions.md`, el plan de tareas (hoy archivado en
-   `docs/archivo/planificacion/tasks.md`) y plantillas en `docs/`.
-3. **El repositorio de muestra FacturaYa v1** (`samples/facturaya-v1/`), como material de **entrada**
-   para el producto, no como parte de él.
+1. **The empty structure of this repository**: folders, configuration, templates and placeholder
+   files whose only content is a docstring or a TODO comment.
+2. **Design documents**: `AGENTS.md`, `docs/decisions.md`, the task plan (now archived in
+   `docs/archive/planning/tasks.md`) and templates in `docs/`.
+3. **The FacturaYa v1 sample repository** (`samples/facturaya-v1/`), as **input** material
+   for the product, not as part of it.
 
-**No se escribió lógica del producto antes del kickoff.** Todo el código funcional se escribe
-durante el evento y queda trazable en el historial de git a partir del primer commit posterior
-al kickoff.
+**No product logic was written before the kickoff.** All functional code was written
+during the event and is traceable in the git history from the first commit after
+the kickoff.

@@ -166,6 +166,16 @@ class BobExecutionError(BobError):
     """Bob exited with an error or its output is not a valid result."""
 
 
+class BobBudgetError(BobError):
+    """The server reached its daily bobcoin spending limit (BOB_DAILY_SPEND_LIMIT)."""
+
+
+BUDGET_MESSAGE = (
+    "The server reached today's bobcoin limit for live features. The recorded FacturaYa showcase still works; "
+    "try live features again tomorrow."
+)
+
+
 class BobStats(BaseModel):
     task_id: str
     duration_ms: int
@@ -179,6 +189,43 @@ class BobResult(BaseModel):
     last_message: str
     stats: BobStats | None = None
     execution_mode: ExecutionMode
+
+
+# Daily spending guard for a public deployment without LIVE_AUDIT_TOKEN. Keyed by Bob task id, so a
+# resumed session (whose session_costs are cumulative) is counted once. Kept in memory: it resets at
+# UTC midnight and when the process restarts. Unset limit = no guard.
+_SPEND_LOCK = threading.Lock()
+_SPENT_BY_TASK: dict[str, tuple[str, float]] = {}
+
+
+def daily_spend_limit() -> float | None:
+    """BOB_DAILY_SPEND_LIMIT in bobcoins, or None when unset or invalid."""
+    raw = os.environ.get("BOB_DAILY_SPEND_LIMIT", "").strip()
+    try:
+        value = float(raw) if raw else 0.0
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def spent_today() -> float:
+    """Bobcoins this process has spent on Bob sessions today (UTC)."""
+    today = _today()
+    with _SPEND_LOCK:
+        return round(sum(cost for day, cost in _SPENT_BY_TASK.values() if day == today), 4)
+
+
+def record_spend(result: "BobResult") -> None:
+    """Records a finished session's cost for the daily guard."""
+    if not result.stats:
+        return
+    with _SPEND_LOCK:
+        _, previous = _SPENT_BY_TASK.get(result.stats.task_id, (_today(), 0.0))
+        _SPENT_BY_TASK[result.stats.task_id] = (_today(), max(previous, result.stats.session_costs))
 
 
 def bob_child_env() -> dict[str, str]:
@@ -351,6 +398,9 @@ class BobAdapter:
             raise BobConfigError("BOB_API_KEY is missing from the environment (see .env.example).")
         if not self.workspace.is_dir():
             raise BobConfigError(f"The workspace does not exist: {self.workspace}")
+        limit = daily_spend_limit()
+        if limit is not None and spent_today() >= limit:
+            raise BobBudgetError(f"Daily bobcoin limit reached ({spent_today():.2f} of {limit:g}).")
         binary_path = shutil.which(self.settings.bob_binary)
         if binary_path is None:
             raise BobNotInstalledError(
@@ -385,6 +435,7 @@ class BobAdapter:
                 f"Bob ({mode}) exited with code {completed.returncode}: {detail}"
             )
         result = parse_bob_output(completed.stdout, mode)
+        record_spend(result)
         if result.status != "success":
             raise BobExecutionError(f"Bob ({mode}) returned status {result.status!r}.")
         return result
@@ -514,6 +565,7 @@ class BobAdapter:
             stats=BobStats.model_validate(final["stats"]) if "stats" in final else None,
             execution_mode="live",
         )
+        record_spend(result)
         if result.status != "success":
             raise BobExecutionError(f"Bob ({mode}) returned status {result.status!r}.")
         return result

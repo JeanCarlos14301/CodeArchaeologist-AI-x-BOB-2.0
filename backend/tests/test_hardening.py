@@ -113,7 +113,7 @@ def test_event_log_caps_noise_but_keeps_essential_events(tmp_path: Path, monkeyp
 def test_read_events_skips_delivered_lines_and_ignores_corrupt_ones(tmp_path: Path) -> None:
     log = EventLog(tmp_path / "events.jsonl")
     for index in range(4):
-        log.emit("preparing", "x", "python", f"evento {index}")
+        log.emit("preparing", "x", "python", f"event {index}")
     with log.path.open("a", encoding="utf-8") as handle:
         handle.write("{this is not json}\n")
     log.emit("preparing", "x", "python", "after the corrupt line")
@@ -122,7 +122,7 @@ def test_read_events_skips_delivered_lines_and_ignores_corrupt_ones(tmp_path: Pa
 
 
 def test_parse_todos_is_capped() -> None:
-    items = parse_todos("\n".join(f"[ ] tarea {index}" for index in range(500)))
+    items = parse_todos("\n".join(f"[ ] task {index}" for index in range(500)))
     assert len(items) == activity_module.MAX_TODOS
 
 

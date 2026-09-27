@@ -1,58 +1,55 @@
-# Evaluación
+# Evaluation
 
-- `expected-findings.json` es la **verdad de referencia** de hallazgos para `samples/facturaya-v1`,
-  tomada de [FacturaYa](https://github.com/JeanCarlos14301/FacturaYa) (`evaluation/expected-findings.json`
-  de ese repo), con las rutas de evidencia reescritas relativas a la raíz de la muestra (`app.py`,
-  no `samples/facturaya-v1/app.py`) para que coincidan con lo que cita `evidence-auditor`.
-- Incluye 7 hallazgos: 6 con `expected_detection: true` y uno (`EF-7`) con `false`, para poder medir
-  también falsos positivos, no solo recall.
-- **NUNCA se pasa a Bob** ni se incluye en ningún prompt o contexto de modo. `evidence_audit.py`
-  ya excluye la carpeta `evaluation/` y `expected-findings*.json` al copiar el workspace del sandbox.
-- Se usa solo para medir la precisión y el recall de `evidence-auditor` (F-07).
+- `expected-findings.json` is the curated **ground truth** for `samples/facturaya-v1`. It comes from
+  [FacturaYa](https://github.com/JeanCarlos14301/FacturaYa) (`evaluation/expected-findings.json` in that
+  repository), with evidence paths rewritten relative to the sample root (`app.py`, not
+  `samples/facturaya-v1/app.py`) to match `evidence-auditor` citations.
+- It contains seven entries: six with `expected_detection: true` and one (`EF-7`) with `false`, so the scorer
+  measures false positives as well as recall.
+- It is **NEVER passed to Bob** or included in any mode prompt or context. When building the sandbox,
+  `evidence_audit.py` excludes `evaluation/` and `expected-findings*.json`.
+- It is used only to measure `evidence-auditor` precision and recall (F-07).
 
-## Primera medición (informal, H7 aprox., job `02833a24a7a7`)
+## First measurement (informal, around H7, job `02833a24a7a7`)
 
-Primera corrida `live` real de `evidence-auditor` sobre `facturaya-v1` (Jean, 25/09/2026 15:22,
-120 s, 1.14 bobcoins), comparada a mano contra `expected-findings.json`:
+The first real `live` `evidence-auditor` run on `facturaya-v1` (Jean, September 25, 2026 at 15:22; 120 s;
+1.14 bobcoins), compared manually with `expected-findings.json`:
 
-| Referencia | Esperado | Resultado |
+| Reference | Expected | Result |
 |---|---|---|
-| EF-1 SQL inyectado | detectar | ✅ detectado y validado (`F-1`) |
-| EF-2 función `invoice_new` extensa | detectar | ✅ detectado y validado (`F-10`) |
-| EF-3 descuento duplicado | detectar | ⚠️ Bob lo reportó (`F-5`), pero el validador **rechazó** la mitad de la evidencia (el fragmento citado en `reports.py` no calzó con el rango) — el hallazgo no llegó al expediente final |
-| EF-4 secretos hardcodeados | detectar | ✅ detectado y validado (`F-2`) |
-| EF-5 dependencia circular | detectar | ✅ detectado y validado (`F-9`) |
-| EF-6 IDOR en JSON de factura | detectar | ✅ detectado y validado (`F-3`) |
-| EF-7 consulta parametrizada (control negativo) | NO detectar | ✅ no se reportó ningún falso positivo aquí |
+| EF-1 SQL injection | detect | ✅ Detected and validated (`F-1`) |
+| EF-2 long `invoice_new` function | detect | ✅ Detected and validated (`F-10`) |
+| EF-3 duplicated discount logic | detect | ⚠️ Bob reported it (`F-5`), but the validator rejected half of the evidence because the `reports.py` snippet did not match the cited range; the finding did not enter the final dossier |
+| EF-4 hardcoded secrets | detect | ✅ Detected and validated (`F-2`) |
+| EF-5 circular dependency | detect | ✅ Detected and validated (`F-9`) |
+| EF-6 invoice JSON IDOR | detect | ✅ Detected and validated (`F-3`) |
+| EF-7 parameterized query (negative control) | do not detect | ✅ No false positive reported |
 
-**Recall sobre hallazgos validados: 5/6 (83%).** El único miss (EF-3) no es que Bob no lo haya visto
-— lo vio y lo redactó — sino que su propia cita de evidencia no coincidió lo bastante con el código
-como para pasar el validador de la etapa 3. Es el comportamiento correcto del validador (D7): mejor
-perder un hallazgo real que dejar pasar uno con evidencia que no se sostiene.
+**Recall on validated findings: 5/6 (83%).** The EF-3 miss was not a discovery failure: Bob found and wrote
+the issue, but its own citation did not match the code closely enough to pass stage 3. That is the intended
+validator behavior (D7): rejecting a real issue with unsupported evidence is safer than accepting the claim.
 
-Bob reportó además 7 hallazgos fuera de esta lista de 7 (condición de carrera en numeración de
-facturas, N+1 en el reporte mensual, hashing débil en `seed.py`, IDOR en el conteo de facturas por
-cliente, dinero como `TEXT` en SQLite, ausencia de pruebas, `login_required` inconsistente); todos
-con cita de archivo/línea verificada por el validador. No están en `expected-findings.json` porque
-esa lista es un mínimo curado, no exhaustivo — no se cuentan como falsos positivos sin revisión
-manual, pero valdría la pena que alguien del equipo los revise para decidir si se agregan a la
-verdad de referencia.
+Bob also reported seven findings outside this list: an invoice-number race, an N+1 monthly-report query, weak
+hashing in `seed.py`, an invoice-count IDOR, money stored as SQLite `TEXT`, no tests, and inconsistent
+`login_required` behavior. Each had a file-and-line citation verified by the validator. They are not in
+`expected-findings.json` because it is a curated minimum, not an exhaustive truth set. They are not counted as
+false positives without manual review, but the team should decide whether to add them to the ground truth.
 
-## Medición automática
+## Automated measurement
 
 ```bash
-python evaluation/score.py <dossier.json>      # exit 0 solo si acierta todos y no hay falsos positivos
+python evaluation/score.py <dossier.json>      # exits 0 only when every expected issue is found and there are no false positives
 ```
 
-Regla única: un esperado es acierto si un hallazgo **validado** solapa sus líneas en el mismo archivo; los rechazados no cuentan
-(`evaluation/score.py`, con pruebas en `backend/tests/test_score.py`).
+An expected item is a hit when a **validated** finding overlaps its lines in the same file; rejected findings
+do not count. The scorer is `evaluation/score.py`, with tests in `backend/tests/test_score.py`.
 
-Con la respuesta real grabada de Bob (`contracts/fixtures/bob-evidence-auditor-facturaya.json`) y el validador sobre `samples/facturaya-v1`
-da **6/6 y 0 falsos positivos**. Los **5/6** de la tabla anterior (job `02833a24a7a7`) siguen sin poder reproducirse: su `dossier.json` no está
-versionado. Súbelo (sin credenciales) a `contracts/fixtures/` y `score.py` lo confirmará.
+Using the real recorded Bob reply (`contracts/fixtures/bob-evidence-auditor-facturaya.json`) and validating it
+against `samples/facturaya-v1` produces **6/6 and zero false positives**. The earlier **5/6** result above
+(job `02833a24a7a7`) is not reproducible because its `dossier.json` is not versioned.
 
 ## TODO
-- [ ] Versionar el `dossier.json` de la corrida `02833a24a7a7` para reproducir el 5/6.
-- [ ] Revisar por qué el segundo fragmento de `F-5` no calzó en `reports.py` (¿tolerancia de línea,
-  o el snippet de Bob no es literal?) y decidir si vale la pena ajustar `LINE_TOLERANCE` o pedirle
-  a Bob una sola línea representativa por evidencia en vez de fragmentos con `...`.
+
+- [ ] Add the credential-free `dossier.json` from job `02833a24a7a7` to `contracts/fixtures/` so the 5/6 result can be reproduced.
+- [ ] Review why the second `F-5` snippet did not match `reports.py` and decide whether to adjust
+  `LINE_TOLERANCE` or ask Bob for one representative evidence line instead of snippets containing `...`.

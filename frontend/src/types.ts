@@ -169,6 +169,9 @@ export interface BobStatus {
   max_cost_per_run: number;
   timeout_s: number;
   live_requires_token: boolean;
+  /** BOB_DAILY_SPEND_LIMIT in bobcoins; null when the server has no daily guard. */
+  daily_spend_limit?: number | null;
+  spent_today?: number;
 }
 
 export interface SampleInfo {
