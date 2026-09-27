@@ -23,6 +23,12 @@
   --ca-spectrum-orange: #fd7c0f;
   --ca-spectrum-red: #ff2b2b;
   --ca-spectrum-violet: #9500ff;
+  /* IBM Bob mascot identity: used ONLY by BobMascot, never as UI color (DESIGN.md §2.1). */
+  --ca-bob-blue: #3d5afe;
+  --ca-bob-violet: #8b3dff;
+  --ca-bob-ridge: #7390ff;
+  --ca-bob-ear: #dfe3ee;
+  --ca-bob-ink: #0b0b14;
   --ca-spectrum: linear-gradient(to right, #08c380 0%, #fd7c0f 31.73%, #ff2b2b 62.5%, #9500ff 100%);
   color-scheme: dark;
 }
@@ -113,6 +119,12 @@
   --color-warning: var(--ca-electric-yellow);
 
   --background-image-spectrum: var(--ca-spectrum);
+
+  --color-mascot-helmet: var(--ca-bob-blue);
+  --color-mascot-helmet-2: var(--ca-bob-violet);
+  --color-mascot-ridge: var(--ca-bob-ridge);
+  --color-mascot-ear: var(--ca-bob-ear);
+  --color-mascot-ink: var(--ca-bob-ink);
 }
 
 @utility bg-spectrum {

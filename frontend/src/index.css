@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
+@import "./styles/bob-mascot.css";
 
 /* In @layer base so component utilities (e.g. focus:outline-none) can override them. */
 @layer base {
@@ -48,7 +49,7 @@
 
 /* Text that comes from Bob or from the code (paths, secrets, long identifiers) never widens the layout. */
 #workspace,
-aside[aria-label="Asistente IBM Bob"],
+#bob-panel,
 footer {
   overflow-wrap: anywhere;
 }

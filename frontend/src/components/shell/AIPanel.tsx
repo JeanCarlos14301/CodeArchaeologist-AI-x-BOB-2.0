@@ -65,7 +65,7 @@ export function AIPanel({ onClose }: { onClose: () => void }) {
         : null;
 
   return (
-    <aside aria-label="IBM Bob assistant" className="relative flex h-full flex-col overflow-hidden bg-surface">
+    <aside id="bob-panel" aria-label="IBM Bob assistant" className="relative flex h-full flex-col overflow-hidden bg-surface">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
         <span aria-hidden className="h-2 w-2 rounded-pill bg-fg-2" />
         <h2 className="font-display text-body text-fg">Bob</h2>
