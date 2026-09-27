@@ -10,7 +10,7 @@ no aparece en `.gitignore`.
 |---|---|---|
 | Felipe | [felipe/](felipe/) | ✅ `2026-09-26_F-15_bob-run-terminal.png`: `bob run --mode evidence-auditor` con *Task Summary* (0,180 bobcoins, 10,4 s, tarea `39094ee2b09c`). `2026-09-26_F-03_sesion-live-evidence-auditor.png`: la sesión live de la vitrina vista en la app (1,15 bobcoins). |
 | Jean | [jean/](jean/) | ⚠️ `EVIDENCE-USEBOB-001.PNG`: *Task Overview* de Bob Shell 2.0.5 (tarea `c54cdc15907f`, 25-09) con 0 bobcoins en esa tarea. Falta una captura de una tarea con costo. |
-| Daniel | [daniel/](daniel/) | ❌ Las imágenes actuales muestran ejecuciones de pruebas (pytest y la batería de seguridad), no un resumen de sesión de Bob. Falta la captura. |
+| Daniel | [daniel/](daniel/) | ✅ `2026-09-26_blast-radius-guard01.png`, `2026-09-26_blast-radius-guard02.png`: `bob run --mode blast-radius-guard` en terminal de Bob IDE con *Task Summary* (0,068 bobcoins, 8,3 s, tarea `4a259689353b`). Trazado de impacto sobre `db.py` y módulos dependientes. |
 | Edgar | [edgar/](edgar/) | ❌ Carpeta vacía. Falta la captura. |
 
 ## Qué debe verse en cada captura
