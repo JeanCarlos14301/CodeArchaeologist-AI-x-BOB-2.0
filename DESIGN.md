@@ -51,6 +51,7 @@ Primitive (--ca-void)  →  Semantic (--color-canvas → bg-canvas)  →  Compon
 | `--ca-ember` | `#ff5e23` | primary hover, focus, active indicator |
 | `--ca-electric-yellow` | `#ffd900` | primary-action halo, medium severity |
 | `--ca-spectrum-*` | `#08c380` `#fd7c0f` `#ff2b2b` `#9500ff` | *Spectrum Rail* stops |
+| `--ca-bob-*` | `#3d5afe` `#8b3dff` `#7390ff` `#dfe3ee` `#0b0b14` | IBM Bob mascot identity (helmet, ridge, ears, ink). **Only** inside `BobMascot`, through the `--color-mascot-*` semantics; never as UI color |
 
 ### 2.2 Semantic tokens—use these
 
@@ -192,6 +193,7 @@ Domain components in `components/domain/`:
 | `MigrationSequence` · `PertRange` | cut steps with dependencies · PERT range as a ruler |
 | `AskBob` (`AskComposer`, `AskAnswerView`) | carbon composer + orb; while Bob answers, show its real steps live with compact `BobWork`; on completion show facts / inferences / recommendations / unknowns and a collapsed **How Bob reached this answer** section |
 | `BobWork` | what Bob actually does—reads, searches, skills, subagents, edits—with timer and counters; `compact` variant for the panel. Announce a screen-reader summary no more than once every 5 seconds, never one event per action |
+| `BobMascot` · `BobPresence` | IBM Bob as inline SVG sitting on the composer (`AskComposer`), with one line beside it. Its mood comes only from the chat: **idle** (asks about the context) · **listening** (focus or text: leans and looks at the input) · **working** (question pending: hops, reads left to right, types; the line shows Bob's latest *real* step and the seconds) · **happy** 2.6 s when the answer arrives · **error** 3.6 s when it fails · **sleeping** when the composer is disabled. Only `transform`/`opacity` move (`styles/bob-mascot.css`); `prefers-reduced-motion` stops everything and the face and text still tell the state. Decorative (`aria-hidden`): `BobWork` already announces progress |
 
 Modernization Studio components in `components/domain/studio/`, under **Modernization → Studio**:
 

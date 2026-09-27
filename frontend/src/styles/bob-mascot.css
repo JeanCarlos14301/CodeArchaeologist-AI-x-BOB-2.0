@@ -1,0 +1,163 @@
+/*
+ * BobMascot (DESIGN.md §4): each mood moves a different part. Only transform and opacity are animated, and
+ * transforms use viewBox coordinates (transform-box: view-box) so each part pivots where it attaches.
+ */
+
+.bob-mascot {
+  overflow: visible;
+}
+
+.bob-mascot .bob-body {
+  transform-origin: 60px 126px;
+  animation: bob-breathe 3.2s ease-in-out infinite;
+}
+
+.bob-mascot .bob-head {
+  transform-origin: 60px 88px;
+  transition: transform 200ms ease-out;
+}
+
+.bob-mascot .bob-pupils {
+  transition: transform 200ms ease-out;
+}
+
+.bob-mascot .bob-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bob-blink 5.2s infinite;
+}
+
+.bob-mascot .bob-eye + .bob-eye {
+  animation-delay: 40ms;
+}
+
+.bob-mascot .bob-arm-l {
+  transform-origin: 34px 93px;
+}
+
+.bob-mascot .bob-arm-r {
+  transform-origin: 86px 93px;
+}
+
+/* Listening: leans toward what is being typed and looks down at the composer. */
+.bob-mascot[data-mood="listening"] .bob-head {
+  transform: rotate(-5deg);
+}
+
+.bob-mascot[data-mood="listening"] .bob-pupils {
+  transform: translate(-1px, 2.5px);
+}
+
+/* Working: hops, reads left to right and types; the </> badge pulses. */
+.bob-mascot[data-mood="working"] .bob-body {
+  animation: bob-hop 0.9s ease-in-out infinite;
+}
+
+.bob-mascot[data-mood="working"] .bob-pupils {
+  animation: bob-scan 1.8s ease-in-out infinite;
+}
+
+.bob-mascot[data-mood="working"] .bob-arm-l {
+  animation: bob-type-l 0.32s ease-in-out infinite alternate;
+}
+
+.bob-mascot[data-mood="working"] .bob-arm-r {
+  animation: bob-type-r 0.32s ease-in-out 0.16s infinite alternate;
+}
+
+.bob-mascot[data-mood="working"] .bob-code {
+  animation: bob-code 1.2s ease-in-out infinite;
+}
+
+/* Happy: a small jump and a wave. */
+.bob-mascot[data-mood="happy"] .bob-body {
+  animation: bob-jump 0.5s ease-out 2;
+}
+
+.bob-mascot[data-mood="happy"] .bob-arm-r {
+  animation: bob-wave 0.45s ease-in-out 3;
+}
+
+/* Error: shakes its head. */
+.bob-mascot[data-mood="error"] .bob-head {
+  animation: bob-shake 0.42s ease-in-out 2;
+}
+
+/* Sleeping: slow breathing and a floating z. */
+.bob-mascot[data-mood="sleeping"] .bob-body {
+  animation-duration: 4.8s;
+}
+
+.bob-mascot[data-mood="sleeping"] .bob-head {
+  transform: rotate(4deg);
+}
+
+.bob-mascot .bob-z {
+  animation: bob-z 2.4s ease-out infinite;
+}
+
+@keyframes bob-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes bob-blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.1); }
+}
+
+@keyframes bob-hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes bob-scan {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+}
+
+@keyframes bob-type-l {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-16deg); }
+}
+
+@keyframes bob-type-r {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(16deg); }
+}
+
+@keyframes bob-code {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes bob-jump {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-9px); }
+}
+
+@keyframes bob-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-130deg); }
+}
+
+@keyframes bob-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-7deg); }
+  75% { transform: rotate(7deg); }
+}
+
+@keyframes bob-z {
+  from { opacity: 0; transform: translate(0, 6px); }
+  40% { opacity: 1; }
+  to { opacity: 0; transform: translate(6px, -10px); }
+}
+
+/* The mood is still told by the face and the caption; nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .bob-mascot *,
+  .bob-mascot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
