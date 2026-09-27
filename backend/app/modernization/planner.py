@@ -32,7 +32,8 @@ PLANNER_MODE = "modernization-planner"
 _FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
 # Percentages and time estimates: effort and risk numbers are never invented by the AI.
 # A bare % is legitimate in code (LIKE wildcards, string formatting); what is forbidden is a figure with a percent sign.
-_PERCENT = re.compile(r"\d\s*%")
+# "100 %" is a completion criterion ("tests pass 100%"), not a claim, so it is exempt; any other figure with a percent sign is not.
+_PERCENT = re.compile(r"(?<![\d.,])(?!100\s*%)\d+(?:[.,]\d+)?\s*%")
 _ESTIMATE = re.compile(
     r"\b(?:\d+(?:[.,]\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty|thirty|"
     r"un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|veinte|treinta)\s+"
@@ -55,7 +56,7 @@ class Runner(Protocol):
 
 
 EventSink = Callable[[dict[str, Any]], None]
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 3
 
 
 # ---------------------------------------------------------------- prompts
@@ -210,8 +211,10 @@ def extract_json(message: str) -> dict[str, Any]:
     return data
 
 
-def _check_text(label: str, text: str) -> None:
-    if _PERCENT.search(text) or _ESTIMATE.search(text):
+def _check_text(label: str, text: str, percent: bool = True) -> None:
+    """Rejects invented figures. `percent=False` is for acceptance criteria, where a target such as "coverage >= 80%"
+    is a requirement the plan sets, not a measurement Bob claims. Time estimates are never accepted."""
+    if (percent and _PERCENT.search(text)) or _ESTIMATE.search(text):
         raise PlannerError(f"{label} contains figures or estimates Bob cannot invent: {text[:120]!r}")
 
 
@@ -274,8 +277,9 @@ def validate_plan(raw: dict[str, Any], workspace: Path) -> Plan:
         for dep in step.depends_on:
             if dep not in known or dep == step.id:
                 raise PlannerError(f"Step {step.id} depends on «{dep}», which does not exist.")
-        for text in (step.title, step.why, step.validation, step.changes):
+        for text in (step.title, step.why, step.changes):
             _check_text(f"Step {step.id}", text)
+        _check_text(f"Step {step.id} validation", step.validation, percent=False)
         for change in step.files:
             parts = Path(change.path).parts
             if change.path.startswith(("/", "\\")) or ".." in parts or any(p in _FORBIDDEN_PARTS for p in parts):
