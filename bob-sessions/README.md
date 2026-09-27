@@ -8,7 +8,7 @@ no aparece en `.gitignore`.
 
 | Integrante | Carpeta | Estado |
 |---|---|---|
-| Felipe | [felipe/](felipe/) | ✅ `2026-09-26_F-15_bob-run-terminal.png`: `bob run --mode evidence-auditor` con *Task Summary* (0,180 bobcoins, 10,4 s, tarea `39094ee2b09c`). `2026-09-26_F-03_sesion-live-evidence-auditor.png`: la sesión live de la vitrina vista en la app (1,15 bobcoins). |
+| Felipe | [felipe/](felipe/) | ✅ Cuatro *Task Summary* de `bob run` en terminal, cada uno con un modo distinto: `2026-09-26_F-15_bob-run-terminal.png` (`evidence-auditor`, 0,180 bobcoins, tarea `39094ee2b09c`), `2026-09-26_polyglot-architect.png` (0,251, tarea `eaacf5cf39db`), `2026-09-26_modernization-planner.png` (0,251, tarea `18f5ac81623b`) y `2026-09-26_board-narrator.png` (0,238, tarea `2c12a3e21954`). `2026-09-26_F-03_sesion-live-evidence-auditor.png`: la sesión live de la vitrina vista en la app (1,15 bobcoins). |
 | Jean | [jean/](jean/) | ⚠️ `EVIDENCE-USEBOB-001.PNG`: *Task Overview* de Bob Shell 2.0.5 (tarea `c54cdc15907f`, 25-09) con 0 bobcoins en esa tarea. Falta una captura de una tarea con costo. |
 | Daniel | [daniel/](daniel/) | ✅ `2026-09-26_blast-radius-guard01.png`, `2026-09-26_blast-radius-guard02.png`: `bob run --mode blast-radius-guard` en terminal de Bob IDE con *Task Summary* (0,068 bobcoins, 8,3 s, tarea `4a259689353b`). Trazado de impacto sobre `db.py` y módulos dependientes. |
 | Edgar | [edgar/](edgar/) | ❌ Carpeta vacía. Falta la captura. |
@@ -33,7 +33,7 @@ modos. Todos son de solo lectura y tienen tope de costo. Se ejecutan desde la ra
 | **Jean** (producto, despliegue, pitch) | El modo que decide qué migrar primero: el corazón del pitch. | `bob run --mode migration-architect --max-turns 6 --max-cost 0.6 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué ruta migrarías primero con el patrón Strangler Fig y por qué? Cita archivo y líneas."` |
 | **Daniel** (backend y contrato) | Radio de impacto: qué se rompe al tocar la capa de datos. | `bob run --mode blast-radius-guard --max-turns 5 --max-cost 0.5 --trust "Sin modificar archivos: en samples/facturaya-v1, ¿qué rutas y funciones se rompen si cambio db.py? Cita archivo y líneas."` |
 | **Edgar** (frontend) | Revisión escéptica del código: cuestiona supuestos antes de migrar. | `bob run --mode code-skeptic --max-turns 4 --max-cost 0.4 --trust "Sin modificar archivos: revisa samples/facturaya-v1/billing.py y señala qué supuestos del cálculo de totales podrían ser falsos. Cita archivo y líneas."` |
-| **Felipe** (modos de Bob) | ✅ Ya está (`evidence-auditor`). No hace falta repetir. | — |
+| **Felipe** (modos de Bob) | ✅ Ya están (`evidence-auditor`, `polyglot-architect`, `modernization-planner`, `board-narrator`). | — |
 
 Si `bob run` no está disponible, sirve una sesión interactiva: ejecutar `bob`, elegir el modo con `/mode`,
 hacer la misma pregunta y cerrar la sesión para que aparezca el resumen.
