@@ -10,7 +10,7 @@ each team member**, captured from that member's own account. This directory is v
 |---|---|---|
 | Felipe | [felipe/](felipe/) | ✅ Four terminal `bob run` Task Summaries, each with a different mode: `2026-09-26_F-15_bob-run-terminal.png` (`evidence-auditor`, 0.180 bobcoins, task `39094ee2b09c`), `2026-09-26_polyglot-architect.png` (0.251, task `eaacf5cf39db`), `2026-09-26_modernization-planner.png` (0.251, task `18f5ac81623b`), and `2026-09-26_board-narrator.png` (0.238, task `2c12a3e21954`). `2026-09-26_F-03_live-session-evidence-auditor.png` shows the showcase's live session in the app (1.15 bobcoins). |
 | Jean | [jean/](jean/) | ⚠️ `EVIDENCE-USEBOB-001.PNG`: Bob Shell 2.0.5 Task Overview (task `c54cdc15907f`, September 25) with zero bobcoins for that task. A screenshot from a task with nonzero cost is still required. |
-| Daniel | [daniel/](daniel/) | ⚠️ `2026-09-26_blast-radius-guard01.png` and `2026-09-26_blast-radius-guard02.png` show `bob run --mode blast-radius-guard` with a paid Task Summary (0.068 bobcoins, 8.3 s, task `4a259689353b`), but the run reached its three-turn limit with zero assistant messages. Rerun it with enough turns and capture Bob's final response. |
+| Daniel | [daniel/](daniel/) | ✅ Six terminal screenshots `2026-09-26_blast-radius-guard-extended-01.png` to `06.png` (`blast-radius-guard`, task `4420fca2456d`, 0.323 bobcoins, 1m 16s). Shows complete static blast radius analysis of `samples/facturaya-v1/db.py`, tool executions, symbol inventory, transitive call graphs, mutation matrix, quantitative impact metrics (DIR: 30.3%, TBR: 66.7%, CBRS: 73.2/100 RED GATE), failure propagation Mermaid diagram, and complete Task Summary. |
 | Edgar | [edgar/](edgar/) | ❌ The directory is empty. The screenshot is missing. |
 
 ## What every screenshot must show
@@ -31,7 +31,7 @@ real use of the repository's modes. Run these commands from the repository root.
 | Member | Why this mode | Command |
 |---|---|---|
 | **Jean** (product, deployment, pitch) | It explains which cut should be migrated first—the core of the pitch. | `bob run --mode migration-architect --max-turns 6 --max-cost 0.6 --trust "Do not modify files. In samples/facturaya-v1, which route would you migrate first with the Strangler Fig pattern, and why? Cite files and lines."` |
-| **Daniel** (backend and contract) | Blast radius: what breaks when the data layer changes. | `bob run --mode blast-radius-guard --max-turns 6 --max-cost 0.5 --trust "Do not modify files. In samples/facturaya-v1, which routes and functions break if I change db.py? Cite files and lines, then give a concise final answer."` |
+| **Daniel** (backend and contract) | ✅ Completed (`blast-radius-guard`, task `4420fca2456d`, 0.323 bobcoins). Full analysis across 6 screenshots in [daniel/](daniel/). | — |
 | **Edgar** (frontend) | A skeptical code review that challenges assumptions before migration. | `bob run --mode code-skeptic --max-turns 4 --max-cost 0.4 --trust "Do not modify files. Review samples/facturaya-v1/billing.py and identify assumptions in total calculation that may be false. Cite files and lines."` |
 | **Felipe** (Bob modes) | ✅ Already complete (`evidence-auditor`, `polyglot-architect`, `modernization-planner`, and `board-narrator`). No repeat needed. | — |
 
