@@ -235,11 +235,11 @@ docs/            Migration engine, Bob usage log, decisions, deployment and subm
 
 ## Team
 
-| Member | Role | Profiles |
+| Member | Profiles |
 |---|---|---|
 | **Jean Carlos Reyes** | [GitHub](https://github.com/JeanCarlos14301) · [LinkedIn](https://www.linkedin.com/in/jean-carlos-reyes-12528416b) |
 | **Nelson Felipe Gonzalez** | [GitHub](https://github.com/IngeNelsonG)
-| **Daniel Esteban Alarcon** [GitHub](https://github.com/alarconDaniel)|
+| **Daniel Esteban Alarcon** | [GitHub](https://github.com/alarconDaniel)|
 | **Edgar Leonardo Patiño**| [GitHub](https://github.com/Wissen01720) · [LinkedIn](https://www.linkedin.com/in/edgard-leonardo-patiño-largo-a274072a4) |
 
 ## License
