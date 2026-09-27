@@ -7,6 +7,7 @@ import { InlineText } from "../ui/InlineText";
 import { Eyebrow } from "../ui/Layout";
 import { EvidenceRef } from "./EvidenceRef";
 import { BOB_GLYPH, BobWork, bobCounters, type BobWorkEvent } from "./BobWork";
+import { BobPresence } from "./BobMascot";
 
 const BOOKKEEPING = new Set(["bob.turn", "bob.result", "bob.start"]);
 /** What Bob DOES (reads, searches, skills, reasoning); without its turns or the session closing. */
@@ -112,8 +113,11 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
   const { ask, askHistory, token, setToken, tokenRequired, hasAccess, composerSeed, clearComposerSeed } = useWorkspace();
   const [text, setText] = useState("");
   const [draftToken, setDraftToken] = useState("");
+  const [focused, setFocused] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const pending = askHistory.some((entry) => entry.status === "pending");
+  const latest = askHistory.at(-1);
+  const activity = latest?.status === "pending" ? visibleSteps(latest.progress).at(-1)?.message : undefined;
 
   useEffect(() => {
     if (!composerSeed) return;
@@ -155,6 +159,9 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
           </div>
         </div>
       )}
+      <div>
+      <BobPresence latest={latest} activity={activity} listening={focused || text.trim().length > 0} sleeping={!!disabledReason}
+        subject={context.label ?? "this repository"} />
       <div className="rounded-composer border border-fg/10 bg-composer p-3 focus-within:border-focus/70">
         <label htmlFor="ask-input" className="sr-only">Ask Bob about {context.label ?? "this project"}</label>
         <textarea
@@ -165,6 +172,8 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKey}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder={context.kind === "project" ? "Ask about this repository…" : `Ask about ${context.label ?? "this object"}…`}
           className="block max-h-40 min-h-11 w-full resize-none bg-transparent text-caption leading-relaxed text-fg placeholder:text-subtle focus:outline-none"
         />
@@ -179,6 +188,7 @@ export function AskComposer({ context, disabledReason }: { context: AskContext; 
             <ArrowUp size={16} aria-hidden />
           </button>
         </div>
+      </div>
       </div>
     </form>
   );
