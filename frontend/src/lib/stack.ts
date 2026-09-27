@@ -1,6 +1,6 @@
 import type { ArchitectureData } from "../types";
 
-/** Dependencia declarada en requirements.txt. Solo lo que dice el archivo: no se consulta PyPI. */
+/** Dependency declared in requirements.txt. Only what the file says: PyPI is never queried. */
 export interface DeclaredPackage {
   name: string;
   spec: string | null;
@@ -39,23 +39,23 @@ export interface DetectedStack {
   data: string | null;
 }
 
-/** Stack detectado a partir de hechos medidos: AST, rutas, SQL y requirements.txt. */
+/** Stack detected from measured facts: AST, routes, SQL and requirements.txt. */
 export function detectStack(architecture: ArchitectureData | null, packages: DeclaredPackage[]): DetectedStack {
   const frameworks = packages.map((pkg) => FRAMEWORKS[pkg.name.toLowerCase()]).filter((name): name is string => !!name);
   if (architecture && architecture.routes.length > 0 && !frameworks.includes("Flask") && !frameworks.includes("FastAPI")) {
-    frameworks.push("Rutas HTTP");
+    frameworks.push("HTTP routes");
   }
   const tables = architecture?.tables.length ?? 0;
   return {
     language: architecture && architecture.totals.functions > 0 ? "Python" : null,
     frameworks: [...new Set(frameworks)],
     data: architecture && (tables > 0 || architecture.sql.total > 0)
-      ? `SQL · ${tables} ${tables === 1 ? "tabla" : "tablas"}`
+      ? `SQL · ${tables} ${tables === 1 ? "table" : "tables"}`
       : null,
   };
 }
 
-/** Framework importado en un archivo de código (detección literal, no inferida). */
+/** Framework imported in a code file (literal detection, not inferred). */
 export function importedFramework(code: string | null): string | null {
   if (!code) return null;
   if (/^\s*(from|import)\s+fastapi\b/m.test(code)) return "FastAPI";

@@ -1,4 +1,4 @@
-// Espejo de backend/app/contracts/schema_v1.py y de las respuestas de backend/app/api/routes.py.
+// Mirror of backend/app/contracts/schema_v1.py and of the responses of backend/app/api/routes.py.
 
 export type ExecutionMode = "live" | "imported" | "example";
 export type JobStatus = "queued" | "running" | "done" | "failed";
@@ -58,12 +58,12 @@ export interface Dossier {
   }[];
   first_cut_pert: PertEstimate | null;
   migration: MigrationResult | null;
-  /** Propuestas de Bob (migration-architect) sobre el ranking de rutas, validadas por código; vacío si no corrió o se rechazó. */
+  /** Bob's proposals (migration-architect) over the route ranking, validated by code; empty if it did not run or was rejected. */
   migration_options?: {
     id: string; name: string; pattern: string; endpoint?: string | null; finding_ids: string[];
     pros: string[]; cons: string[]; recommended: boolean;
   }[];
-  /** Ranking determinista de rutas (backend/app/pipeline/migration_ranking.py): qué migrar primero y en qué olas. */
+  /** Deterministic route ranking (backend/app/pipeline/migration_ranking.py): what to migrate first and in which waves. */
   recommendation?: MigrationRecommendation | null;
 }
 
@@ -184,7 +184,7 @@ export interface SourceExcerpt {
   lines: { number: number; text: string }[];
 }
 
-// --- Arquitectura medida sobre el código subido (GET /api/audits/{id}/architecture) ---------
+// --- Architecture measured on the uploaded code (GET /api/audits/{id}/architecture) --------
 
 export interface ArchitectureData {
   job_id: string;
@@ -199,7 +199,7 @@ export interface ArchitectureData {
   totals: { files: number; functions: number; calls: number };
 }
 
-// Vista normalizada del avance de un análisis.
+// Normalized view of an analysis's progress.
 export interface FlowStage {
   id: string;
   number: number;
@@ -219,11 +219,11 @@ export interface FlowJob {
   error: string | null;
   created_at: string;
   updated_at: string;
-  /** "modernization": subido solo para el Estudio (sin auditoría, arquitectura ni expediente). */
+  /** "modernization": uploaded only for the Studio (no audit, architecture or dossier). */
   purpose: "audit" | "modernization";
 }
 
-// Grafo de llamadas real (GET /api/audits/{id}/graph).
+// Real call graph (GET /api/audits/{id}/graph).
 export interface GraphNode {
   id: string; name: string; qualname: string; file: string; line_start: number; line_end: number;
   kind: "legacy" | "modern"; route: { rule: string; methods: string[] } | null;
@@ -246,7 +246,7 @@ export interface GraphData {
   notes: string;
 }
 
-// --- Asistente contextual (POST /api/audits/{id}/ask) -------------------------------------
+// --- Contextual assistant (POST /api/audits/{id}/ask) -------------------------------------
 
 export type ContextKind = "project" | "finding" | "file" | "function" | "module";
 
@@ -271,10 +271,10 @@ export interface Claim {
   refs: CodeRef[];
 }
 
-/** Una acción real de Bob mientras responde una pregunta (del stream de Bob, sin contenido de archivos). */
+/** A real Bob action while it answers a question (from the Bob stream, with no file contents). */
 export interface AskStep {
   seq: number;
-  /** Segundos desde que Bob empezó a responder. */
+  /** Seconds since Bob started answering. */
   t: number;
   kind: string;
   message: string;
@@ -291,11 +291,11 @@ export interface AskAnswer {
   structured: boolean;
   bob_cost: number | null;
   bob_duration_ms: number | null;
-  /** Lo que Bob hizo para llegar a la respuesta. */
+  /** What Bob did to reach the answer. */
   activity: AskStep[];
 }
 
-// --- Actividad del análisis (GET /api/audits/{id}/events) ----------------------------------
+// --- Analysis activity (GET /api/audits/{id}/events) ---------------------------------------
 
 export type StageId = "preparing" | "auditing" | "validating" | "migration" | "done";
 
@@ -320,7 +320,7 @@ export interface ActivityPage {
 }
 
 
-// --- Estudio de modernización (GET /api/audits/{id}/modernization) ---------------------------
+// --- Modernization Studio (GET /api/audits/{id}/modernization) ------------------------------
 
 export interface StackEvidence { path: string; line: number | null; text: string }
 export interface DetectedTech {
@@ -343,7 +343,7 @@ export interface StudioMapping { from_id: string; to_id: string; service?: strin
 export interface StudioAnswer { question: string; answer: string }
 export interface AssessRequest {
   mode: "chosen" | "recommend"; mappings: StudioMapping[]; business_context: string; priorities: Priority[];
-  /** Respuestas de la persona a las preguntas que Bob dejó abiertas. */
+  /** The person's answers to the questions Bob left open. */
   answers?: StudioAnswer[];
 }
 export type Axis = "security" | "performance" | "cost" | "maintainability" | "compatibility" | "team" | "operations";

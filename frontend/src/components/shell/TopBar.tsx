@@ -10,10 +10,10 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
 
   return (
     <header className="flex h-12 items-center gap-2 border-b border-line bg-canvas px-3">
-      <IconButton label="Abrir navegación" className="lg:hidden" onClick={onOpenNav}>
+      <IconButton label="Open navigation" className="lg:hidden" onClick={onOpenNav}>
         <Menu size={16} aria-hidden />
       </IconButton>
-      <button type="button" onClick={() => navigate({ jobId: null })} className="flex items-center gap-2.5 rounded-inner px-1.5 py-1" aria-label="CodeArchaeologist, ir a Proyectos">
+      <button type="button" onClick={() => navigate({ jobId: null })} className="flex items-center gap-2.5 rounded-inner px-1.5 py-1" aria-label="CodeArchaeologist, go to Projects">
         <BrandMark />
         <span className="hidden font-display text-body text-fg sm:inline">CodeArchaeologist</span>
       </button>
@@ -25,14 +25,14 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
           type="button"
           onClick={() => setPaletteOpen(true)}
           className="flex min-w-0 items-center gap-2 rounded-pill px-2.5 py-1 text-body hover:bg-raised"
-          aria-label="Cambiar de proyecto o análisis"
+          aria-label="Switch project or analysis"
         >
           <span className="truncate font-mono text-caption text-fg">{flow?.label ?? route.jobId}</span>
           {mode && <span className="hidden sm:inline-flex"><ModeBadge mode={mode} /></span>}
           <ChevronDown size={14} aria-hidden className="shrink-0 text-subtle" />
         </button>
       ) : (
-        <span className="text-caption text-subtle">Sin proyecto abierto</span>
+        <span className="text-caption text-subtle">No project open</span>
       )}
 
       <button
@@ -41,14 +41,14 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
         className="ml-auto hidden h-8 w-80 items-center gap-2 rounded-pill border border-line bg-control px-3 text-caption whitespace-nowrap text-subtle transition-[border-color] duration-150 hover:border-line-strong md:flex"
       >
         <Search size={14} aria-hidden />
-        <span className="truncate">Buscar hallazgos, archivos o acciones…</span>
+        <span className="truncate">Search findings, files or actions…</span>
         <span className="ml-auto flex gap-0.5"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
       </button>
-      <IconButton label="Buscar o ejecutar acción" className="ml-auto md:hidden" onClick={() => setPaletteOpen(true)}>
+      <IconButton label="Search or run an action" className="ml-auto md:hidden" onClick={() => setPaletteOpen(true)}>
         <Search size={16} aria-hidden />
       </IconButton>
 
-      <IconButton label={aiOpen ? "Cerrar panel de Bob (⌘J)" : "Abrir panel de Bob (⌘J)"} active={aiOpen} onClick={() => setAiOpen(!aiOpen)}>
+      <IconButton label={aiOpen ? "Close the Bob panel (⌘J)" : "Open the Bob panel (⌘J)"} active={aiOpen} onClick={() => setAiOpen(!aiOpen)}>
         {aiOpen ? <PanelRightClose size={16} aria-hidden /> : <PanelRightOpen size={16} aria-hidden />}
       </IconButton>
     </header>

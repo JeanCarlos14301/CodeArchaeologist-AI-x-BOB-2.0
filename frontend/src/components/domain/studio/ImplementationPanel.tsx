@@ -16,9 +16,9 @@ interface Props {
 }
 
 const STATUS = {
-  done: { glyph: "✓", label: "hecho", tone: "text-verified" },
-  failed: { glyph: "✗", label: "falló", tone: "text-danger" },
-  skipped: { glyph: "○", label: "omitido", tone: "text-subtle" },
+  done: { glyph: "✓", label: "done", tone: "text-verified" },
+  failed: { glyph: "✗", label: "failed", tone: "text-danger" },
+  skipped: { glyph: "○", label: "skipped", tone: "text-subtle" },
 } as const;
 
 export function ImplementationPanel({ plan, state, busy, onImplement, onDownload, loadDiff }: Props) {
@@ -33,20 +33,20 @@ export function ImplementationPanel({ plan, state, busy, onImplement, onDownload
         <div className="grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <div>
             <p className="text-body text-pretty text-fg">
-              Bob ejecutará los {plan.steps.length} pasos en orden sobre una <strong className="font-medium">copia</strong> del proyecto y te devolverá un ZIP con el resultado y el diff completo.
+              Bob will run the {plan.steps.length} steps in order on a <strong className="font-medium">copy</strong> of the project and give you back a ZIP with the result and the full diff.
             </p>
             <ul className="mt-3 space-y-1.5 text-caption text-muted">
-              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>Tu proyecto original no se modifica.</span></li>
-              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>Bob no ejecuta comandos ni el código del proyecto.</span></li>
-              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-warning">▲</span><span>El resultado es un borrador: solo se comprueba su sintaxis, no se prueba. Revísalo antes de usarlo.</span></li>
+              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>Your original project is not modified.</span></li>
+              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>Bob runs no commands and does not run the project's code.</span></li>
+              <li className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-warning">▲</span><span>The result is a draft: only its syntax is checked, it is not tested. Review it before using it.</span></li>
             </ul>
           </div>
           <div className="flex flex-col justify-end gap-4">
             <label className="flex cursor-pointer items-start gap-3 text-body text-fg-2">
               <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-accent" />
-              <span>Entiendo que Bob va a escribir código nuevo y que debo revisarlo y probarlo yo.</span>
+              <span>I understand that Bob will write new code and that I must review and test it myself.</span>
             </label>
-            <div><Button variant="primary" disabled={!understood || busy} onClick={onImplement} icon={<Hammer size={14} aria-hidden />}>Implementar el plan con Bob</Button></div>
+            <div><Button variant="primary" disabled={!understood || busy} onClick={onImplement} icon={<Hammer size={14} aria-hidden />}>Implement the plan with Bob</Button></div>
           </div>
         </div>
       )}
@@ -65,7 +65,7 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
   return (
     <div className="grid grid-cols-1 gap-x-10 gap-y-5 @3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" aria-live="polite">
       <div>
-        <Eyebrow>Pasos</Eyebrow>
+        <Eyebrow>Steps</Eyebrow>
         <ol className="mt-2 divide-y divide-line-subtle border-y border-line-subtle">
           {plan.steps.map((step, index) => {
             const run = runs.get(step.id);
@@ -77,9 +77,9 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
                 </span>
                 <span className="min-w-0 text-body text-fg-2"><span className="block truncate">{step.title}</span>
                   {run?.note && <span className="block truncate text-caption text-subtle" title={run.note}>{run.note}</span>}
-                  {run?.fixed.map((fix) => <span key={fix} className="block text-caption text-verified"><span aria-hidden>✓ </span>Corrigió: {fix}</span>)}
+                  {run?.fixed.map((fix) => <span key={fix} className="block text-caption text-verified"><span aria-hidden>✓ </span>Fixed: {fix}</span>)}
                 </span>
-                <span className="font-mono text-subtle tabular-nums">{run ? `${run.changed.length} arch.` : live ? "en curso" : ""}</span>
+                <span className="font-mono text-subtle tabular-nums">{run ? `${run.changed.length} files` : live ? "in progress" : ""}</span>
               </li>
             );
           })}
@@ -87,10 +87,10 @@ function Progress({ plan, state, running }: { plan: MigrationPlan; state: Studio
       </div>
       <div>
         {running ? (
-          <BobWork title={currentId ? `Bob ejecuta el paso ${currentId}` : "Bob prepara la copia de trabajo"} events={events} />
+          <BobWork title={currentId ? `Bob runs step ${currentId}` : "Bob prepares the working copy"} events={events} />
         ) : (
           <>
-            <Eyebrow>Actividad</Eyebrow>
+            <Eyebrow>Activity</Eyebrow>
             <ul className="mt-2 space-y-1.5 text-caption text-muted">
               {events.slice(-8).map((event, index) => <li key={`${event.t}-${index}`} className="grid grid-cols-[1rem_1fr]"><span aria-hidden className="text-subtle">·</span><span>{event.message}</span></li>)}
             </ul>
@@ -128,15 +128,15 @@ function Result({ result, onDownload, loadDiff, onRetry, busy }: { result: Imple
     <div className="mt-6 border-t border-line pt-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Eyebrow>Resultado</Eyebrow>
+          <Eyebrow>Result</Eyebrow>
           <p className="mt-1 font-mono text-body text-fg tabular-nums">
-            {result.files_changed} archivos · <span className="text-verified">+{result.lines_added}</span> <span className="text-danger">−{result.lines_removed}</span> líneas
+            {result.files_changed} files · <span className="text-verified">+{result.lines_added}</span> <span className="text-danger">−{result.lines_removed}</span> lines
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => void toggleDiff()}>{diff === null ? "Ver diff" : "Ocultar diff"}</Button>
-          <Button variant="secondary" onClick={() => void download("migration.diff")}>Descargar diff</Button>
-          <Button variant="primary" onClick={() => void download("modernized.zip")} icon={<Download size={14} aria-hidden />}>Descargar proyecto migrado (ZIP)</Button>
+          <Button variant="secondary" onClick={() => void toggleDiff()}>{diff === null ? "View diff" : "Hide diff"}</Button>
+          <Button variant="secondary" onClick={() => void download("migration.diff")}>Download diff</Button>
+          <Button variant="primary" onClick={() => void download("modernized.zip")} icon={<Download size={14} aria-hidden />}>Download the migrated project (ZIP)</Button>
         </div>
       </div>
       {error && <p role="alert" className="mt-3 text-caption text-danger">{error}</p>}
@@ -144,25 +144,25 @@ function Result({ result, onDownload, loadDiff, onRetry, busy }: { result: Imple
       <ul className="mt-5 space-y-2 text-body text-fg-2">
         <li className="grid grid-cols-[1.25rem_1fr]">
           <span aria-hidden className={bad.length ? "text-danger" : "text-verified"}>{bad.length ? "✗" : "✓"}</span>
-          <span>{result.checks.length === 0 ? "No hubo archivos de Python, JSON, YAML o TOML cuya sintaxis comprobar." : bad.length ? `${bad.length} de ${result.checks.length} archivos comprobados tienen errores de sintaxis.` : `Sintaxis correcta en los ${result.checks.length} archivos comprobables.`}</span>
+          <span>{result.checks.length === 0 ? "There were no Python, JSON, YAML or TOML files whose syntax to check." : bad.length ? `${bad.length} of ${result.checks.length} checked files have syntax errors.` : `Correct syntax in the ${result.checks.length} checkable files.`}</span>
         </li>
         {bad.map((check) => <li key={check.path} className="ml-5 font-mono text-caption text-danger">{check.path} <span className="font-sans text-subtle">· {check.detail}</span></li>)}
         {result.outside_plan.length > 0 && (
           <li className="grid grid-cols-[1.25rem_1fr]">
             <span aria-hidden className="text-warning">▲</span>
-            <span>Bob tocó {result.outside_plan.length} {result.outside_plan.length === 1 ? "archivo" : "archivos"} que no estaban en el plan: <span className="font-mono text-caption">{result.outside_plan.slice(0, 6).join(", ")}{result.outside_plan.length > 6 ? "…" : ""}</span>. Revísalos.</span>
+            <span>Bob touched {result.outside_plan.length} {result.outside_plan.length === 1 ? "file" : "files"} that were not in the plan: <span className="font-mono text-caption">{result.outside_plan.slice(0, 6).join(", ")}{result.outside_plan.length > 6 ? "…" : ""}</span>. Review them.</span>
           </li>
         )}
         {failedStep && (
           <li className="grid grid-cols-[1.25rem_1fr]">
             <span aria-hidden className="text-danger">✗</span>
-            <span>Un paso falló y los siguientes se omitieron: el ZIP contiene solo lo que se alcanzó a hacer. <button type="button" disabled={busy} onClick={onRetry} className="text-fg underline underline-offset-2">Volver a intentarlo</button></span>
+            <span>A step failed and the following ones were skipped: the ZIP contains only what was done. <button type="button" disabled={busy} onClick={onRetry} className="text-fg underline underline-offset-2">Try again</button></span>
           </li>
         )}
         <li className="grid grid-cols-[1.25rem_1fr] text-caption text-subtle"><span aria-hidden>○</span><span>{result.not_executed}</span></li>
       </ul>
 
-      {diff !== null && <div className="mt-5"><CodeViewer path="migration.diff" lines={toLines(diff)} maxHeight="28rem" caption={`${diff.split("\n").length} líneas`} /></div>}
+      {diff !== null && <div className="mt-5"><CodeViewer path="migration.diff" lines={toLines(diff)} maxHeight="28rem" caption={`${diff.split("\n").length} lines`} /></div>}
     </div>
   );
 }

@@ -11,8 +11,8 @@ interface Props {
 }
 
 /**
- * Referencia `archivo:línea` verificable (DESIGN.md §4). ✓ = el validador en Python confirmó que el
- * archivo, las líneas y el fragmento existen; ✗ = no coinciden; sin marca = no se comprobó.
+ * Verifiable `file:line` reference (DESIGN.md §4). ✓ = the Python validator confirmed that the
+ * file, the lines and the snippet exist; ✗ = they do not match; no mark = not checked.
  */
 export function EvidenceRef({ path, lineStart, lineEnd, verified, reason, active = false, onOpen }: Props) {
   const mark = verified === null ? null : verified ? "✓" : "✗";
@@ -23,7 +23,7 @@ export function EvidenceRef({ path, lineStart, lineEnd, verified, reason, active
       {mark && <span aria-hidden className={tone}>{mark}</span>}
       <span className="min-w-0 truncate text-fg" title={path}>{path}</span>
       <span className="text-subtle">:{lineRange(lineStart, lineEnd)}</span>
-      <span className="sr-only">, evidencia {status}{reason ? `: ${reason}` : ""}</span>
+      <span className="sr-only">, evidence {status}{reason ? `: ${reason}` : ""}</span>
     </>
   );
   const base = "inline-flex max-w-full items-center gap-1.5 rounded-pill border px-2.5 py-0.5 font-mono text-caption";

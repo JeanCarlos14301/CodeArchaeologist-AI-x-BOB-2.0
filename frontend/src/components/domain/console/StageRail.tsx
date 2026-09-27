@@ -2,23 +2,23 @@ import { formatClock, stageMetric, STAGE_ORDER, type ActivityModel } from "../..
 import type { StageId } from "../../../types";
 
 export const STAGE_INFO: Record<StageId, { label: string; running: string; detail: string }> = {
-  preparing: { label: "Repositorio indexado", running: "Indexando repositorio", detail: "Extracción segura en un sandbox; el código nunca se ejecuta." },
-  auditing: { label: "Auditoría de IBM Bob", running: "Bob analiza el código", detail: "evidence-auditor recorre el código y delega en subagentes especializados." },
-  validating: { label: "Evidencia verificada", running: "Verificando evidencia", detail: "Python comprueba archivo, líneas y fragmento de cada hallazgo." },
-  migration: { label: "Primer corte probado", running: "Probando primer corte", detail: "Pruebas de caracterización contra el legado y el corte moderno." },
-  done: { label: "Expediente listo", running: "Generando expediente", detail: "Solo quedan hallazgos cuya evidencia coincide con el código." },
+  preparing: { label: "Repository indexed", running: "Indexing repository", detail: "Safe extraction into a sandbox; the code never runs." },
+  auditing: { label: "IBM Bob audit", running: "Bob analyzes the code", detail: "evidence-auditor walks the code and delegates to specialized subagents." },
+  validating: { label: "Evidence verified", running: "Verifying evidence", detail: "Python checks the file, lines and snippet of every finding." },
+  migration: { label: "First cut tested", running: "Testing the first cut", detail: "Characterization tests against the legacy code and the modern cut." },
+  done: { label: "Dossier ready", running: "Generating the dossier", detail: "Only findings whose evidence matches the code remain." },
 };
 
 export type StageState = "pending" | "running" | "done" | "failed";
 
 const MARK: Record<StageState, { glyph: string; tone: string; label: string }> = {
-  done: { glyph: "✓", tone: "text-verified border-verified/40", label: "completada" },
-  running: { glyph: "●", tone: "text-activity border-activity/40 animate-pulse", label: "en curso" },
-  failed: { glyph: "✗", tone: "text-danger border-danger/50", label: "falló" },
-  pending: { glyph: "", tone: "text-subtle border-line", label: "pendiente" },
+  done: { glyph: "✓", tone: "text-verified border-verified/40", label: "complete" },
+  running: { glyph: "●", tone: "text-activity border-activity/40 animate-pulse", label: "in progress" },
+  failed: { glyph: "✗", tone: "text-danger border-danger/50", label: "failed" },
+  pending: { glyph: "", tone: "text-subtle border-line", label: "pending" },
 };
 
-/** Estado de cada etapa según los eventos visibles (sirve igual en vivo y en reproducción). */
+/** State of each stage from the visible events (works the same live and in replay). */
 export function stageStates(model: ActivityModel, settled: boolean): Record<StageId, StageState> {
   const reached = STAGE_ORDER.filter((stage) => model.stages[stage].events > 0);
   const last = reached[reached.length - 1];
@@ -38,13 +38,13 @@ interface Props {
   states: Record<StageId, StageState>;
   selected: StageId;
   onSelect: (stage: StageId) => void;
-  /** id del panel que muestra la etapa elegida (aria-controls). */
+  /** id of the panel that shows the chosen stage (aria-controls). */
   panelId: string;
 }
 
 export function StageRail({ model, states, selected, onSelect, panelId }: Props) {
   return (
-    <ol aria-label="Etapas del análisis" className="relative">
+    <ol aria-label="Analysis stages" className="relative">
       {STAGE_ORDER.map((stage, index) => {
         const state = states[stage];
         const mark = MARK[state];
@@ -74,7 +74,7 @@ export function StageRail({ model, states, selected, onSelect, panelId }: Props)
                   {elapsed && <span className="font-mono text-micro text-subtle tabular-nums">{elapsed}</span>}
                 </span>
                 <span className="block truncate text-caption text-subtle">{metric ?? info.detail}</span>
-                <span className="sr-only">Etapa {index + 1}, {mark.label}</span>
+                <span className="sr-only">Stage {index + 1}, {mark.label}</span>
               </span>
             </button>
           </li>

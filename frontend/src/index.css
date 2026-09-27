@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
-/* En @layer base para que las utilidades de los componentes (p. ej. focus:outline-none) puedan sobrescribirlos. */
+/* In @layer base so component utilities (e.g. focus:outline-none) can override them. */
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
@@ -33,7 +33,7 @@
     outline-offset: 2px;
   }
 
-  /* Barras de desplazamiento discretas sobre negro. */
+  /* Discreet scrollbars on black. */
   * {
     scrollbar-width: thin;
     scrollbar-color: rgb(255 255 255 / 0.16) transparent;
@@ -46,7 +46,7 @@
   }
 }
 
-/* Texto que llega de Bob o del código (rutas, secretos, identificadores largos) nunca ensancha el layout. */
+/* Text that comes from Bob or from the code (paths, secrets, long identifiers) never widens the layout. */
 #workspace,
 aside[aria-label="Asistente IBM Bob"],
 footer {

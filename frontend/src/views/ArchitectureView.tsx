@@ -22,26 +22,26 @@ function Architecture({ dossier }: { dossier: Dossier }) {
   const architecture = useResource("architecture");
   const graph = useResource("graph");
   const [tab, setTab] = useState<Tab>(route.node || route.finding ? "functions" : "modules");
-  // Un enlace a una función o al impacto de un hallazgo abre directamente el grafo de funciones.
+  // A link to a function or to a finding's impact opens the function graph directly.
   useEffect(() => {
     if (route.node || route.finding) setTab("functions");
   }, [route.node, route.finding]);
 
   const failed = architecture.error ?? graph.error;
-  if (failed) return <div className="p-6"><ErrorState title="No se pudo medir la arquitectura." message={failed} onRetry={() => { architecture.retry(); graph.retry(); }} /></div>;
-  if (!architecture.data || !graph.data) return <div className="p-6"><Loading label="Midiendo módulos, llamadas y rutas…" /></div>;
+  if (failed) return <div className="p-6"><ErrorState title="The architecture could not be measured." message={failed} onRetry={() => { architecture.retry(); graph.retry(); }} /></div>;
+  if (!architecture.data || !graph.data) return <div className="p-6"><Loading label="Measuring modules, calls and routes…" /></div>;
   const arch = architecture.data;
 
   return (
     <div className="px-6 py-6 @3xl:px-10">
       <ScreenHeader
-        eyebrow="Arquitectura · ¿Cómo funciona este sistema?"
-        title={`${arch.modules.length} módulos · ${arch.totals.functions} funciones · ${arch.totals.calls} llamadas`}
-        description="Medido con análisis estático (AST, SQL, complejidad ciclomática) sobre el código del análisis. Nada se estima."
+        eyebrow="Architecture · How does this system work?"
+        title={`${arch.modules.length} modules · ${arch.totals.functions} functions · ${arch.totals.calls} calls`}
+        description="Measured with static analysis (AST, SQL, cyclomatic complexity) on the analysis's code. Nothing is estimated."
         actions={
-          <Segmented<Tab> label="Vista de arquitectura" value={tab} onChange={setTab} options={[
-            { value: "modules", label: "Módulos" },
-            { value: "functions", label: "Funciones" },
+          <Segmented<Tab> label="Architecture view" value={tab} onChange={setTab} options={[
+            { value: "modules", label: "Modules" },
+            { value: "functions", label: "Functions" },
           ]} />
         }
       />
@@ -68,21 +68,21 @@ function ModulesPanel({ arch, dossier }: { arch: ArchitectureData; dossier: Doss
         <Legend />
         <ModuleMap data={arch} selected={selected} onSelect={(file) => go("architecture", { file: file ?? undefined })} />
       </div>
-      <aside aria-label="Inspector de módulo" className="@4xl:border-l @4xl:border-line @4xl:pl-5">
+      <aside aria-label="Module inspector" className="@4xl:border-l @4xl:border-line @4xl:pl-5">
         {!module ? (
-          <p className="text-body text-muted">Selecciona un módulo para ver quién lo llama, a quién llama y qué hallazgos contiene. Los módulos de la izquierda son puntos de entrada; las flechas son llamadas medidas.</p>
+          <p className="text-body text-muted">Select a module to see who calls it, what it calls and which findings it contains. The modules on the left are entry points; the arrows are measured calls.</p>
         ) : (
           <div className="space-y-4">
             <div>
-              <Eyebrow>Módulo</Eyebrow>
+              <Eyebrow>Module</Eyebrow>
               <p className="mt-1 font-mono text-body text-fg">{module.file}</p>
-              {inCycle && <p className="mt-1 text-caption text-danger">▲ Participa en una dependencia circular</p>}
+              {inCycle && <p className="mt-1 text-caption text-danger">▲ Part of a circular dependency</p>}
             </div>
             <DataList rows={[
-              { label: "Funciones", value: module.functions },
-              { label: "Lo llaman", value: incoming.length ? incoming.map((d) => `${d.source} (${d.calls})`).join(", ") : "nadie" },
-              { label: "Llama a", value: outgoing.length ? outgoing.map((d) => `${d.target} (${d.calls})`).join(", ") : "nadie" },
-              { label: "Hallazgos", value: findings.length },
+              { label: "Functions", value: module.functions },
+              { label: "Called by", value: incoming.length ? incoming.map((d) => `${d.source} (${d.calls})`).join(", ") : "nobody" },
+              { label: "Calls", value: outgoing.length ? outgoing.map((d) => `${d.target} (${d.calls})`).join(", ") : "nobody" },
+              { label: "Findings", value: findings.length },
             ]} />
             {findings.length > 0 && (
               <ul className="space-y-1">
@@ -97,8 +97,8 @@ function ModulesPanel({ arch, dossier }: { arch: ArchitectureData; dossier: Doss
               </ul>
             )}
             <div className="flex flex-col gap-2 border-t border-line pt-4">
-              <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`¿Qué impacto tendría modificar ${module.file} y quién depende de él?`)}>Preguntar a Bob por el impacto</Button>
-              <Button size="sm" variant="ghost" icon={<FileCode2 size={14} aria-hidden />} onClick={() => go("repository", { file: module.file })}>Abrir {module.file}</Button>
+              <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`What would changing ${module.file} impact, and what depends on it?`)}>Ask Bob about the impact</Button>
+              <Button size="sm" variant="ghost" icon={<FileCode2 size={14} aria-hidden />} onClick={() => go("repository", { file: module.file })}>Open {module.file}</Button>
             </div>
           </div>
         )}
@@ -123,7 +123,7 @@ function FunctionsPanel({ graph }: { graph: GraphData }) {
     };
   }, [graph, node]);
 
-  if (graph.nodes.length === 0) return <EmptyState title="No se encontraron funciones Python">El repositorio no tiene funciones que graficar.</EmptyState>;
+  if (graph.nodes.length === 0) return <EmptyState title="No Python functions were found">The repository has no functions to graph.</EmptyState>;
 
   const toggle = (key: keyof Layers) => setLayers((current) => ({ ...current, [key]: !current[key] }));
   const findingIds = [...new Set(graph.findings.filter((m) => m.status !== "rejected").map((m) => m.finding_id))];
@@ -136,36 +136,36 @@ function FunctionsPanel({ graph }: { graph: GraphData }) {
             <button key={key} type="button" role="switch" aria-checked={layers[key]} onClick={() => toggle(key)}
               className={`inline-flex h-7 items-center gap-2 rounded-pill border px-3 text-caption transition-[border-color,color] duration-150 ${layers[key] ? "border-line-strong text-fg" : "border-line text-subtle"}`}>
               <span aria-hidden className={`h-2 w-2 rounded-pill ${layers[key] ? (key === "findings" ? "bg-risk-high" : "bg-warning") : "bg-disabled"}`} />
-              {key === "findings" ? "Capa de hallazgos" : "Capa de impacto"}
+              {key === "findings" ? "Findings layer" : "Impact layer"}
             </button>
           ))}
-          <label className="sr-only" htmlFor="focus-finding">Enfocar impacto de un hallazgo</label>
+          <label className="sr-only" htmlFor="focus-finding">Focus a finding's impact</label>
           <select id="focus-finding" value={focusFinding ?? ""} onChange={(event) => go("architecture", { finding: event.target.value || undefined, node: route.node ?? undefined })}
             className="h-7 rounded-pill border border-line bg-control px-3 text-caption text-fg-2 focus:border-focus focus:outline-none">
-            <option value="">Impacto de todos los hallazgos</option>
-            {findingIds.map((id) => <option key={id} value={id}>Impacto de {id}</option>)}
+            <option value="">Impact of all findings</option>
+            {findingIds.map((id) => <option key={id} value={id}>Impact of {id}</option>)}
           </select>
-          <span className="ml-auto font-mono text-caption text-subtle">{graph.nodes.length} funciones · {graph.edges.length} llamadas</span>
+          <span className="ml-auto font-mono text-caption text-subtle">{graph.nodes.length} functions · {graph.edges.length} calls</span>
         </div>
         <div className="overflow-hidden rounded-panel border border-line bg-surface">
           <CallGraph graph={graph} layers={layers} selectedId={node?.id ?? null} focusFindingId={focusFinding}
             onSelect={(id) => go("architecture", { node: id ?? undefined, finding: focusFinding ?? undefined })} />
         </div>
         <p className="text-caption text-subtle">
-          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-fg align-middle" />Punto de entrada HTTP</span>
-          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill border border-fg-2 align-middle" />Función</span>
-          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-danger/60 align-middle" />Origen del hallazgo</span>
-          <span><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-warning/60 align-middle" />La llama (impacto)</span>
+          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-fg align-middle" />HTTP entry point</span>
+          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill border border-fg-2 align-middle" />Function</span>
+          <span className="mr-3"><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-danger/60 align-middle" />Finding origin</span>
+          <span><span aria-hidden className="mr-1 inline-block h-2 w-2 rounded-pill bg-warning/60 align-middle" />Calls it (impact)</span>
           {" · "}{graph.notes}
         </p>
       </div>
-      <aside aria-label="Inspector de función" className="@4xl:border-l @4xl:border-line @4xl:pl-5">
+      <aside aria-label="Function inspector" className="@4xl:border-l @4xl:border-line @4xl:pl-5">
         {!node || !info ? (
-          <p className="text-body text-muted">Selecciona una función para ver quién la llama, a quién llama y qué hallazgos la tocan. Usa Tab para recorrer el grafo con el teclado.</p>
+          <p className="text-body text-muted">Select a function to see who calls it, what it calls and which findings touch it. Use Tab to walk the graph with the keyboard.</p>
         ) : (
           <div className="space-y-4">
             <div>
-              <Eyebrow>Función</Eyebrow>
+              <Eyebrow>Function</Eyebrow>
               <p className="mt-1 font-mono text-body break-all text-fg">{node.qualname}</p>
               <p className="font-mono text-caption text-subtle">{node.file}:{node.line_start}–{node.line_end}</p>
               {node.route && <p className="mt-1 font-mono text-caption text-fg-2">{node.route.methods.join(",")} {node.route.rule}</p>}
@@ -182,11 +182,11 @@ function FunctionsPanel({ graph }: { graph: GraphData }) {
                 ))}
               </ul>
             )}
-            <NodeList title={`La llaman · ${info.callers.length}`} nodes={info.callers} onSelect={(id) => go("architecture", { node: id })} />
-            <NodeList title={`Llama a · ${info.callees.length}`} nodes={info.callees} onSelect={(id) => go("architecture", { node: id })} />
+            <NodeList title={`Called by · ${info.callers.length}`} nodes={info.callers} onSelect={(id) => go("architecture", { node: id })} />
+            <NodeList title={`Calls · ${info.callees.length}`} nodes={info.callees} onSelect={(id) => go("architecture", { node: id })} />
             <div className="flex flex-col gap-2 border-t border-line pt-4">
-              <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`¿Qué podría romperse si modifico ${node.qualname} (${node.file})?`)}>Preguntar a Bob qué rompería</Button>
-              <Button size="sm" variant="ghost" icon={<FileCode2 size={14} aria-hidden />} onClick={() => go("repository", { file: node.file, line: node.line_start })}>Ver código</Button>
+              <Button size="sm" icon={<MessageSquareText size={14} aria-hidden />} onClick={() => seedComposer(`What could break if I change ${node.qualname} (${node.file})?`)}>Ask Bob what it would break</Button>
+              <Button size="sm" variant="ghost" icon={<FileCode2 size={14} aria-hidden />} onClick={() => go("repository", { file: node.file, line: node.line_start })}>View code</Button>
             </div>
           </div>
         )}
@@ -199,7 +199,7 @@ function NodeList({ title, nodes, onSelect }: { title: string; nodes: ({ id: str
   return (
     <div>
       <Eyebrow>{title}</Eyebrow>
-      {nodes.length === 0 ? <p className="mt-1 text-caption text-subtle">Ninguna</p> : (
+      {nodes.length === 0 ? <p className="mt-1 text-caption text-subtle">None</p> : (
         <ul className="mt-1">
           {nodes.map((n) => n && (
             <li key={n.id}>
@@ -217,9 +217,9 @@ function NodeList({ title, nodes, onSelect }: { title: string; nodes: ({ id: str
 function Legend() {
   return (
     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-subtle">
-      <span>Barra izquierda = peor severidad del módulo</span>
-      <span>Número sobre la flecha = llamadas medidas</span>
-      <span className="text-danger">- - - dependencia circular</span>
+      <span>Left bar = the module's worst severity</span>
+      <span>Number over the arrow = measured calls</span>
+      <span className="text-danger">- - - circular dependency</span>
     </p>
   );
 }
@@ -228,10 +228,10 @@ function EntryPoints({ arch }: { arch: ArchitectureData }) {
   const { go } = useWorkspace();
   return (
     <div className="grid grid-cols-1 gap-x-12 @4xl:grid-cols-2">
-      <Section eyebrow="Puntos de entrada" title={`Rutas HTTP · ${arch.routes.length}`}>
-        {arch.routes.length === 0 ? <p className="text-body text-muted">No se detectaron rutas HTTP.</p> : (
+      <Section eyebrow="Entry points" title={`HTTP routes · ${arch.routes.length}`}>
+        {arch.routes.length === 0 ? <p className="text-body text-muted">No HTTP routes were detected.</p> : (
           <table className="w-full text-left">
-            <thead><tr className="border-b border-line text-micro tracking-eyebrow text-subtle uppercase"><th className="py-2 font-medium">Método · ruta</th><th className="py-2 text-right font-medium">Definida en</th></tr></thead>
+            <thead><tr className="border-b border-line text-micro tracking-eyebrow text-subtle uppercase"><th className="py-2 font-medium">Method · route</th><th className="py-2 text-right font-medium">Defined in</th></tr></thead>
             <tbody className="divide-y divide-line-subtle">
               {arch.routes.map((r) => (
                 <tr key={`${r.file}:${r.line_start}:${r.rule}`}>
@@ -245,10 +245,10 @@ function EntryPoints({ arch }: { arch: ArchitectureData }) {
           </table>
         )}
       </Section>
-      <Section eyebrow="Puntos calientes" title="Funciones más complejas">
-        {arch.complex_functions.length === 0 ? <p className="text-body text-muted">No se pudo medir la complejidad.</p> : (
+      <Section eyebrow="Hotspots" title="Most complex functions">
+        {arch.complex_functions.length === 0 ? <p className="text-body text-muted">Complexity could not be measured.</p> : (
           <table className="w-full text-left">
-            <thead><tr className="border-b border-line text-micro tracking-eyebrow text-subtle uppercase"><th className="py-2 font-medium">Función</th><th className="py-2 text-right font-medium">Complejidad</th><th className="py-2 text-right font-medium">Líneas</th></tr></thead>
+            <thead><tr className="border-b border-line text-micro tracking-eyebrow text-subtle uppercase"><th className="py-2 font-medium">Function</th><th className="py-2 text-right font-medium">Complexity</th><th className="py-2 text-right font-medium">Lines</th></tr></thead>
             <tbody className="divide-y divide-line-subtle">
               {arch.complex_functions.map((fn) => (
                 <tr key={`${fn.file}:${fn.line_start}`}>

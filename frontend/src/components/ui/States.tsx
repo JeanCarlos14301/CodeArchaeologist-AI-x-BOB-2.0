@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** Estado vacío que ayuda a actuar: qué falta, por qué y la acción concreta (PRODUCT.md §28). */
+/** Empty state that helps you act: what is missing, why and the concrete action (PRODUCT.md §28). */
 export function EmptyState({ title, children, action, className = "" }: { title: string; children?: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={`rounded-panel border border-dashed border-line-strong px-6 py-10 ${className}`}>
@@ -11,8 +11,8 @@ export function EmptyState({ title, children, action, className = "" }: { title:
   );
 }
 
-/** Error con qué pasó · por qué importa · qué hacer (PRODUCT.md §29). */
-export function ErrorState({ title, message, hint, onRetry, retryLabel = "Reintentar" }: {
+/** Error with what happened · why it matters · what to do (PRODUCT.md §29). */
+export function ErrorState({ title, message, hint, onRetry, retryLabel = "Retry" }: {
   title: string;
   message: string;
   hint?: ReactNode;

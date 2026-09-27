@@ -3,15 +3,15 @@ import { useWorkspace } from "../../lib/workspace";
 import { visibleSteps } from "../domain/AskBob";
 import { StatusDot } from "../ui/Badge";
 
-/** Contexto y operaciones en segundo plano (PRODUCT.md §7): etapa, backend, Bob, trazabilidad. */
+/** Context and background operations (PRODUCT.md §7): stage, backend, Bob, traceability. */
 export function StatusBar() {
   const { flow, dossier, offline, bob, jobs, askHistory } = useWorkspace();
   const running = jobs.find((job) => isActive(job)) ?? (flow && isActive(flow) ? flow : null);
-  // Bob trabajando en una pregunta del chat: visible desde cualquier pantalla, con sus pasos reales.
+  // Bob working on a chat question: visible from any screen, with its real steps.
   const asking = askHistory.find((entry) => entry.status === "pending");
   const steps = asking ? visibleSteps(asking.progress) : [];
   const askLabel = asking
-    ? `Bob responde tu pregunta${steps.length ? ` · ${steps.length} ${steps.length === 1 ? "paso" : "pasos"} · ${steps[steps.length - 1].message}` : ""}`
+    ? `Bob is answering your question${steps.length ? ` · ${steps.length} ${steps.length === 1 ? "step" : "steps"} · ${steps[steps.length - 1].message}` : ""}`
     : null;
 
   return (
@@ -23,15 +23,15 @@ export function StatusBar() {
         ) : flow ? (
           <StatusDot tone={flow.status === "failed" ? "bad" : "ok"} label={statusLabel(flow)} />
         ) : (
-          <StatusDot tone="idle" label="Sin análisis en curso" />
+          <StatusDot tone="idle" label="No analysis running" />
         )}
       </span>
       {askLabel && <span className="hidden min-w-0 max-w-2/5 shrink truncate sm:inline"><StatusDot tone="busy" label={askLabel} /></span>}
       {dossier?.source_sha256 && !askLabel && <span className="hidden shrink-0 lg:inline" title={dossier.source_sha256}>sha256 {dossier.source_sha256.slice(0, 12)}</span>}
       <span className="ml-auto flex shrink-0 items-center gap-4">
-        <StatusDot tone={offline ? "bad" : "ok"} label={offline ? "Backend sin conexión" : "Backend conectado"} />
+        <StatusDot tone={offline ? "bad" : "ok"} label={offline ? "Backend offline" : "Backend connected"} />
         <span className="hidden sm:inline">
-          {bob ? <StatusDot tone={bob.installed && bob.api_key_configured ? "ok" : "warn"} label={bob.installed ? `IBM Bob ${bob.version ?? ""}` : "Bob no instalado"} /> : "Bob …"}
+          {bob ? <StatusDot tone={bob.installed && bob.api_key_configured ? "ok" : "warn"} label={bob.installed ? `IBM Bob ${bob.version ?? ""}` : "Bob not installed"} /> : "Bob …"}
         </span>
       </span>
     </footer>

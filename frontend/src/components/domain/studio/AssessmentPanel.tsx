@@ -8,20 +8,20 @@ import type { Assessment, StackReport } from "../../../types";
 import { InlineText } from "../../ui/InlineText";
 
 const VERDICT = {
-  recommended: { glyph: "✓", label: "Recomendado", tone: "text-verified", note: "Bob no encontró bloqueos. Aun así, valida cada paso con pruebas." },
-  conditional: { glyph: "▲", label: "Con condiciones", tone: "text-warning", note: "Conviene solo si se resuelven los puntos de abajo primero." },
-  not_recommended: { glyph: "✗", label: "No recomendado", tone: "text-danger", note: "Bob cree que el cambio no compensa en tu caso. Puedes seguir, pero con esta advertencia a la vista." },
+  recommended: { glyph: "✓", label: "Recommended", tone: "text-verified", note: "Bob found no blockers. Even so, validate every step with tests." },
+  conditional: { glyph: "▲", label: "Conditional", tone: "text-warning", note: "It pays off only if the points below are resolved first." },
+  not_recommended: { glyph: "✗", label: "Not recommended", tone: "text-danger", note: "Bob thinks the change does not pay off in your case. You can go on, but with this warning in view." },
 } as const;
 
 const AXIS: Record<string, string> = {
-  security: "Seguridad", performance: "Rendimiento", cost: "Costo", maintainability: "Mantenibilidad",
-  compatibility: "Compatibilidad", team: "Equipo", operations: "Operación",
+  security: "Security", performance: "Performance", cost: "Cost", maintainability: "Maintainability",
+  compatibility: "Compatibility", team: "Team", operations: "Operations",
 };
 const EFFECT = {
-  improves: { glyph: "↑", label: "Mejora", tone: "text-verified" },
-  worsens: { glyph: "↓", label: "Empeora", tone: "text-danger" },
-  neutral: { glyph: "=", label: "Neutro", tone: "text-subtle" },
-  depends: { glyph: "?", label: "Depende", tone: "text-warning" },
+  improves: { glyph: "↑", label: "Improves", tone: "text-verified" },
+  worsens: { glyph: "↓", label: "Worsens", tone: "text-danger" },
+  neutral: { glyph: "=", label: "Neutral", tone: "text-subtle" },
+  depends: { glyph: "?", label: "Depends", tone: "text-warning" },
 } as const;
 
 interface Props {
@@ -31,18 +31,18 @@ interface Props {
   busy: boolean;
   onPlan: () => void;
   onOpenFile: (path: string, line: number) => void;
-  /** Respuestas en curso, por pregunta de Bob. */
+  /** Answers in progress, per Bob question. */
   answers: Record<string, string>;
   onAnswer: (question: string, answer: string) => void;
-  /** Preguntas que la persona ya contestó en rondas anteriores. */
+  /** Questions the person already answered in previous rounds. */
   history: { question: string; answer: string }[];
   onReassess: () => void;
   reassessBusy: boolean;
   hasToken: boolean;
 }
 
-/** Lo primero que se ve tras evaluar: veredicto y sacrificios, antes de cualquier plan (PRODUCT.md §17 y §46). */
-const QUICK = ["Sí", "No", "No lo sé"];
+/** The first thing shown after assessing: verdict and trade-offs, before any plan (PRODUCT.md §17 and §46). */
+const QUICK = ["Yes", "No", "I don't know"];
 
 export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, onOpenFile, answers, onAnswer, history, onReassess, reassessBusy, hasToken }: Props) {
   const [understood, setUnderstood] = useState(false);
@@ -59,14 +59,14 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
           <p className="mt-1 text-caption text-subtle">{verdict.note}</p>
         </div>
         <div>
-          <Eyebrow>Lectura de tu negocio</Eyebrow>
+          <Eyebrow>Reading of your business</Eyebrow>
           <p className="mt-1 text-body text-pretty text-fg-2"><InlineText text={assessment.business_reading} /></p>
         </div>
       </div>
 
       {assessment.recommended.length > 0 && (
         <div className="mt-6">
-          <Eyebrow>Destinos que propone Bob</Eyebrow>
+          <Eyebrow>Targets Bob proposes</Eyebrow>
           <ul className="mt-2 divide-y divide-line-subtle border-y border-line-subtle">
             {assessment.recommended.map((item) => {
               const from = name(item.from_id);
@@ -87,10 +87,10 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
       )}
 
       <div className="mt-6">
-        <Eyebrow>Qué se gana y qué se sacrifica</Eyebrow>
+        <Eyebrow>What is gained and what is traded away</Eyebrow>
         <table className="mt-2 w-full border-t border-line-subtle text-left">
-          <caption className="sr-only">Efecto de la migración por eje</caption>
-          <thead className="sr-only"><tr><th scope="col">Eje</th><th scope="col">Efecto</th><th scope="col">Detalle</th></tr></thead>
+          <caption className="sr-only">Effect of the migration per axis</caption>
+          <thead className="sr-only"><tr><th scope="col">Axis</th><th scope="col">Effect</th><th scope="col">Detail</th></tr></thead>
           <tbody>
             {assessment.tradeoffs.map((tradeoff, index) => {
               const effect = EFFECT[tradeoff.effect];
@@ -118,17 +118,17 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
 
       {assessment.fixes_during_migration.length > 0 && (
         <div className="mt-6">
-          <Eyebrow>Bob corregirá durante la migración</Eyebrow>
+          <Eyebrow>Bob will fix during the migration</Eyebrow>
           <ul className="mt-2 space-y-1.5 text-body text-fg-2">
             {assessment.fixes_during_migration.map((item) => <li key={item} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span>{item}</span></li>)}
           </ul>
-          <p className="mt-2 text-caption text-subtle">Los defectos del código actual no se portan al nuevo: cada paso los corrige al reescribir esa parte.</p>
+          <p className="mt-2 text-caption text-subtle">Defects in the current code are not carried over: each step fixes them while rewriting that part.</p>
         </div>
       )}
 
       {assessment.blockers.length > 0 && (
         <div className="mt-6">
-          <Eyebrow>Bloqueos</Eyebrow>
+          <Eyebrow>Blockers</Eyebrow>
           <ul className="mt-2 space-y-1.5 text-body text-fg-2">
             {assessment.blockers.map((item) => <li key={item} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-danger">✗</span><span><InlineText text={item} /></span></li>)}
           </ul>
@@ -137,8 +137,8 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
 
       {assessment.questions.length > 0 && (
         <div className="mt-6 border-t border-line pt-5">
-          <Eyebrow>Bob necesita saber</Eyebrow>
-          <p className="mt-1 max-w-2xl text-caption text-pretty text-muted">Respóndele aquí mismo y Bob vuelve a evaluar con tus respuestas. Puedes dejar en blanco lo que no sepas.</p>
+          <Eyebrow>Bob needs to know</Eyebrow>
+          <p className="mt-1 max-w-2xl text-caption text-pretty text-muted">Answer right here and Bob assesses again with your answers. You can leave blank what you do not know.</p>
           <ul className="mt-4 space-y-5">
             {assessment.questions.map((question, index) => {
               const id = `answer-${index}`;
@@ -147,13 +147,13 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
                 <li key={question}>
                   <label htmlFor={id} className="grid grid-cols-[1.25rem_1fr] text-body text-fg"><span aria-hidden className="text-warning">?</span><span><InlineText text={question} /></span></label>
                   <div className="mt-2 ml-5 flex flex-wrap items-start gap-2">
-                    <div role="group" aria-label="Respuestas rápidas" className="flex gap-1.5">
+                    <div role="group" aria-label="Quick answers" className="flex gap-1.5">
                       {QUICK.map((quick) => (
                         <button key={quick} type="button" aria-pressed={value === quick} onClick={() => onAnswer(question, value === quick ? "" : quick)}
                           className={`inline-flex h-7 items-center rounded-pill border px-3 text-caption transition-[border-color,background-color] duration-150 ease-out ${value === quick ? "border-line-strong bg-raised text-fg" : "border-line text-muted hover:border-line-strong hover:text-fg"}`}>{quick}</button>
                       ))}
                     </div>
-                    <textarea id={id} rows={2} maxLength={800} value={value} onChange={(event) => onAnswer(question, event.target.value)} placeholder="Escribe tu respuesta o matiza…"
+                    <textarea id={id} rows={2} maxLength={800} value={value} onChange={(event) => onAnswer(question, event.target.value)} placeholder="Write your answer or add nuance…"
                       className="min-w-56 flex-1 resize-y rounded-inner border border-line bg-control px-3 py-1.5 text-caption text-fg placeholder:text-subtle focus:border-focus focus:outline-none" />
                   </div>
                 </li>
@@ -162,17 +162,17 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button variant="secondary" disabled={!answered || reassessBusy || !hasToken} onClick={onReassess}>
-              {reassessBusy ? "Bob está evaluando de nuevo…" : "Enviar respuestas y evaluar de nuevo"}
+              {reassessBusy ? "Bob is assessing again…" : "Send answers and assess again"}
             </Button>
-            {planReady && <span className="text-caption text-warning">Evaluar de nuevo descarta el plan y la implementación actuales.</span>}
-            {!hasToken && <span className="text-caption text-subtle">Introduce el token en «Destinos de la migración» para poder responder.</span>}
+            {planReady && <span className="text-caption text-warning">Assessing again discards the current plan and implementation.</span>}
+            {!hasToken && <span className="text-caption text-subtle">Enter the token in «Migration targets» to be able to answer.</span>}
           </div>
         </div>
       )}
 
       {history.length > 0 && (
         <details className="mt-5 text-caption text-muted">
-          <summary className="cursor-pointer text-fg-2">Ya le respondiste a Bob {history.length} {history.length === 1 ? "pregunta" : "preguntas"}</summary>
+          <summary className="cursor-pointer text-fg-2">You already answered {history.length} {history.length === 1 ? "question" : "questions"} from Bob</summary>
           <ul className="mt-2 space-y-2">
             {history.map((item) => (
               <li key={item.question} className="grid grid-cols-[1.25rem_1fr]"><span aria-hidden className="text-verified">✓</span><span><span className="text-fg-2">{item.question}</span><span className="block text-fg">→ {item.answer}</span></span></li>
@@ -185,10 +185,10 @@ export function AssessmentPanel({ assessment, stack, planReady, busy, onPlan, on
         <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
           <label className="flex max-w-xl cursor-pointer items-start gap-3 text-body text-fg-2">
             <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} className="mt-1 h-4 w-4 accent-accent" />
-            <span>Entiendo lo que mejora y lo que empeora{assessment.verdict === "not_recommended" ? ", incluida la advertencia de que Bob no lo recomienda," : ""} y quiero seguir con esta decisión.</span>
+            <span>I understand what improves and what gets worse{assessment.verdict === "not_recommended" ? ", including the warning that Bob does not recommend it," : ""} and I want to go on with this decision.</span>
           </label>
           <Button variant="primary" disabled={!understood || busy} onClick={onPlan} icon={<ArrowRight size={14} aria-hidden />}>
-            {busy ? "Bob prepara el plan…" : "Generar plan detallado"}
+            {busy ? "Bob is preparing the plan…" : "Generate a detailed plan"}
           </Button>
         </div>
       )}

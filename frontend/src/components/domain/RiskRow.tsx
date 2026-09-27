@@ -11,7 +11,7 @@ interface Props {
   onSelect: () => void;
 }
 
-/** Un hallazgo como fila densa: categoría · severidad · título · evidencia · confianza (PRODUCT.md §43). */
+/** A finding as a dense row: category · severity · title · evidence · confidence (PRODUCT.md §43). */
 export function RiskRow({ finding, impacted, score, selected, rejected = false, onSelect }: Props) {
   const severity = SEVERITY[finding.severity];
   const evidence = finding.evidence[0];
@@ -33,10 +33,10 @@ export function RiskRow({ finding, impacted, score, selected, rejected = false, 
         <span className="col-span-2 text-body text-pretty text-fg group-hover:text-fg">{finding.title}</span>
         <span className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-subtle">
           {evidence && <span className="font-mono text-fg-2">{evidence.path}:{lineRange(evidence.line_start, evidence.line_end)}</span>}
-          <span>{finding.observed_or_inferred === "observed" ? "Observado en el código" : "Inferido"}</span>
-          {impacted !== null && <span>{impacted === 0 ? "Sin llamadores afectados" : plural(impacted, "llamador afectado", "llamadores afectados")}</span>}
-          {score !== null && <span className="font-mono">riesgo {score}</span>}
-          {rejected && <span className="text-danger">✗ evidencia no coincide con el código</span>}
+          <span>{finding.observed_or_inferred === "observed" ? "Observed in the code" : "Inferred"}</span>
+          {impacted !== null && <span>{impacted === 0 ? "No affected callers" : plural(impacted, "affected caller", "affected callers")}</span>}
+          {score !== null && <span className="font-mono">risk {score}</span>}
+          {rejected && <span className="text-danger">✗ evidence does not match the code</span>}
           <span className="font-mono text-subtle">{finding.id}</span>
         </span>
       </button>

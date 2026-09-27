@@ -3,14 +3,14 @@ import type { Section } from "../../lib/router";
 import { useWorkspace } from "../../lib/workspace";
 
 export const NAV: { id: Section; label: string; question: string; icon: LucideIcon }[] = [
-  { id: "overview", label: "Resumen", question: "¿Qué tipo de sistema es?", icon: LayoutDashboard },
-  { id: "session", label: "Sesión de Bob", question: "¿Cómo lo analizó IBM Bob?", icon: Activity },
-  { id: "architecture", label: "Arquitectura", question: "¿Cómo funciona?", icon: Network },
-  { id: "repository", label: "Repositorio", question: "¿Qué contiene?", icon: FolderTree },
-  { id: "dependencies", label: "Dependencias", question: "¿De qué depende?", icon: Boxes },
-  { id: "risks", label: "Riesgos", question: "¿Qué podría romperse?", icon: ShieldAlert },
-  { id: "modernization", label: "Modernización", question: "¿Cómo migrar con seguridad?", icon: ArrowRightLeft },
-  { id: "reports", label: "Reportes", question: "Entregables del análisis", icon: FileDown },
+  { id: "overview", label: "Overview", question: "What kind of system is it?", icon: LayoutDashboard },
+  { id: "session", label: "Bob session", question: "How did IBM Bob analyze it?", icon: Activity },
+  { id: "architecture", label: "Architecture", question: "How does it work?", icon: Network },
+  { id: "repository", label: "Repository", question: "What does it contain?", icon: FolderTree },
+  { id: "dependencies", label: "Dependencies", question: "What does it depend on?", icon: Boxes },
+  { id: "risks", label: "Risks", question: "What could break?", icon: ShieldAlert },
+  { id: "modernization", label: "Modernization", question: "How do I migrate safely?", icon: ArrowRightLeft },
+  { id: "reports", label: "Reports", question: "Analysis deliverables", icon: FileDown },
 ];
 
 export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
@@ -26,11 +26,11 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
       <button type="button" onClick={() => { navigate({ jobId: null }); onNavigate?.(); }} aria-current={!hasJob ? "page" : undefined} className={itemClass(!hasJob)}>
         {!hasJob && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-pill bg-accent-hover" />}
         <History size={16} aria-hidden className="shrink-0" />
-        Proyectos
+        Projects
       </button>
 
       <div className="mt-4 mb-1 px-3 text-micro tracking-eyebrow text-subtle uppercase">
-        {hasJob ? (flow?.label ?? "Proyecto") : "Workspace"}
+        {hasJob ? (flow?.label ?? "Project") : "Workspace"}
       </div>
       <ul className="space-y-0.5">
         {NAV.map((item) => {
@@ -41,7 +41,7 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
               <button
                 type="button"
                 disabled={!hasJob}
-                title={hasJob ? item.question : "Abre o inicia un análisis para explorarlo"}
+                title={hasJob ? item.question : "Open or start an analysis to explore it"}
                 aria-current={active ? "page" : undefined}
                 onClick={() => { navigate({ jobId: route.jobId, section: item.id }); onNavigate?.(); }}
                 className={`${itemClass(active)} disabled:cursor-not-allowed disabled:opacity-35`}
@@ -50,8 +50,8 @@ export function NavRail({ onNavigate }: { onNavigate?: () => void }) {
                 <Icon size={16} aria-hidden className="shrink-0" />
                 <span className="truncate">{item.label}</span>
                 {item.id === "risks" && blocking > 0 && (
-                  <span className="ml-auto font-mono text-caption text-risk-high tabular-nums" title={`${blocking} críticos o altos`}>
-                    {blocking}<span className="sr-only"> hallazgos críticos o altos</span>
+                  <span className="ml-auto font-mono text-caption text-risk-high tabular-nums" title={`${blocking} critical or high`}>
+                    {blocking}<span className="sr-only"> critical or high findings</span>
                   </span>
                 )}
               </button>

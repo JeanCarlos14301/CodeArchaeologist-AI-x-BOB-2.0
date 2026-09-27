@@ -6,8 +6,8 @@ interface State {
 }
 
 /**
- * Si una vista no puede cargarse (p. ej. tras un redespliegue el navegador pide un fragmento del bundle
- * que ya no existe), se muestra un error accionable en lugar de una pantalla en blanco.
+ * If a view cannot load (e.g. after a redeploy the browser requests a bundle chunk that no longer
+ * exists), an actionable error is shown instead of a blank screen.
  */
 export class ViewBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { failed: false };
@@ -17,8 +17,8 @@ export class ViewBoundary extends Component<{ children: ReactNode }, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Sin logger en el cliente: la traza queda en la consola del navegador para diagnóstico.
-    console.error("La vista falló al renderizarse", error, info.componentStack);
+    // No client-side logger: the trace stays in the browser console for diagnosis.
+    console.error("The view failed to render", error, info.componentStack);
   }
 
   render() {
@@ -26,11 +26,11 @@ export class ViewBoundary extends Component<{ children: ReactNode }, State> {
     return (
       <div className="px-6 py-6 @3xl:px-10">
         <ErrorState
-          title="No se pudo cargar esta vista."
-          message="La aplicación se actualizó o falló al mostrar la sección."
-          hint="Recarga la página para obtener la versión actual."
+          title="This view could not be loaded."
+          message="The application was updated or failed to show the section."
+          hint="Reload the page to get the current version."
           onRetry={() => window.location.reload()}
-          retryLabel="Recargar"
+          retryLabel="Reload"
         />
       </div>
     );

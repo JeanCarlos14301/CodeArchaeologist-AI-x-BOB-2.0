@@ -1,7 +1,7 @@
 /*
- * Tokens de diseño de CodeArchaeologist. Documentación: /DESIGN.md (fuente única de verdad).
- * Capa 1 — primitivos (--ca-*): valores de la referencia Linearity. No generan utilidades.
- * Capa 2 — semánticos (@theme): los únicos que usan los componentes (bg-canvas, text-fg, ...).
+ * CodeArchaeologist design tokens. Documentation: /DESIGN.md (single source of truth).
+ * Layer 1 — primitives (--ca-*): values from the Linearity reference. They generate no utilities.
+ * Layer 2 — semantic (@theme): the only ones components use (bg-canvas, text-fg, ...).
  */
 
 :root {
@@ -28,7 +28,7 @@
 }
 
 @theme {
-  /* Sin paletas, fuentes, tamaños, radios ni sombras por defecto: solo tokens del sistema. */
+  /* No default palettes, fonts, sizes, radii or shadows: only system tokens. */
   --color-*: initial;
   --font-*: initial;
   --text-*: initial;
@@ -96,10 +96,10 @@
 
   --color-accent: var(--ca-signal-orange);
   --color-accent-hover: var(--ca-ember);
-  /* Negro sobre naranja: 6.2:1 (AA). Blanco sobre #ff4800 da 3.4:1 y no cumple para texto de 12px. */
+  /* Black on orange: 6.2:1 (AA). White on #ff4800 gives 3.4:1 and fails for 12px text. */
   --color-on-accent: var(--ca-void);
   --color-focus: var(--ca-ember);
-  /* Trabajo en curso (análisis, Bob leyendo): neutro. El naranja se reserva para acciones. */
+  /* Work in progress (analysis, Bob reading): neutral. Orange is reserved for actions. */
   --color-activity: var(--ca-white);
 
   --color-risk-critical: var(--ca-spectrum-red);
@@ -119,7 +119,7 @@
   background-image: var(--ca-spectrum);
 }
 
-/* Spectrum Rail animado: solo mientras Bob analiza (DESIGN.md §2.5). */
+/* Animated Spectrum Rail: only while Bob analyzes (DESIGN.md §2.5). */
 @utility spectrum-rail {
   background-image: var(--ca-spectrum);
   background-size: 200% 100%;

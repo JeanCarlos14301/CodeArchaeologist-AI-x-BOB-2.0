@@ -4,29 +4,29 @@ import { TechIcon } from "./TechIcon";
 import type { DetectedTech, StackReport } from "../../../types";
 
 const KINDS: { kind: string; label: string }[] = [
-  { kind: "language", label: "Lenguajes" },
+  { kind: "language", label: "Languages" },
   { kind: "backend", label: "Backend" },
   { kind: "frontend", label: "Frontend" },
-  { kind: "database", label: "Datos" },
-  { kind: "orm", label: "Acceso a datos" },
-  { kind: "infra", label: "Infraestructura" },
-  { kind: "testing", label: "Pruebas" },
-  { kind: "build", label: "Construcción" },
+  { kind: "database", label: "Data" },
+  { kind: "orm", label: "Data access" },
+  { kind: "infra", label: "Infrastructure" },
+  { kind: "testing", label: "Testing" },
+  { kind: "build", label: "Build" },
 ];
 
 const ARCHITECTURE: Record<StackReport["architecture"]["kind"], { label: string; note: string }> = {
-  monolith: { label: "Monolito", note: "Una sola aplicación desplegable." },
-  "multi-app": { label: "Varias aplicaciones", note: "Backend y frontend como aplicaciones separadas." },
-  microservices: { label: "Microservicios", note: "Varios servicios con código propio." },
-  unknown: { label: "Sin determinar", note: "No se encontró un framework de aplicación." },
+  monolith: { label: "Monolith", note: "A single deployable application." },
+  "multi-app": { label: "Several applications", note: "Backend and frontend as separate applications." },
+  microservices: { label: "Microservices", note: "Several services with their own code." },
+  unknown: { label: "Undetermined", note: "No application framework was found." },
 };
 
 function evidenceTitle(tech: DetectedTech): string {
   const lines = tech.evidence.filter((item) => item.path).map((item) => (item.line ? `${item.path}:${item.line}` : item.path));
-  return lines.length ? `Detectado en ${lines.join(", ")}` : "Detectado por extensión de archivo";
+  return lines.length ? `Detected in ${lines.join(", ")}` : "Detected by file extension";
 }
 
-/** Lo que el proyecto usa hoy, medido sobre el código: cada tecnología con su evidencia en el tooltip. */
+/** What the project uses today, measured on the code: each technology with its evidence in the tooltip. */
 export function StackBoard({ stack }: { stack: StackReport }) {
   const architecture = ARCHITECTURE[stack.architecture.kind];
   const languageShare = new Map(stack.languages.map((language) => [language.id, language.share]));
@@ -36,7 +36,7 @@ export function StackBoard({ stack }: { stack: StackReport }) {
     <div>
       <div className="grid grid-cols-1 gap-x-10 gap-y-3 @3xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
         <div>
-          <Eyebrow>Arquitectura detectada</Eyebrow>
+          <Eyebrow>Detected architecture</Eyebrow>
           <p className="mt-1 font-display text-title text-fg">{architecture.label}</p>
           <p className="text-caption text-subtle">{architecture.note}</p>
         </div>
@@ -44,7 +44,7 @@ export function StackBoard({ stack }: { stack: StackReport }) {
           {stack.architecture.basis.map((line) => (
             <li key={line} className="grid grid-cols-[1rem_1fr]"><span aria-hidden className="text-subtle">·</span><span>{line}</span></li>
           ))}
-          <li className="grid grid-cols-[1rem_1fr] text-subtle"><span aria-hidden>·</span><span className="font-mono">{stack.totals.files} archivos · {stack.totals.lines} líneas de código · {stack.totals.technologies} tecnologías</span></li>
+          <li className="grid grid-cols-[1rem_1fr] text-subtle"><span aria-hidden>·</span><span className="font-mono">{stack.totals.files} files · {stack.totals.lines} lines of code · {stack.totals.technologies} technologies</span></li>
         </ul>
       </div>
 

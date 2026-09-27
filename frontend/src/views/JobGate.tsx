@@ -5,41 +5,41 @@ import { AnalysisConsole } from "../components/domain/console/AnalysisConsole";
 import { Button } from "../components/ui/Button";
 import { EmptyState, ErrorState, Loading } from "../components/ui/States";
 
-/** Estados comunes de un análisis antes de mostrar una vista: privado, error, en curso, fallido. */
+/** Common states of an analysis before a view is shown: private, error, running, failed. */
 export function JobGate({ children }: { children: (dossier: Dossier) => ReactNode }) {
   const { flow, dossier, accessDenied, jobError, offline, setToken, navigate, go } = useWorkspace();
 
   if (offline && !flow) {
-    return <Frame><ErrorState title="No hay conexión con el backend." message="GET /api/audits no respondió." hint="Arranca el servidor (uvicorn app.main:app) y recarga la página." /></Frame>;
+    return <Frame><ErrorState title="No connection to the backend." message="GET /api/audits did not answer." hint="Start the server (uvicorn app.main:app) and reload the page." /></Frame>;
   }
   if (accessDenied) return <Frame><TokenPrompt onSubmit={setToken} /></Frame>;
   if (jobError) {
     return (
       <Frame>
-        <ErrorState title="No se pudo abrir este análisis." message={jobError} hint="Puede que el identificador no exista en este servidor." onRetry={() => navigate({ jobId: null })} retryLabel="Volver a Proyectos" />
+        <ErrorState title="This analysis could not be opened." message={jobError} hint="The identifier may not exist on this server." onRetry={() => navigate({ jobId: null })} retryLabel="Back to Projects" />
       </Frame>
     );
   }
-  if (!flow) return <Frame><Loading label="Cargando análisis…" /></Frame>;
+  if (!flow) return <Frame><Loading label="Loading the analysis…" /></Frame>;
   if (flow.status === "done" && !dossier) {
     return (
       <Frame>
         <EmptyState
-          title="Este proyecto se subió solo para modernizar."
-          action={<Button variant="secondary" onClick={() => go("modernization")}>Ir al Estudio de modernización</Button>}
+          title="This project was uploaded for modernization only."
+          action={<Button variant="secondary" onClick={() => go("modernization")}>Go to the Modernization Studio</Button>}
         >
-          No se auditó con evidencia, así que no hay hallazgos, riesgos ni expediente. El stack, la evaluación y el plan de migración están en Modernización.
+          It was not audited with evidence, so there are no findings, risks or dossier. The stack, the assessment and the migration plan are in Modernization.
         </EmptyState>
       </Frame>
     );
   }
   if (flow.status !== "done" || !dossier) {
-    // Mientras corre (o si falló), cualquier sección muestra la sesión en vivo con su actividad real.
+    // While it runs (or if it failed), any section shows the live session with its real activity.
     return (
       <Frame>
         <AnalysisConsole autoplay={false} />
         {flow.status === "failed" && (
-          <div className="mt-6"><Button variant="secondary" onClick={() => navigate({ jobId: null })}>Volver a Proyectos para reintentar</Button></div>
+          <div className="mt-6"><Button variant="secondary" onClick={() => navigate({ jobId: null })}>Back to Projects to retry</Button></div>
         )}
       </Frame>
     );
@@ -58,30 +58,30 @@ function TokenPrompt({ onSubmit }: { onSubmit: (token: string) => void }) {
     if (value.trim()) onSubmit(value.trim());
   };
   return (
-    <EmptyState title="Este análisis es privado">
-      <p>Proviene de un repositorio subido y su código solo se muestra con el token de acceso con el que se creó.</p>
+    <EmptyState title="This analysis is private">
+      <p>It comes from an uploaded repository and its code is only shown with the access token it was created with.</p>
       <form onSubmit={submit} className="mt-4 flex flex-wrap gap-2">
-        <label htmlFor="gate-token" className="sr-only">Token de acceso</label>
+        <label htmlFor="gate-token" className="sr-only">Access token</label>
         <input id="gate-token" type="password" autoComplete="off" value={value} onChange={(event) => setValue(event.target.value)}
           placeholder="X-Live-Token" className="h-9 w-72 max-w-full rounded-pill border border-line bg-control px-4 font-mono text-caption text-fg placeholder:text-subtle focus:border-focus focus:outline-none" />
-        <Button type="submit" variant="secondary" disabled={!value.trim()}>Desbloquear análisis</Button>
+        <Button type="submit" variant="secondary" disabled={!value.trim()}>Unlock the analysis</Button>
       </form>
     </EmptyState>
   );
 }
 
-/** Igual que JobGate pero sin exigir expediente: el Estudio de modernización funciona con cualquier proyecto subido. */
+/** Like JobGate but without requiring a dossier: the Modernization Studio works with any uploaded project. */
 export function StudioGate({ children }: { children: () => ReactNode }) {
   const { flow, accessDenied, jobError, offline, setToken, navigate } = useWorkspace();
-  if (offline && !flow) return <Frame><ErrorState title="No hay conexión con el backend." message="GET /api/audits no respondió." hint="Arranca el servidor (uvicorn app.main:app) y recarga la página." /></Frame>;
+  if (offline && !flow) return <Frame><ErrorState title="No connection to the backend." message="GET /api/audits did not answer." hint="Start the server (uvicorn app.main:app) and reload the page." /></Frame>;
   if (accessDenied) return <Frame><TokenPrompt onSubmit={setToken} /></Frame>;
-  if (jobError) return <Frame><ErrorState title="No se pudo abrir este análisis." message={jobError} onRetry={() => navigate({ jobId: null })} retryLabel="Volver a Proyectos" /></Frame>;
-  if (!flow) return <Frame><Loading label="Cargando proyecto…" /></Frame>;
+  if (jobError) return <Frame><ErrorState title="This analysis could not be opened." message={jobError} onRetry={() => navigate({ jobId: null })} retryLabel="Back to Projects" /></Frame>;
+  if (!flow) return <Frame><Loading label="Loading the project…" /></Frame>;
   if (flow.status !== "done") {
     return (
       <Frame>
         <AnalysisConsole autoplay={false} />
-        {flow.status === "failed" && <div className="mt-6"><Button variant="secondary" onClick={() => navigate({ jobId: null })}>Volver a Proyectos para reintentar</Button></div>}
+        {flow.status === "failed" && <div className="mt-6"><Button variant="secondary" onClick={() => navigate({ jobId: null })}>Back to Projects to retry</Button></div>}
       </Frame>
     );
   }

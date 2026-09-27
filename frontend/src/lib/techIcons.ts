@@ -1,5 +1,5 @@
 /**
- * Trazados SVG monocromos por slug de tecnología. Sin icono, `TechIcon` muestra las iniciales.
- * Se generan con `npm run icons` (scripts/tech-icons.mjs): solo el trazado, sin los metadatos de simple-icons.
+ * Monochrome SVG paths per technology slug. Without an icon, `TechIcon` shows the initials.
+ * Generated with `npm run icons` (scripts/tech-icons.mjs): only the path, without simple-icons' metadata.
  */
 export { TECH_ICONS } from "./techIconPaths";

@@ -1,6 +1,6 @@
 /**
- * Marca: testigo de sondeo arqueológico (columna vertical con estratos). El estrato más profundo,
- * el que se analiza, en naranja señal: la única nota de color de la marca.
+ * Mark: an archaeological core sample (a vertical column with strata). The deepest stratum,
+ * the one being analyzed, in signal orange: the mark's only note of color.
  */
 export function BrandMark({ size = 20 }: { size?: number }) {
   return (
