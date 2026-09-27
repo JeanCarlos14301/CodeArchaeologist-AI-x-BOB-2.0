@@ -1,11 +1,11 @@
-"""Renderizador de Reporte HTML Autónomo e Interactivo (D-08).
+"""Standalone, interactive HTML report renderer (D-08; not wired into the product).
 
-Genera un archivo HTML autocontenido con:
-- Paleta ejecutiva moderna (inspirada en IBM Carbon Design y modo oscuro refinado).
-- Tarjetas de resumen de métricas clave (Fidelidad 100%, Hallazgos, PERT, Radio de Explosión).
-- Visor de evidencia con fragmentos de código, números de línea y badges de severidad.
-- Diagramas Mermaid embebidos (ER y flujo de llamadas).
-- Tabla de opciones de arquitectura y plan PERT.
+Generates a self-contained HTML file with:
+- A modern executive palette (inspired by IBM Carbon Design and a refined dark mode).
+- Summary cards for the key metrics (100% fidelity, findings, PERT, blast radius).
+- An evidence viewer with code snippets, line numbers and severity badges.
+- Embedded Mermaid diagrams (ER and call flow).
+- A table of architecture options and the PERT plan.
 """
 
 from pathlib import Path
@@ -14,7 +14,7 @@ from backend.app.models import DossierResult
 
 
 HTML_TEMPLATE = """<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -170,7 +170,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <header>
       <div class="logo-group">
         <h1>CodeArchaeologist × IBM Bob 2.0</h1>
-        <p>Expediente de Diagnóstico y Migración — <strong>{{ dossier.snapshot.repo_name }}</strong></p>
+        <p>Diagnosis and Migration Dossier — <strong>{{ dossier.snapshot.repo_name }}</strong></p>
       </div>
       <div>
         <span class="badge badge-{{ dossier.execution_mode }}">{{ dossier.execution_mode }} mode</span>
@@ -181,34 +181,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- METRICS -->
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-title">Fidelidad de Evidencia</div>
+        <div class="metric-title">Evidence Fidelity</div>
         <div class="metric-value" style="color: #34d399;">{{ (dossier.validation_report.fidelity_ratio * 100)|round(1) }}%</div>
-        <div class="metric-sub">{{ dossier.validation_report.valid_references }} / {{ dossier.validation_report.total_references }} referencias verificadas en código</div>
+        <div class="metric-sub">{{ dossier.validation_report.valid_references }} / {{ dossier.validation_report.total_references }} references verified in code</div>
       </div>
       <div class="metric-card">
-        <div class="metric-title">Hallazgos Detectados</div>
+        <div class="metric-title">Findings Detected</div>
         <div class="metric-value">{{ dossier.findings|length }}</div>
         <div class="metric-sub">
           {% set critical_count = dossier.findings|selectattr('severity', 'equalto', 'CRITICAL')|list|length %}
-          {{ critical_count }} críticos · {{ dossier.findings|length - critical_count }} alta/media
+          {{ critical_count }} critical · {{ dossier.findings|length - critical_count }} high/medium
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-title">Esfuerzo Total PERT</div>
+        <div class="metric-title">Total PERT Effort</div>
         {% set total_pert = dossier.pert_plan|map(attribute='pert_expected_days')|sum %}
         <div class="metric-value" style="color: #60a5fa;">{{ total_pert|round(1) }} d</div>
-        <div class="metric-sub">Estimación estadística en 4 fases</div>
+        <div class="metric-sub">Statistical estimate in 4 phases</div>
       </div>
       <div class="metric-card">
-        <div class="metric-title">Primer Corte Probado</div>
+        <div class="metric-title">First Cut Tested</div>
         <div class="metric-value" style="font-size: 1.25rem; padding-top: 0.5rem; color: #f59e0b;">{{ dossier.selected_first_cut }}</div>
-        <div class="metric-sub">Strangler Fig + Pruebas PASS</div>
+        <div class="metric-sub">Strangler Fig + PASS tests</div>
       </div>
     </div>
 
-    <!-- SECCIÓN 1: HALLAZGOS Y EVIDENCIA FÍSICA -->
+    <!-- SECTION 1: FINDINGS AND PHYSICAL EVIDENCE -->
     <section>
-      <h2>Hallazgos Forenses con Evidencia Física en Código</h2>
+      <h2>Forensic Findings with Physical Evidence in Code</h2>
       {% for f in dossier.findings %}
       <div class="card">
         <div class="finding-header">
@@ -226,23 +226,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         {% for ev in f.evidence %}
         <div class="code-meta">
-          <span>📄 <strong>{{ ev.path }}</strong>: Líneas {{ ev.line_start }}–{{ ev.line_end }}</span>
-          <span>Observado directamente en fuente</span>
+          <span>📄 <strong>{{ ev.path }}</strong>: Lines {{ ev.line_start }}–{{ ev.line_end }}</span>
+          <span>Observed directly in the source</span>
         </div>
         <pre class="code-box"><code>{{ ev.fragment }}</code></pre>
         {% endfor %}
 
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
-          <strong>Método de verificación:</strong> {{ f.verification_method }}
+          <strong>Verification method:</strong> {{ f.verification_method }}
         </div>
       </div>
       {% endfor %}
     </section>
 
-    <!-- SECCIÓN 2: DIAGRAMAS MERMAID -->
+    <!-- SECTION 2: MERMAID DIAGRAMS -->
     {% if dossier.mermaid_er_diagram %}
     <section>
-      <h2>Diagrama Entidad-Relación Observable</h2>
+      <h2>Observable Entity-Relationship Diagram</h2>
       <div class="mermaid-box">
         <pre class="mermaid">
 {{ dossier.mermaid_er_diagram }}
@@ -251,18 +251,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </section>
     {% endif %}
 
-    <!-- SECCIÓN 3: OPCIONES ARQUITECTÓNICAS -->
+    <!-- SECTION 3: ARCHITECTURE OPTIONS -->
     <section>
-      <h2>Opciones Arquitectónicas Comparadas</h2>
+      <h2>Architecture Options Compared</h2>
       <div class="card" style="padding: 0; overflow-x: auto;">
         <table>
           <thead>
             <tr>
-              <th>Opción</th>
-              <th>Patrón</th>
-              <th>Riesgo</th>
-              <th>Esfuerzo</th>
-              <th>Ventajas</th>
+              <th>Option</th>
+              <th>Pattern</th>
+              <th>Risk</th>
+              <th>Effort</th>
+              <th>Advantages</th>
             </tr>
           </thead>
           <tbody>
@@ -270,11 +270,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <tr>
               <td>
                 <strong>{{ opt.name }}</strong>
-                {% if opt.recommended %}<br><span class="badge" style="background: #10b981; color: white;">Recomendada</span>{% endif %}
+                {% if opt.recommended %}<br><span class="badge" style="background: #10b981; color: white;">Recommended</span>{% endif %}
               </td>
               <td>{{ opt.pattern }}</td>
               <td><span class="badge badge-{{ opt.risk_level }}">{{ opt.risk_level }}</span></td>
-              <td>{{ opt.estimated_effort_days }} días</td>
+              <td>{{ opt.estimated_effort_days }} days</td>
               <td>
                 <ul style="padding-left: 1rem;">
                   {% for pro in opt.pros[:2] %}
@@ -289,30 +289,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- SECCIÓN 4: PLAN PERT -->
+    <!-- SECTION 4: PERT PLAN -->
     <section>
-      <h2>Plan de Fases de Migración (PERT)</h2>
+      <h2>Migration Phase Plan (PERT)</h2>
       <div class="card" style="padding: 0; overflow-x: auto;">
         <table>
           <thead>
             <tr>
-              <th>Fase</th>
-              <th>Alcance y Entregables</th>
+              <th>Phase</th>
+              <th>Scope and Deliverables</th>
               <th>O / M / P</th>
-              <th>Esperado (E)</th>
-              <th>Estrategia de Rollback</th>
+              <th>Expected (E)</th>
+              <th>Rollback Strategy</th>
             </tr>
           </thead>
           <tbody>
             {% for ph in dossier.pert_plan %}
             <tr>
-              <td><strong>Fase {{ ph.phase_number }}</strong></td>
+              <td><strong>Phase {{ ph.phase_number }}</strong></td>
               <td>
                 <strong>{{ ph.name }}</strong>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">{{ ph.description }}</p>
               </td>
               <td>{{ ph.optimistic_days }} / {{ ph.nominal_days }} / {{ ph.pessimistic_days }} d</td>
-              <td><strong>{{ ph.pert_expected_days }} días</strong></td>
+              <td><strong>{{ ph.pert_expected_days }} days</strong></td>
               <td><small>{{ ph.rollback_strategy }}</small></td>
             </tr>
             {% endfor %}
@@ -322,7 +322,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </section>
 
     <footer>
-      <p>Generado deterministamente por <strong>CodeArchaeologist</strong> × <strong>IBM Bob Shell 2.0</strong> · Hackathon IBM Bob 2.0</p>
+      <p>Generated deterministically by <strong>CodeArchaeologist</strong> × <strong>IBM Bob Shell 2.0</strong> · IBM Bob 2.0 Hackathon</p>
       <p style="margin-top: 0.25rem;">SHA256: <code>{{ dossier.snapshot.snapshot_sha256 }}</code></p>
     </footer>
   </div>
@@ -332,7 +332,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 
 def render_dossier_to_html(dossier: DossierResult, output_path: Path | str) -> Path:
-    """Renderiza el expediente a un archivo HTML autónomo."""
+    """Renders the dossier to a standalone HTML file."""
     template = Template(HTML_TEMPLATE)
     html_content = template.render(dossier=dossier)
     out_file = Path(output_path)

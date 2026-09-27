@@ -25,21 +25,21 @@ def create_app(test_config=None):
         if "user_id" not in session:
             return redirect(url_for("login"))
         return render_template_string("""<!doctype html><title>FacturaYa</title>
-        <h1>FacturaYa</h1><nav><a href="/customers">Clientes</a> |
-        <a href="/invoices">Facturas</a> | <a href="/invoices/new">Nueva factura</a> |
-        <a href="/reports/monthly">Reporte mensual</a> |
-        <form method="post" action="/logout"><button>Salir</button></form></nav>""")
+        <h1>FacturaYa</h1><nav><a href="/customers">Customers</a> |
+        <a href="/invoices">Invoices</a> | <a href="/invoices/new">New invoice</a> |
+        <a href="/reports/monthly">Monthly report</a> |
+        <form method="post" action="/logout"><button>Log out</button></form></nav>""")
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "GET":
-            return render_template_string("""<!doctype html><title>Entrar</title>
-            <h1>Entrar</h1><form method="post"><label>Usuario <input name="username" required></label>
-            <label>Clave <input name="password" type="password" required></label>
-            <button>Entrar</button></form>""")
+            return render_template_string("""<!doctype html><title>Login</title>
+            <h1>Login</h1><form method="post"><label>Username <input name="username" required></label>
+            <label>Password <input name="password" type="password" required></label>
+            <button>Log in</button></form>""")
         user = authenticate(get_db(), request.form.get("username", ""), request.form.get("password", ""))
         if user is None:
-            return "Credenciales incorrectas", 401
+            return "Invalid credentials", 401
         session.clear()
         session["user_id"] = user["id"]
         return redirect(url_for("index"))
@@ -53,8 +53,8 @@ def create_app(test_config=None):
     @login_required
     def customers_list():
         customers = list_customers(get_db(), session["user_id"])
-        return render_template_string("""<!doctype html><title>Clientes</title><h1>Clientes</h1>
-        <a href="/">Inicio</a><ul>{% for c in customers %}<li>
+        return render_template_string("""<!doctype html><title>Customers</title><h1>Customers</h1>
+        <a href="/">Home</a><ul>{% for c in customers %}<li>
         <a href="{{ url_for('customer_detail', customer_id=c['id']) }}">{{ c['name'] }}</a>
         </li>{% endfor %}</ul>""", customers=customers)
 
@@ -65,8 +65,8 @@ def create_app(test_config=None):
         if customer is None:
             abort(404)
         count = invoice_count_for_customer(get_db(), customer_id)
-        return render_template_string("""<!doctype html><title>Cliente</title><h1>{{ c['name'] }}</h1>
-        <p>{{ c['email'] }}</p><p>Facturas: {{ count }}</p><a href="/customers">Volver</a>""",
+        return render_template_string("""<!doctype html><title>Customer</title><h1>{{ c['name'] }}</h1>
+        <p>{{ c['email'] }}</p><p>Invoices: {{ count }}</p><a href="/customers">Back</a>""",
                                       c=customer, count=count)
 
     @app.get("/invoices")
@@ -82,9 +82,9 @@ def create_app(test_config=None):
                 "SELECT id, number, issue_date, total FROM invoices WHERE owner_id = ? ORDER BY id DESC",
                 (session["user_id"],),
             ).fetchall()
-        return render_template_string("""<!doctype html><title>Facturas</title><h1>Facturas</h1>
-        <form><input name="q" value="{{ q }}"><button>Buscar</button></form>
-        <a href="/invoices/new">Nueva</a><ul>{% for i in rows %}<li>
+        return render_template_string("""<!doctype html><title>Invoices</title><h1>Invoices</h1>
+        <form><input name="q" value="{{ q }}"><button>Search</button></form>
+        <a href="/invoices/new">New</a><ul>{% for i in rows %}<li>
         <a href="{{ url_for('invoice_html', invoice_id=i['id']) }}">{{ i['number'] }}</a>
         {{ i['issue_date'] }} — {{ i['total'] }}</li>{% endfor %}</ul>""", rows=rows, q=search)
 
@@ -113,14 +113,14 @@ def create_app(test_config=None):
         if invoice is None or invoice["owner_id"] != session["user_id"]:
             abort(404)
         items = invoice_items(get_db(), invoice_id)
-        return render_template_string("""<!doctype html><title>Factura</title>
-        <h1>{{ i['number'] }}</h1><p>Cliente: {{ i['customer_name'] }}</p>
-        <p>Fecha: {{ i['issue_date'] }} | Estado: {{ i['status'] }}</p>
-        <table><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr>
+        return render_template_string("""<!doctype html><title>Invoice</title>
+        <h1>{{ i['number'] }}</h1><p>Customer: {{ i['customer_name'] }}</p>
+        <p>Date: {{ i['issue_date'] }} | Status: {{ i['status'] }}</p>
+        <table><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr>
         {% for item in items %}<tr><td>{{ item['description'] }}</td><td>{{ item['quantity'] }}</td>
         <td>{{ item['unit_price'] }}</td><td>{{ item['line_total'] }}</td></tr>{% endfor %}</table>
-        <p>Subtotal: {{ i['subtotal'] }} | Descuento: {{ i['discount'] }} | Total: {{ i['total'] }}</p>
-        <a href="/invoices">Volver</a>""", i=invoice, items=items)
+        <p>Subtotal: {{ i['subtotal'] }} | Discount: {{ i['discount'] }} | Total: {{ i['total'] }}</p>
+        <a href="/invoices">Back</a>""", i=invoice, items=items)
 
     @app.route("/invoices/new", methods=["GET", "POST"])
     @login_required
@@ -144,31 +144,31 @@ def create_app(test_config=None):
             raw_quantities = request.form.getlist("quantity")
             raw_prices = request.form.getlist("unit_price")
             if not selected_customer.isdigit():
-                errors.append("Seleccione un cliente válido.")
+                errors.append("Select a valid customer.")
             else:
                 customer = get_customer(connection, int(selected_customer), owner_id)
                 if customer is None:
-                    errors.append("El cliente no está disponible.")
+                    errors.append("Customer is unavailable.")
                 else:
                     customer_name = customer["name"]
             try:
                 parsed_date = date.fromisoformat(selected_date)
                 if parsed_date.isoformat() != selected_date:
-                    errors.append("La fecha debe tener formato AAAA-MM-DD.")
+                    errors.append("Date must be in YYYY-MM-DD format.")
                 if parsed_date.year < 2000 or parsed_date.year > 2100:
-                    errors.append("La fecha está fuera del período permitido.")
+                    errors.append("Date is outside the allowed range.")
             except ValueError:
-                errors.append("La fecha debe tener formato AAAA-MM-DD.")
+                errors.append("Date must be in YYYY-MM-DD format.")
             if selected_status not in {"pending", "paid"}:
-                errors.append("El estado no es válido.")
+                errors.append("Invalid status.")
             if not raw_descriptions:
-                errors.append("Agregue al menos un ítem.")
+                errors.append("Add at least one item.")
             if len(raw_descriptions) != len(raw_quantities):
-                errors.append("Faltan cantidades.")
+                errors.append("Missing quantities.")
             if len(raw_descriptions) != len(raw_prices):
-                errors.append("Faltan precios.")
+                errors.append("Missing unit prices.")
             if len(raw_descriptions) > 20:
-                errors.append("Máximo 20 ítems.")
+                errors.append("Maximum 20 items.")
             if len(raw_descriptions) == len(raw_quantities) == len(raw_prices):
                 item_count = len(raw_descriptions)
             if not errors:
@@ -177,25 +177,25 @@ def create_app(test_config=None):
                     quantity_text = raw_quantities[index].strip()
                     price_text = raw_prices[index].strip()
                     if not description:
-                        errors.append(f"Ítem {index + 1}: falta descripción.")
+                        errors.append(f"Item {index + 1}: missing description.")
                     if len(description) > 120:
-                        errors.append(f"Ítem {index + 1}: descripción demasiado larga.")
+                        errors.append(f"Item {index + 1}: description too long.")
                     if not quantity_text.isdigit():
-                        errors.append(f"Ítem {index + 1}: cantidad inválida.")
+                        errors.append(f"Item {index + 1}: invalid quantity.")
                     else:
                         quantity = int(quantity_text)
                         if quantity < 1 or quantity > 10000:
-                            errors.append(f"Ítem {index + 1}: cantidad fuera de rango.")
+                            errors.append(f"Item {index + 1}: quantity out of range.")
                     try:
                         price = Decimal(price_text)
                         if not price.is_finite() or price < 0 or price > 1000000:
-                            errors.append(f"Ítem {index + 1}: precio fuera de rango.")
+                            errors.append(f"Item {index + 1}: unit price out of range.")
                         if price.as_tuple().exponent < -2:
-                            errors.append(f"Ítem {index + 1}: máximo dos decimales.")
+                            errors.append(f"Item {index + 1}: maximum two decimal places.")
                         if len(price_text) > 16:
-                            errors.append(f"Ítem {index + 1}: precio demasiado largo.")
+                            errors.append(f"Item {index + 1}: unit price too long.")
                     except Exception:
-                        errors.append(f"Ítem {index + 1}: precio inválido.")
+                        errors.append(f"Item {index + 1}: invalid unit price.")
                     submitted_rows.append({
                         "description": description,
                         "quantity": quantity_text,
@@ -207,7 +207,7 @@ def create_app(test_config=None):
                     preview = {"items": normalized, "subtotal": subtotal,
                                "discount": discount, "total": total}
                 except (ValueError, KeyError, OverflowError):
-                    errors.append("No se pudo calcular la factura.")
+                    errors.append("Could not calculate invoice.")
             if not errors:
                 try:
                     invoice_id = create_invoice(
@@ -216,57 +216,57 @@ def create_app(test_config=None):
                     )
                     return redirect(url_for("invoice_html", invoice_id=invoice_id))
                 except ValueError:
-                    errors.append("No se pudo guardar la factura.")
+                    errors.append("Could not save invoice.")
         if not submitted_rows:
             submitted_rows = [
                 {"description": "", "quantity": "1", "unit_price": "0.00"},
                 {"description": "", "quantity": "1", "unit_price": "0.00"},
             ]
-        parts = ["<!doctype html><html lang='es'><meta charset='utf-8'><title>Nueva factura</title>"]
-        parts.append("<h1>Nueva factura</h1><a href='/invoices'>Volver a facturas</a>")
-        parts.append("<p>Complete el cliente, la fecha y al menos un ítem.</p>")
-        parts.append("<p>Los precios aceptan hasta dos decimales.</p>")
-        parts.append("<p>Las facturas pueden quedar pendientes o pagadas.</p>")
+        parts = ["<!doctype html><html lang='en'><meta charset='utf-8'><title>New Invoice</title>"]
+        parts.append("<h1>New Invoice</h1><a href='/invoices'>Back to invoices</a>")
+        parts.append("<p>Fill in the customer, date, and at least one item.</p>")
+        parts.append("<p>Unit prices accept up to two decimal places.</p>")
+        parts.append("<p>Invoices can be pending or paid.</p>")
         if customer_name:
-            parts.append("<p>Cliente seleccionado: " + str(escape(customer_name)) + "</p>")
+            parts.append("<p>Selected customer: " + str(escape(customer_name)) + "</p>")
         if request.method == "POST":
-            parts.append("<p>Ítems enviados: " + str(item_count) + "</p>")
+            parts.append("<p>Items submitted: " + str(item_count) + "</p>")
         for error in errors:
             parts.append("<p role='alert'>" + str(escape(error)) + "</p>")
         if errors:
-            parts.append("<p>Corrija los campos y vuelva a enviar el formulario.</p>")
+            parts.append("<p>Please correct the errors and resubmit the form.</p>")
         parts.append("<form method='post'>")
-        parts.append("<fieldset><legend>Datos de la factura</legend>")
-        parts.append("<label>Cliente <select name='customer_id' required>")
-        parts.append("<option value=''>Seleccione</option>")
+        parts.append("<fieldset><legend>Invoice Details</legend>")
+        parts.append("<label>Customer <select name='customer_id' required>")
+        parts.append("<option value=''>Select</option>")
         for customer in customers:
             cid = str(customer["id"])
             name = str(escape(customer["name"]))
             selected = " selected" if cid == selected_customer else ""
             parts.append("<option value='" + cid + "'" + selected + ">" + name + "</option>")
         parts.append("</select></label>")
-        parts.append("<label>Fecha <input type='date' name='issue_date' value='" + str(escape(selected_date)) + "' required></label>")
-        parts.append("<small>La fecha se guarda en formato AAAA-MM-DD.</small>")
-        parts.append("<label>Estado <select name='status'>")
-        for status, label in (("pending", "Pendiente"), ("paid", "Pagada")):
+        parts.append("<label>Date <input type='date' name='issue_date' value='" + str(escape(selected_date)) + "' required></label>")
+        parts.append("<small>Date is stored in YYYY-MM-DD format.</small>")
+        parts.append("<label>Status <select name='status'>")
+        for status, label in (("pending", "Pending"), ("paid", "Paid")):
             selected = " selected" if selected_status == status else ""
             parts.append("<option value='" + status + "'" + selected + ">" + label + "</option>")
         parts.append("</select></label></fieldset>")
-        parts.append("<fieldset><legend>Ítems</legend>")
-        parts.append("<p>Puede añadir hasta 20 ítems en una solicitud.</p>")
+        parts.append("<fieldset><legend>Items</legend>")
+        parts.append("<p>You can add up to 20 items per request.</p>")
         for index, row in enumerate(submitted_rows):
-            parts.append("<div><strong>Ítem " + str(index + 1) + "</strong>")
-            parts.append("<label>Descripción <input name='description' value='" + str(escape(row["description"])) + "' required></label>")
-            parts.append("<label>Cantidad <input type='number' name='quantity' min='1' value='" + str(escape(row["quantity"])) + "' required></label>")
-            parts.append("<label>Precio <input name='unit_price' value='" + str(escape(row["unit_price"])) + "' required></label>")
-            parts.append("<small>El precio corresponde a una unidad.</small>")
+            parts.append("<div><strong>Item " + str(index + 1) + "</strong>")
+            parts.append("<label>Description <input name='description' value='" + str(escape(row["description"])) + "' required></label>")
+            parts.append("<label>Quantity <input type='number' name='quantity' min='1' value='" + str(escape(row["quantity"])) + "' required></label>")
+            parts.append("<label>Unit Price <input name='unit_price' value='" + str(escape(row["unit_price"])) + "' required></label>")
+            parts.append("<small>Price corresponds to a single unit.</small>")
             parts.append("</div>")
         parts.append("</fieldset>")
-        parts.append("<button type='submit'>Crear factura</button></form>")
+        parts.append("<button type='submit'>Create invoice</button></form>")
         if preview:
-            parts.append("<section><h2>Cálculo</h2>")
-            parts.append("<table><thead><tr><th>Descripción</th><th>Cantidad</th>")
-            parts.append("<th>Precio</th><th>Importe</th></tr></thead><tbody>")
+            parts.append("<section><h2>Calculation</h2>")
+            parts.append("<table><thead><tr><th>Description</th><th>Quantity</th>")
+            parts.append("<th>Unit Price</th><th>Line Total</th></tr></thead><tbody>")
             for item in preview["items"]:
                 parts.append("<tr><td>" + str(escape(item["description"])) + "</td>")
                 parts.append("<td>" + str(item["quantity"]) + "</td>")
@@ -274,9 +274,9 @@ def create_app(test_config=None):
                 parts.append("<td>" + item["line_total"] + "</td></tr>")
             parts.append("</tbody></table>")
             parts.append("<p>Subtotal " + preview["subtotal"] + "</p>")
-            parts.append("<p>Descuento " + preview["discount"] + "</p>")
+            parts.append("<p>Discount " + preview["discount"] + "</p>")
             parts.append("<p>Total " + preview["total"] + "</p></section>")
-        parts.append("<footer><a href='/'>Inicio</a></footer>")
+        parts.append("<footer><a href='/'>Home</a></footer>")
         parts.append("</html>")
         return "\n".join(parts), 400 if errors else 200
 
@@ -289,9 +289,9 @@ def create_app(test_config=None):
         except ValueError:
             abort(400)
         rows = monthly_report(get_db(), session["user_id"], month)
-        return render_template_string("""<!doctype html><title>Reporte</title><h1>Reporte {{ month }}</h1>
-        <form><input type="month" name="month" value="{{ month }}"><button>Consultar</button></form>
-        <table><tr><th>Factura</th><th>Total en reporte</th></tr>
+        return render_template_string("""<!doctype html><title>Report</title><h1>Report {{ month }}</h1>
+        <form><input type="month" name="month" value="{{ month }}"><button>View Report</button></form>
+        <table><tr><th>Invoice</th><th>Report Total</th></tr>
         {% for row in rows %}<tr><td>{{ row['number'] }}</td><td>{{ row['report_total'] }}</td></tr>
         {% endfor %}</table>""", month=month, rows=rows)
 

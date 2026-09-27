@@ -1,11 +1,11 @@
-"""Extractor de Inventario de Código, Rutas Flask, Consultas SQL y Complejidad Radon (D-03).
+"""Code inventory extractor: Flask routes, SQL queries and Radon complexity (D-03).
 
-Realiza análisis estático determinista sobre el árbol de código:
-- Detección exhaustiva de rutas Flask (@app.route, @blueprint.route), métodos y controladores.
-- Detección de consultas SQL con sqlglot y regex (análisis de concatenación insegura vs parametrización).
-- Medición de complejidad ciclomática por función con radon (detección de monolitos).
-- Análisis de dependencias e importaciones circulares (ej. billing <-> customers).
-- Mapeo de esquema relacional a partir de DDL.
+Deterministic static analysis over the code tree:
+- Thorough detection of Flask routes (@app.route, @blueprint.route), methods and handlers.
+- Detection of SQL queries with sqlglot and regex (unsafe concatenation vs parameterization).
+- Cyclomatic complexity per function with radon (monolith detection).
+- Dependency and circular import analysis (e.g. billing <-> customers).
+- Relational schema mapping from DDL.
 """
 
 import ast
@@ -126,7 +126,7 @@ class SQLCallVisitor(ast.NodeVisitor):
         self.sql_queries: List[SQLQueryInfo] = []
 
     def visit_BinOp(self, node: ast.BinOp):
-        # Detección de concatenación con '+' donde uno de los lados es una consulta SQL
+        # Detect '+' concatenation where one side is a SQL query
         if isinstance(node.op, ast.Add):
             left_const = self._get_str_constant(node.left)
             right_const = self._get_str_constant(node.right)
@@ -145,13 +145,13 @@ class SQLCallVisitor(ast.NodeVisitor):
                         tables_referenced=tables,
                         is_concatenated_or_interpolated=True,
                         is_parameterized=False,
-                        explanation="Consulta SQL armada mediante concatenación directa de cadenas (+), riesgo alto de SQL Injection.",
+                        explanation="SQL query built through direct string concatenation (+); high SQL injection risk.",
                     )
                 )
         self.generic_visit(node)
 
     def visit_JoinedStr(self, node: ast.JoinedStr):
-        # Detección de f-strings que contengan SQL
+        # Detect f-strings that contain SQL
         fstring_source = self._get_source_range(node.lineno, getattr(node, "end_lineno", node.lineno))
         if self._looks_like_sql(fstring_source):
             tables = self._extract_tables(fstring_source)
@@ -166,13 +166,13 @@ class SQLCallVisitor(ast.NodeVisitor):
                     tables_referenced=tables,
                     is_concatenated_or_interpolated=True,
                     is_parameterized=False,
-                    explanation="Consulta SQL armada mediante interpolación en f-string, vulnerable a inyección SQL.",
+                    explanation="SQL query built through f-string interpolation; vulnerable to SQL injection.",
                 )
             )
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
-        # Detección de llamadas a execute, query_db, etc.
+        # Detect calls to execute, query_db, etc.
         fn_name = ""
         if isinstance(node.func, ast.Name):
             fn_name = node.func.id
@@ -201,7 +201,7 @@ class SQLCallVisitor(ast.NodeVisitor):
                             tables_referenced=tables,
                             is_concatenated_or_interpolated=not is_safe,
                             is_parameterized=is_safe,
-                            explanation="Consulta parametrizada correctamente con placeholders." if is_safe else "Consulta ejecutada sin separación segura de parámetros.",
+                            explanation="Query correctly parameterized with placeholders." if is_safe else "Query executed without safe parameter separation.",
                         )
                     )
         self.generic_visit(node)
@@ -248,7 +248,7 @@ class SQLCallVisitor(ast.NodeVisitor):
 
 
 def analyze_repository_inventory(repo_dir: Path | str) -> CodeInventoryReport:
-    """Ejecuta el inventario completo sobre el repositorio indicado."""
+    """Runs the full inventory over the given repository."""
     repo_path = Path(repo_dir)
     all_routes: List[FlaskRouteInfo] = []
     all_sql_queries: List[SQLQueryInfo] = []
@@ -258,7 +258,7 @@ def analyze_repository_inventory(repo_dir: Path | str) -> CodeInventoryReport:
     schema_ddl: Optional[str] = None
     python_files_count = 0
 
-    # 1. Leer esquemas SQL si existen
+    # 1. Read SQL schemas when they exist
     for sql_file in repo_path.glob("**/*.sql"):
         try:
             ddl_content = sql_file.read_text(encoding="utf-8")
@@ -269,7 +269,7 @@ def analyze_repository_inventory(repo_dir: Path | str) -> CodeInventoryReport:
         except Exception:
             pass
 
-    # 2. Analizar cada archivo Python
+    # 2. Analyze each Python file
     for py_file in repo_path.glob("**/*.py"):
         if any(p in py_file.parts for p in [".git", ".venv", "venv", "__pycache__", "tests"]):
             continue
@@ -280,7 +280,7 @@ def analyze_repository_inventory(repo_dir: Path | str) -> CodeInventoryReport:
             tree = ast.parse(source, filename=str(py_file))
             lines = source.splitlines()
 
-            # Rutas Flask
+            # Flask routes
             route_visitor = FlaskRouteVisitor(rel_posix, lines)
             route_visitor.visit(tree)
             all_routes.extend(route_visitor.routes)
@@ -293,7 +293,7 @@ def analyze_repository_inventory(repo_dir: Path | str) -> CodeInventoryReport:
                 for t in q.tables_referenced:
                     tables_detected.add(t.lower())
 
-            # Complejidad ciclomática Radon (incluyendo closures/rutas dentro de application factory)
+            # Radon cyclomatic complexity (including closures/routes inside an application factory)
             def _extract_all_radon_blocks(blocks_list):
                 results = []
                 for blk in blocks_list:

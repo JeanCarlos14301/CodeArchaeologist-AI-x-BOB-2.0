@@ -1,15 +1,15 @@
-"""Script de pruebas DAST (Dynamic Application Security Testing) mediante curl.
+"""DAST (Dynamic Application Security Testing) script using curl.
 
-Ejecuta peticiones HTTP reales contra el servidor local (127.0.0.1:8088):
-1. Validación funcional de endpoints base (/health, /api/samples, /api/audits).
-2. Verificación del endpoint GET /api/audits/{id}/migration con recomendación y PERT.
-3. Pruebas de seguridad y robustez:
-   - Control de acceso y subida no autorizada (403).
-   - Inyección de Path Traversal (../../etc/passwd, ..\\..\\Windows\\win.ini).
-   - Inyección en parámetros (SQLi / ' OR 1=1 --).
-   - Fuzzing de métodos HTTP no permitidos (405).
-   - Manejo de IDs inexistentes (404).
-   - Cargas útiles malformadas (422).
+Sends real HTTP requests to the local server (127.0.0.1:8088):
+1. Functional validation of the base endpoints (/health, /api/samples, /api/audits).
+2. Verification of GET /api/audits/{id}/migration with the recommendation and PERT.
+3. Security and robustness tests:
+   - Access control and unauthorized upload (403 when locked, 400 for a non-ZIP when open).
+   - Path traversal injection (../../etc/passwd, ..\\..\\Windows\\win.ini).
+   - Parameter injection (SQLi / ' OR 1=1 --).
+   - Fuzzing of disallowed HTTP methods (405).
+   - Handling of missing IDs (404).
+   - Malformed payloads (422).
 """
 
 import json
@@ -21,7 +21,7 @@ BASE_URL = "http://127.0.0.1:8088"
 
 
 def curl(args: list[str]) -> tuple[int, str]:
-    """Ejecuta curl.exe del sistema y retorna el código HTTP y el cuerpo de respuesta."""
+    """Runs the system curl.exe and returns the HTTP code and the response body."""
     cmd = ["curl.exe", "-s", "-w", "\n%{http_code}"] + args
     res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     parts = res.stdout.rsplit("\n", 1)
@@ -36,7 +36,7 @@ def curl(args: list[str]) -> tuple[int, str]:
 
 def run_dast() -> None:
     print("=" * 70)
-    print("INICIANDO SUITE DAST EXIGENTE CON CURL (http://127.0.0.1:8088)")
+    print("STARTING THE STRICT DAST SUITE WITH CURL (http://127.0.0.1:8088)")
     print("=" * 70)
     passes = 0
     total = 0
@@ -53,30 +53,30 @@ def run_dast() -> None:
 
     # 1. Health check
     code, body = curl([f"{BASE_URL}/health"])
-    assert_check("1. GET /health responde HTTP 200", code == 200, f"code={code}")
+    assert_check("1. GET /health answers HTTP 200", code == 200, f"code={code}")
     data = json.loads(body)
-    assert_check("1b. /health status es 'ok'", data.get("status") == "ok")
+    assert_check("1b. /health status is 'ok'", data.get("status") == "ok")
 
     # 2. Samples endpoint
     code, body = curl([f"{BASE_URL}/api/samples"])
-    assert_check("2. GET /api/samples responde HTTP 200", code == 200, f"code={code}")
+    assert_check("2. GET /api/samples answers HTTP 200", code == 200, f"code={code}")
     samples = json.loads(body)
-    assert_check("2b. Muestra 'facturaya-v1' disponible", any(s.get("id") == "facturaya-v1" for s in samples))
+    assert_check("2b. Sample 'facturaya-v1' available", any(s.get("id") == "facturaya-v1" for s in samples))
 
-    # 3. Iniciar auditoría de muestra FacturaYa
+    # 3. Start the FacturaYa sample audit
     code, body = curl([
         "-X", "POST",
         "-H", "Content-Type: application/json",
         "-d", '{"sample": "facturaya-v1", "execution_mode": "imported"}',
         f"{BASE_URL}/api/audits"
     ])
-    assert_check("3. POST /api/audits devuelve 202 Accepted", code == 202, f"code={code}, body={body}")
+    assert_check("3. POST /api/audits returns 202 Accepted", code == 202, f"code={code}, body={body}")
     job = json.loads(body)
     job_id = job.get("id")
-    assert_check("3b. Retorna un job ID válido", bool(job_id), f"body={body}")
+    assert_check("3b. Returns a valid job ID", bool(job_id), f"body={body}")
 
-    # 4. Esperar finalización del análisis
-    print(f"[*] Esperando procesamiento del job {job_id}...")
+    # 4. Wait for the analysis to finish
+    print(f"[*] Waiting for job {job_id}...")
     deadline = time.monotonic() + 45
     status = "running"
     while time.monotonic() < deadline:
@@ -88,42 +88,42 @@ def run_dast() -> None:
                 break
         time.sleep(0.5)
 
-    assert_check("4. Job finaliza en estado 'done'", status == "done", f"status={status}")
+    assert_check("4. Job ends in state 'done'", status == "done", f"status={status}")
 
-    # 5. Validación del endpoint de migración
+    # 5. Validation of the migration endpoint
     code, body = curl([f"{BASE_URL}/api/audits/{job_id}/migration"])
-    assert_check("5. GET /api/audits/{id}/migration responde 200 OK", code == 200, f"code={code}")
+    assert_check("5. GET /api/audits/{id}/migration answers 200 OK", code == 200, f"code={code}")
     migration = json.loads(body)
 
-    # Validar candidatos y ranking
+    # Validate candidates and ranking
     candidates = migration.get("candidates", [])
-    assert_check("5b. Contiene 10 rutas candidatas evaluadas", len(candidates) == 10, f"len={len(candidates)}")
+    assert_check("5b. Contains 10 evaluated candidate routes", len(candidates) == 10, f"len={len(candidates)}")
     scores = [c["score"] for c in candidates]
-    assert_check("5c. Candidatos ordenados descendentemente por score", scores == sorted(scores, reverse=True))
+    assert_check("5c. Candidates sorted by score, descending", scores == sorted(scores, reverse=True))
 
     recommended = migration.get("recommended")
-    assert_check("5d. Candidato recomendado presente y con score positivo", recommended and recommended.get("score") > 0)
+    assert_check("5d. Recommended candidate present with a positive score", recommended and recommended.get("score") > 0)
 
     no_start = migration.get("do_not_start_here")
-    assert_check("5e. 'No empezar por aquí' identificado con alto riesgo", no_start and no_start.get("risk") > 15.0)
+    assert_check("5e. 'Do not start here' identified with high risk", no_start and no_start.get("risk") > 15.0)
 
     waves = migration.get("waves", [])
-    assert_check("5f. Hoja de ruta dividida en 3 olas Strangler Fig", len(waves) == 3, f"len={len(waves)}")
+    assert_check("5f. Roadmap split into 3 Strangler Fig waves", len(waves) == 3, f"len={len(waves)}")
 
     pert = migration.get("first_cut_pert")
-    assert_check("5g. PERT del primer corte incluye aviso heurístico uncalibrated",
-                 pert and any("Estimación heurística, no calibrada" in a for a in pert.get("assumptions", [])))
+    assert_check("5g. First-cut PERT includes the uncalibrated heuristic warning",
+                 pert and any("Uncalibrated heuristic estimate" in a for a in pert.get("assumptions", [])))
 
-    # 6. DAST de Seguridad: Control de acceso en Upload
+    # 6. Security DAST: access control on upload
     code, body = curl([
         "-X", "POST",
         "-F", "zip_file=@backend/app/main.py",
-        "-H", "X-Live-Token: token-falso-invalido",
+        "-H", "X-Live-Token: fake-invalid-token",
         f"{BASE_URL}/api/audits/upload"
     ])
-    assert_check("6. POST /api/audits/upload sin token válido es rechazado (HTTP 403/503)", code in (403, 503), f"code={code}, body={body}")
+    assert_check("6. POST /api/audits/upload with a bad token or a non-ZIP is rejected (HTTP 403/400)", code in (400, 403), f"code={code}, body={body}")
 
-    # 7. DAST de Seguridad: Path Traversal
+    # 7. Security DAST: path traversal
     traversals = [
         "../../../../etc/passwd",
         "..\\..\\..\\Windows\\win.ini",
@@ -132,9 +132,9 @@ def run_dast() -> None:
     ]
     for trav in traversals:
         code, body = curl([f"{BASE_URL}/api/audits/{job_id}/source?path={trav}"])
-        assert_check(f"7. Path traversal prevenido para '{trav}' (HTTP {code})", code in (400, 404, 422), f"code={code}")
+        assert_check(f"7. Path traversal prevented for '{trav}' (HTTP {code})", code in (400, 404, 422), f"code={code}")
 
-    # 8. DAST de Seguridad: ID de auditoría con Inyección SQL / caracteres no válidos
+    # 8. Security DAST: audit ID with SQL injection / invalid characters
     import urllib.parse
     injections = [
         "' OR 1=1 --",
@@ -145,26 +145,26 @@ def run_dast() -> None:
     for inj in injections:
         quoted = urllib.parse.quote(inj)
         code, body = curl([f"{BASE_URL}/api/audits/{quoted}/migration"])
-        assert_check(f"8. Entrada maliciosa en job_id rechazada con 404/400 '{inj}' (HTTP {code})", code in (404, 400), f"code={code}")
+        assert_check(f"8. Malicious job_id input rejected with 404/400 '{inj}' (HTTP {code})", code in (404, 400), f"code={code}")
 
-    # 9. DAST de Seguridad: Métodos no permitidos (405)
+    # 9. Security DAST: disallowed methods (405)
     code, body = curl([
         "-X", "POST",
         f"{BASE_URL}/api/audits/{job_id}/migration"
     ])
-    assert_check("9. POST en endpoint de migración devuelve 405 Method Not Allowed", code == 405, f"code={code}")
+    assert_check("9. POST on the migration endpoint returns 405 Method Not Allowed", code == 405, f"code={code}")
 
-    # 10. DAST de Seguridad: Carga útil JSON malformada / esquema inválido
+    # 10. Security DAST: malformed JSON payload / invalid schema
     code, body = curl([
         "-X", "POST",
         "-H", "Content-Type: application/json",
-        "-d", '{"sample": "facturaya-v1", "execution_mode": "modo-invalido-123"}',
+        "-d", '{"sample": "facturaya-v1", "execution_mode": "invalid-mode-123"}',
         f"{BASE_URL}/api/audits"
     ])
-    assert_check("10. Payload con enum inválido rechazado con 422 Unprocessable Entity", code == 422, f"code={code}, body={body}")
+    assert_check("10. Payload with an invalid enum rejected with 422 Unprocessable Entity", code == 422, f"code={code}, body={body}")
 
     print("=" * 70)
-    print(f"RESULTADO DAST: {passes}/{total} PRUEBAS EXITOSAS (100% OK)")
+    print(f"DAST RESULT: {passes}/{total} CHECKS PASSED (100% OK)")
     print("=" * 70)
 
 

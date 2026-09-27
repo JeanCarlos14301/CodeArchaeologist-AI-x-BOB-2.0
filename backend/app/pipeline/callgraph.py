@@ -1,8 +1,8 @@
-"""Grafo de llamadas real de un repositorio, construido con `ast` (solo análisis estático, nunca se ejecuta código).
+"""Real call graph of a repository, built with `ast` (static analysis only; code never runs).
 
-Las funciones (incluidas anidadas y métodos) son nodos; una arista A -> B significa que A contiene una
-llamada a un nombre que resuelve a B. Se resuelve por nombre dentro del mismo archivo o, si es único, en
-todo el repo; los nombres ambiguos entre archivos se omiten para no inventar relaciones.
+Functions (including nested functions and methods) are nodes; an edge A -> B means that A contains a
+call to a name that resolves to B. Names resolve within the same file or, when unique, across the
+whole repo; names that are ambiguous across files are skipped so no relationship is invented.
 """
 
 import ast
@@ -15,7 +15,7 @@ ROUTE_METHODS = {"get", "post", "put", "delete", "patch", "route"}
 
 
 class FunctionCollector(ast.NodeVisitor):
-    """Recolecta funciones (incluidas anidadas y métodos) y las llamadas que hace cada una."""
+    """Collects functions (including nested functions and methods) and the calls each one makes."""
 
     def __init__(self, rel_path: str) -> None:
         self.rel_path = rel_path
@@ -98,7 +98,7 @@ def collect_functions(repo: Path) -> List[Dict[str, Any]]:
 
 
 def enclosing(functions: List[Dict[str, Any]], path: str, start: int, end: int) -> Optional[Dict[str, Any]]:
-    """Función más pequeña del archivo que contiene el rango citado."""
+    """Smallest function in the file that contains the cited range."""
     best: Optional[Dict[str, Any]] = None
     for fn in functions:
         if fn["file"] == path and fn["line_start"] <= start and end <= fn["line_end"]:
@@ -108,7 +108,7 @@ def enclosing(functions: List[Dict[str, Any]], path: str, start: int, end: int) 
 
 
 def resolve_edges(functions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    """Aristas caller -> callee entre funciones definidas en el repo."""
+    """Caller -> callee edges between functions defined in the repo."""
     by_name: Dict[str, List[Dict[str, Any]]] = {}
     for fn in functions:
         by_name.setdefault(fn["name"], []).append(fn)
@@ -128,7 +128,7 @@ def resolve_edges(functions: List[Dict[str, Any]]) -> List[Dict[str, str]]:
 
 
 def module_node(nodes: List[Dict[str, Any]], path: str, modern_files: set[str] | None = None) -> str:
-    """Nodo de código a nivel de módulo, para evidencias fuera de cualquier función (p. ej. constantes)."""
+    """Module-level code node, for evidence outside any function (e.g. constants)."""
     node_id = f"{path}::<module>"
     if not any(n["id"] == node_id for n in nodes):
         modern = modern_files or set()

@@ -1,1 +1,1 @@
-"""Sandbox para ejecutar pytest contra el legado y contra modern/ (etapas 7 y 9, D-07)."""
+"""Sandbox that runs pytest against the legacy code and against modern/ (registered samples only)."""

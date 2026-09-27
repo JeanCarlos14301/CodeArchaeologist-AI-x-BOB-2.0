@@ -1,4 +1,4 @@
-"""Pruebas de evaluation/score.py: reglas de acierto, rechazados y falsos positivos."""
+"""Tests for evaluation/score.py: hit rules, rejected findings and false positives."""
 
 import importlib.util
 import json
@@ -46,7 +46,7 @@ def test_rejected_finding_is_reported_but_does_not_count() -> None:
     dossier = {"findings": [], "rejected_findings": [_finding("F-9", "app.py", 10, 10)]}
     result = score_module.score(dossier, EXPECTED_SMALL)
     assert result.hits == 0
-    assert result.results[0].outcome == "rechazado por el validador"
+    assert result.results[0].outcome == "rejected by the validator"
 
 
 def test_validated_finding_on_control_is_false_positive() -> None:
@@ -70,7 +70,7 @@ def test_cli_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
 
 
 def test_recorded_bob_run_scores_six_of_six_against_reference() -> None:
-    """Corrida real grabada (contracts/fixtures) + validador real sobre el código de la muestra."""
+    """Real recorded run (contracts/fixtures) + the real validator on the sample's code."""
     result = BobAdapter.import_result(RECORDED_BOB, AUDITOR_MODE)
     dossier = build_dossier("facturaya-v1", SAMPLE, result).model_dump()
     score = score_module.score(dossier, json.loads(EXPECTED.read_text(encoding="utf-8")))

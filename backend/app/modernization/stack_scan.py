@@ -1,9 +1,9 @@
-"""Detección determinista del stack de un repositorio (solo análisis estático; nunca se ejecuta código).
+"""Deterministic detection of a repository's stack (static analysis only; code never runs).
 
-Reconoce lenguajes (por extensión y líneas), frameworks, bases de datos e infraestructura a partir de
-manifiestos de dependencias (Python, Node, Java, Go, Rust, PHP, Ruby, .NET), Dockerfile/compose,
-CI e imports de Python. Cada tecnología lleva evidencia `archivo:línea`. También clasifica la arquitectura
-(monolito, varias aplicaciones o microservicios) y dice en qué se basa.
+Recognizes languages (by extension and lines), frameworks, databases and infrastructure from
+dependency manifests (Python, Node, Java, Go, Rust, PHP, Ruby, .NET), Dockerfile/compose,
+CI and Python imports. Each technology carries `file:line` evidence. It also classifies the architecture
+(monolith, several applications or microservices) and states what the classification is based on.
 """
 
 import json
@@ -45,17 +45,17 @@ class Language(BaseModel):
     name: str
     files: int
     lines: int
-    share: float  # fracción de las líneas de código medidas (0..1)
+    share: float  # fraction of the measured lines of code (0..1)
 
 
 class Detected(BaseModel):
     id: str
     name: str
     kind: str
-    language: str | None = None  # lenguaje del ecosistema de la tecnología
+    language: str | None = None  # language of the technology's ecosystem
     icon: str | None
-    version: str | None = None  # tal como lo declara el proyecto, sin resolver
-    service: str | None = None  # carpeta del servicio/aplicación donde se detectó
+    version: str | None = None  # as the project declares it, unresolved
+    service: str | None = None  # folder of the service/application where it was detected
     evidence: list[Evidence]
 
 
@@ -90,7 +90,7 @@ class StackReport(BaseModel):
 
 @dataclass
 class _Acc:
-    """Acumula detecciones por (tecnología, servicio) con su evidencia."""
+    """Accumulates detections by (technology, service) with their evidence."""
 
     found: dict[tuple[str, str], Detected] = field(default_factory=dict)
 
@@ -133,7 +133,7 @@ def _read(path: Path) -> str | None:
     try:
         if path.stat().st_size > MAX_TEXT_BYTES:
             return None
-        # utf-8-sig: manifiestos guardados con BOM (Windows) no pierden su primera línea ni invalidan el TOML.
+        # utf-8-sig: manifests saved with a BOM (Windows) neither lose their first line nor invalidate the TOML.
         return path.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return None
@@ -152,7 +152,7 @@ def _norm_pip(name: str) -> str:
 
 
 # ---------------------------------------------------------------- manifiestos
-# Cada lector devuelve (ecosistema, paquete, versión declarada | None, línea | None).
+# Each reader returns (ecosystem, package, declared version | None, line | None).
 
 Dep = tuple[str, str, str | None, int | None]
 _REQ = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)(?:\[[^\]]*\])?\s*((?:==|>=|<=|~=|!=|>|<)[^;#\s]+)?")
@@ -312,7 +312,7 @@ _PACKAGE_INDEX: dict[tuple[str, str], Tech] = {
 }
 _IMAGE_INDEX: dict[str, Tech] = {image: tech for tech in TECHS for image in tech.images}
 
-# Imágenes de runtime: nombre de imagen -> lenguaje.
+# Runtime images: image name -> language.
 _RUNTIME_IMAGES = {
     "python": "python", "node": "javascript", "openjdk": "java", "eclipse-temurin": "java", "amazoncorretto": "java",
     "golang": "go", "php": "php", "ruby": "ruby", "rust": "rust",
@@ -325,7 +325,7 @@ _PY_IMPORTS = {
 
 
 def _service_of(rel: str, roots: list[str]) -> str:
-    """Servicio dueño de un archivo: la raíz de manifiesto más específica que lo contiene."""
+    """Service that owns a file: the most specific manifest root that contains it."""
     best = "."
     for root in roots:
         if root != "." and (rel == root or rel.startswith(root + "/")) and len(root) > len(best if best != "." else ""):
@@ -338,14 +338,14 @@ def _image_parts(image: str) -> tuple[str, str | None]:
     return name.split("/")[-1].lower(), (tag or None)
 
 
-# ---------------------------------------------------------------- análisis
+# ---------------------------------------------------------------- analysis
 
 def scan_stack(root: Path) -> StackReport:
     files = _walk(root)
     rels = {path: path.relative_to(root).as_posix() for path in files}
     acc = _Acc()
 
-    # 1. Lenguajes por extensión y líneas
+    # 1. Languages by extension and lines
     by_language: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     extension_language = {ext: lang for lang, exts in LANGUAGE_EXTENSIONS.items() for ext in exts}
     for path in files:
@@ -364,12 +364,12 @@ def scan_stack(root: Path) -> StackReport:
         key=lambda item: -item.lines,
     )
 
-    # 2. Raíces de servicio = carpetas con manifiesto
+    # 2. Service roots = folders with a manifest
     manifest_files = [p for p in files if p.name in MANIFESTS or p.suffix == ".csproj"]
     roots = sorted({Path(rels[p]).parent.as_posix() for p in manifest_files})
     roots = ["." if r in ("", ".") else r for r in roots]
 
-    # 3. Dependencias declaradas
+    # 3. Declared dependencies
     for path in manifest_files:
         text = _read(path)
         if text is None:
@@ -394,7 +394,7 @@ def scan_stack(root: Path) -> StackReport:
             acc.add(BY_ID["npm"], service, rel, 1, "package.json")
 
     # 4. Docker, compose, CI, Kubernetes, Terraform
-    compose_services: list[tuple[str, str, str, dict[str, Any]]] = []  # (nombre, ruta, contexto, definición)
+    compose_services: list[tuple[str, str, str, dict[str, Any]]] = []  # (name, path, context, definition)
     for path in files:
         rel = rels[path]
         name = path.name
@@ -436,7 +436,7 @@ def scan_stack(root: Path) -> StackReport:
             if re.search(r"^apiVersion:", text, re.M) and re.search(r"^kind:\s*(Deployment|StatefulSet|Service|Ingress)\b", text, re.M):
                 acc.add(BY_ID["kubernetes"], service, rel, 1, name)
 
-    # 5. Imports de Python (donde falta manifiesto) y archivos SQLite
+    # 5. Python imports (where a manifest is missing) and SQLite files
     py_files = [p for p in files if p.suffix == ".py"][:MAX_PY_IMPORT_FILES]
     for path in py_files:
         text = _read(path)
@@ -450,18 +450,18 @@ def scan_stack(root: Path) -> StackReport:
                 acc.add(BY_ID[_PY_IMPORTS[match.group(1).lower()]], service, rel, number, line)
     for path in files:
         if path.suffix.lower() in {".sqlite", ".sqlite3", ".db"}:
-            acc.add(BY_ID["sqlite"], _service_of(rels[path], roots), rels[path], None, "archivo de base de datos")
+            acc.add(BY_ID["sqlite"], _service_of(rels[path], roots), rels[path], None, "database file")
 
-    # Los lenguajes van primero, con las cifras medidas como evidencia (sin archivo concreto).
+    # Languages go first, with the measured figures as evidence (no specific file).
     language_techs = [
         Detected(id=lang.id, name=lang.name, kind="language", language=lang.id, icon=BY_ID[lang.id].icon, service=None,
-                 evidence=[Evidence(path="", line=None, text=f"{lang.files} archivos · {lang.lines} líneas")])
+                 evidence=[Evidence(path="", line=None, text=f"{lang.files} files · {lang.lines} lines")])
         for lang in languages
     ]
 
     technologies = language_techs + sorted(acc.found.values(), key=lambda d: (d.kind, d.name, d.service or ""))
 
-    # 6. Servicios y arquitectura
+    # 6. Services and architecture
     services = _services(roots, technologies, files, rels, compose_services)
     architecture = _architecture(services, compose_services, technologies)
     targets = {
@@ -499,13 +499,13 @@ def _services(roots: list[str], technologies: list[Detected], files: list[Path],
         techs = sorted(set(per_service.get(root, [])))
         if not techs and root not in dockerfiles:
             continue
-        result.append(Service(name="raíz del proyecto" if root == "." else root, path=root, technologies=techs,
+        result.append(Service(name="project root" if root == "." else root, path=root, technologies=techs,
                               dockerfile=root in dockerfiles))
     return result
 
 
 def _where(root: str) -> str:
-    return "la raíz del proyecto" if root == "." else root
+    return "the project root" if root == "." else root
 
 
 def _architecture(services: list[Service], compose_services: list[tuple[str, str, str, dict[str, Any]]],
@@ -516,15 +516,15 @@ def _architecture(services: list[Service], compose_services: list[tuple[str, str
     basis: list[str] = []
     if len(own_code) >= 2 or len(backend_roots) >= 2:
         if len(own_code) >= 2:
-            basis.append(f"docker-compose define {len(own_code)} servicios con código propio: {', '.join(own_code)}")
+            basis.append(f"docker-compose defines {len(own_code)} services with their own code: {', '.join(own_code)}")
         if len(backend_roots) >= 2:
-            basis.append(f"hay {len(backend_roots)} carpetas con su propio backend: {', '.join(map(_where, backend_roots))}")
+            basis.append(f"there are {len(backend_roots)} folders with their own backend: {', '.join(map(_where, backend_roots))}")
         return Architecture(kind="microservices", basis=basis)
     apps = sorted(set(backend_roots) | set(frontend_roots))
     if len(apps) >= 2 and backend_roots and frontend_roots:
-        basis.append(f"backend en {', '.join(map(_where, backend_roots))} y frontend en {', '.join(map(_where, frontend_roots))}, como aplicaciones separadas")
+        basis.append(f"backend in {', '.join(map(_where, backend_roots))} and frontend in {', '.join(map(_where, frontend_roots))}, as separate applications")
         return Architecture(kind="multi-app", basis=basis)
     if backend_roots or frontend_roots:
-        basis.append(f"un solo servicio con {'backend' if backend_roots else 'frontend'} en {_where((backend_roots or frontend_roots)[0])}")
+        basis.append(f"a single service with a {'backend' if backend_roots else 'frontend'} in {_where((backend_roots or frontend_roots)[0])}")
         return Architecture(kind="monolith", basis=basis)
-    return Architecture(kind="unknown", basis=["no se detectó ningún framework de backend ni de frontend"])
+    return Architecture(kind="unknown", basis=["no backend or frontend framework was detected"])

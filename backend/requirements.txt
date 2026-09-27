@@ -1,24 +1,24 @@
-# Runtime del API y pipeline
+# API and pipeline runtime
 fastapi==0.141.1
 uvicorn==0.54.0
 pydantic==2.13.5
 PyYAML==6.0.3
 python-multipart==0.0.32
 
-# Pruebas
+# Tests
 pytest==9.1.1
 pytest-cov==7.1.0
 httpx==0.28.1
 
-# Documentos y renderizado
+# Documents and rendering
 python-docx==1.2.0
 python-pptx==1.0.2
 jinja2==3.1.6
 
-# Análisis estático y grafos
+# Static analysis and graphs
 networkx==3.6.1  # 3.7+ requires Python >= 3.12; CI and Docker use 3.11
 radon==6.0.1
 sqlglot==30.19.0
 
-# Monolito y compatibilidad
+# Monolith and compatibility
 flask==3.1.3

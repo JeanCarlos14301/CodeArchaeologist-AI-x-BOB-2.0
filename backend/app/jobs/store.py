@@ -1,4 +1,4 @@
-"""Almacén de jobs en SQLite (D-02). Una fila por auditoría; el expediente vive en disco."""
+"""SQLite job store (D-02). One row per audit; the dossier lives on disk."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def _now() -> str:
 
 
 class JobStore:
-    """Acceso a la tabla jobs con consultas parametrizadas; seguro entre hilos."""
+    """Access to the jobs table with parameterized queries; thread-safe."""
 
     def __init__(self, db_path: Path) -> None:
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -95,10 +95,10 @@ class JobStore:
         return [Job.model_validate(dict(row)) for row in rows]
 
     def list_public(self, limit: int = 50) -> list[Job]:
-        """Lista solo muestras registradas; nunca deja que subidas desplacen la vitrina."""
+        """Lists only registered samples; uploads never push the showcase out of the list."""
         with self._lock:
             rows = self._connection.execute(
-                # Las subidas (auditoría o solo modernización) son privadas: ni siquiera su nombre se lista.
+                # Uploads (audit or modernization only) are private: not even their name is listed.
                 "SELECT * FROM jobs WHERE sample NOT LIKE 'upload:%' AND sample NOT LIKE 'modernize:%' "
                 "ORDER BY created_at DESC, rowid DESC LIMIT ?",
                 (limit,),
@@ -114,10 +114,10 @@ class JobStore:
         return row is not None
 
     def fail_orphans(self) -> None:
-        """Marca como fallidos los jobs que quedaron a medias si el proceso se reinició."""
+        """Marks jobs left half-done as failed when the process restarted."""
         with self._lock:
             self._connection.execute(
-                "UPDATE jobs SET status = 'failed', error = 'Interrumpido por reinicio del servidor',"
+                "UPDATE jobs SET status = 'failed', error = 'Interrupted by a server restart',"
                 " updated_at = ? WHERE status IN ('queued', 'running')",
                 (_now(),),
             )

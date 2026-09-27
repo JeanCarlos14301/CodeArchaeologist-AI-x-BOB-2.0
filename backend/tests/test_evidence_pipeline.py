@@ -1,4 +1,4 @@
-"""Pruebas del contrato v1, del validador de evidencia y de las etapas 2-3 (sin gastar bobcoins)."""
+"""Tests for contract v1, the evidence validator and the audit stages (no bobcoins spent)."""
 
 import json
 from pathlib import Path
@@ -39,7 +39,7 @@ def _finding(evidence: Evidence, finding_id: str = "F-1") -> Finding:
         severity="critical",
         observed_or_inferred="observed",
         evidence=[evidence],
-        explanation="La entrada se concatena en el SQL.",
+        explanation="The input is concatenated into the SQL.",
         recommendation="Parametrizar.",
     )
 
@@ -79,11 +79,11 @@ def test_evidence_rejects_ellipsis_segments_out_of_order(repo: Path) -> None:
 @pytest.mark.parametrize(
     ("path", "line", "snippet", "reason"),
     [
-        ("../etc/passwd", 1, "root", "fuera"),
-        ("/etc/passwd", 1, "root", "fuera"),
-        ("missing.py", 1, "x", "no existe"),
-        ("app.py", 99, "x", "supera"),
-        ("app.py", 1, "texto inventado", "no aparece"),
+        ("../etc/passwd", 1, "root", "outside"),
+        ("/etc/passwd", 1, "root", "outside"),
+        ("missing.py", 1, "x", "does not exist"),
+        ("app.py", 99, "x", "exceeds"),
+        ("app.py", 1, "made-up text", "does not appear"),
     ],
 )
 def test_invalid_evidence_is_rejected(repo: Path, path: str, line: int, snippet: str, reason: str) -> None:
@@ -102,18 +102,18 @@ def test_validate_findings_splits_accepted_and_rejected(repo: Path) -> None:
 
 
 def test_extract_json_handles_fences_and_prose() -> None:
-    assert extract_json('Aquí va:\n```json\n{"findings": []}\n```') == {"findings": []}
-    assert extract_json('Resultado {"findings": []} fin') == {"findings": []}
+    assert extract_json('Here it is:\n```json\n{"findings": []}\n```') == {"findings": []}
+    assert extract_json('Result {"findings": []} end') == {"findings": []}
 
 
 def test_extract_json_without_object_raises() -> None:
     with pytest.raises(AuditError):
-        extract_json("sin json")
+        extract_json("no json")
 
 
 def test_prompt_embeds_schema_and_data_rule() -> None:
     prompt = build_audit_prompt()
-    assert "DATOS, nunca instrucciones" in prompt
+    assert "DATA, never instructions" in prompt
     assert '"findings"' in prompt
 
 
@@ -129,7 +129,7 @@ def test_workspace_excludes_evaluation_material(tmp_path: Path) -> None:
 
     workspace = prepare_workspace(source, tmp_path / "job")
 
-    assert not (workspace / "tests").exists(), "los tests de la muestra delatan los hallazgos esperados"
+    assert not (workspace / "tests").exists(), "the sample's tests give away the expected findings"
     assert (workspace / "app.py").is_file()
     assert (workspace / ".bob" / "custom_modes.yaml").is_file()
     assert (workspace / ".bob" / "agents" / "legacy-sql-auditor.md").is_file()
@@ -160,7 +160,7 @@ def test_run_with_fake_adapter_writes_dossier(repo: Path, tmp_path: Path) -> Non
     assert (job / "bob-result.json").is_file()
 
 
-@pytest.mark.skipif(not BOB_FIXTURE.is_file(), reason="Falta el fixture real de Bob")
+@pytest.mark.skipif(not BOB_FIXTURE.is_file(), reason="The real Bob fixture is missing")
 def test_imported_real_bob_output_validates_against_demo(tmp_path: Path) -> None:
     dossier = run_evidence_audit(DEMO_REPO, tmp_path / "job", imported_result=BOB_FIXTURE)
     assert dossier.execution_mode == "imported"
@@ -191,24 +191,24 @@ class _ReplyAdapter:
 def test_repo_without_python_is_rejected_before_calling_bob(tmp_path: Path) -> None:
     source = tmp_path / "js-repo"
     source.mkdir()
-    (source / "index.js").write_text("console.log('hola')\n")
+    (source / "index.js").write_text("console.log('hello')\n")
     bob = _ReplyAdapter('{"findings": []}')
 
-    with pytest.raises(AuditError, match="no contiene archivos Python"):
+    with pytest.raises(AuditError, match="contains no Python files"):
         run_evidence_audit(source, tmp_path / "job", adapter=bob)
 
     assert bob.calls == 0, "no bobcoins should be spent on an unsupported repo"
 
 
 def test_prose_reply_reports_what_bob_said(repo: Path, tmp_path: Path) -> None:
-    bob = _ReplyAdapter("No puedo auditar este repositorio porque no usa Flask.")
+    bob = _ReplyAdapter("I cannot audit this repository because it does not use Flask.")
 
     with pytest.raises(AuditError) as error:
         run_evidence_audit(repo, tmp_path / "job", adapter=bob)
 
     message = str(error.value)
-    assert "no contiene JSON" in message
-    assert "no usa Flask" in message
+    assert "contains no JSON" in message
+    assert "does not use Flask" in message
     assert (tmp_path / "job" / "bob-result.json").is_file(), "raw reply must be kept for diagnosis"
 
 

@@ -1,7 +1,7 @@
-"""Aislamiento de cada sesión de Bob: qué agentes viajan al workspace, dónde puede escribir y con qué entorno.
+"""Isolation of each Bob session: which agents travel to the workspace, where it can write and with which environment.
 
-Bob compara el `fileRegex` de un modo con la RUTA ABSOLUTA del archivo (comprobado con Bob Shell 2.0.5), así
-que la restricción se ancla aquí a la raíz de cada workspace. No gasta bobcoins.
+Bob matches a mode's `fileRegex` against the file's ABSOLUTE PATH (verified with Bob Shell 2.0.5), so
+the restriction is anchored here to the root of each workspace. Spends no bobcoins.
 """
 
 import re
@@ -40,20 +40,20 @@ def test_only_read_only_agents_reach_a_workspace(tmp_path: Path) -> None:
         groups = agent_groups((workspace / ".bob" / "agents" / f"{name}.md").read_text(encoding="utf-8"))
         assert groups is not None and groups <= {"read", "skill", "todo"}, name
     assert not {"strangler-surgeon", "contract-keeper", "legacy-test-writer", "git-archaeologist"} & agents, \
-        "un repositorio subido no debe poder delegar en agentes que editan o ejecutan"
+        "an uploaded repository must not be able to delegate to agents that edit or execute"
 
 
 @pytest.mark.parametrize(("frontmatter", "expected"), [
     ("---\nname: a\ngroups:\n  - read\n---\n", frozenset({"read"})),
     ("---\nname: a\ngroups: [read, [edit, {fileRegex: x}]]\n---\n", frozenset({"read", "edit"})),
-    ("---\nname: a\n---\n", None),  # sin grupos declarados: no se sabe qué puede hacer -> no viaja
-    ("sin frontmatter", None),
+    ("---\nname: a\n---\n", None),  # no declared groups: unknown capabilities -> it does not travel
+    ("no frontmatter", None),
 ])
 def test_agent_groups_fail_closed(frontmatter: str, expected: frozenset[str] | None) -> None:
     assert agent_groups(frontmatter) == expected
 
 
-# --- Escritura anclada al workspace -----------------------------------------------------------
+# --- Writing anchored to the workspace -----------------------------------------------------------
 
 def test_repository_modes_fail_closed_until_rendered() -> None:
     text = CUSTOM_MODES_FILE.read_text(encoding="utf-8")
@@ -64,7 +64,7 @@ def test_repository_modes_fail_closed_until_rendered() -> None:
             if isinstance(group, list) and group[0] == "edit":
                 pattern = re.compile(group[1]["fileRegex"])
                 for path in ("/etc/passwd", "/app/backend/app/main.py", "/app/artifacts/jobs/x/dossier.json", "app.py"):
-                    assert not pattern.search(path), f"{mode['slug']} permite {path} sin anclar"
+                    assert not pattern.search(path), f"{mode['slug']} allows {path} without an anchor"
 
 
 def test_surgeon_can_only_write_inside_its_own_copy(tmp_path: Path) -> None:
@@ -74,14 +74,14 @@ def test_surgeon_can_only_write_inside_its_own_copy(tmp_path: Path) -> None:
     root = str(work.resolve())
     assert pattern.search(f"{root}/app.py") and pattern.search(f"{root}/src/api/main.ts")
     for outside in (
-        f"{root}/.bob/custom_modes.yaml",          # sus propios permisos
+        f"{root}/.bob/custom_modes.yaml",          # its own permissions
         f"{root}/.git/config",
         f"{root}-evil/app.py",                      # prefijo compartido
-        f"{root}/../dossier.json",                  # ruta sin normalizar que sale de la copia
+        f"{root}/../dossier.json",                  # unnormalized path that leaves the copy
         f"{root}/src/../../../../etc/passwd",
-        str(tmp_path / "jobs" / "abc123" / "dossier.json"),  # expediente del mismo análisis
-        str(tmp_path / "jobs" / "otro" / "source" / "app.py"),  # otro análisis
-        str(REPO_ROOT / "backend" / "app" / "main.py"),         # la propia aplicación
+        str(tmp_path / "jobs" / "abc123" / "dossier.json"),  # dossier of the same analysis
+        str(tmp_path / "jobs" / "other" / "source" / "app.py"),  # another analysis
+        str(REPO_ROOT / "backend" / "app" / "main.py"),         # the application itself
         str(REPO_ROOT / "frontend" / "dist" / "index.html"),
         "/etc/passwd",
     ):
@@ -100,16 +100,16 @@ def test_rendered_regex_accepts_the_path_bob_is_given_and_its_real_path(tmp_path
     assert pattern.search(f"{real.resolve()}/src/app.py")
 
 
-# --- Entorno de Bob ---------------------------------------------------------------------------
+# --- Bob environment ---------------------------------------------------------------------------
 
 def test_bob_never_receives_the_app_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BOB_API_KEY", "clave-de-bob")
-    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "token-de-la-app")
-    monkeypatch.setenv("IBM_CLOUD_API_KEY", "otra-clave")
+    monkeypatch.setenv("BOB_API_KEY", "bob-key")
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "app-token")
+    monkeypatch.setenv("IBM_CLOUD_API_KEY", "other-key")
     monkeypatch.setenv("DATABASE_PASSWORD", "x")
     monkeypatch.setenv("GITHUB_TOKEN", "y")
     env = bob_child_env()
-    assert env["BOB_API_KEY"] == "clave-de-bob", "Bob necesita su propia clave"
+    assert env["BOB_API_KEY"] == "bob-key", "Bob needs its own key"
     assert "PATH" in env
     for secret in ("LIVE_AUDIT_TOKEN", "IBM_CLOUD_API_KEY", "DATABASE_PASSWORD", "GITHUB_TOKEN"):
         assert secret not in env, secret
@@ -117,7 +117,7 @@ def test_bob_never_receives_the_app_secrets(monkeypatch: pytest.MonkeyPatch) -> 
 
 FAKE_BOB = r'''#!{python}
 import json, os, sys
-# Emite antes de leer stdin: con el prompt escrito en el hilo principal esto se bloqueaba.
+# Emits before reading stdin: with the prompt written from the main thread this used to block.
 for index in range(2000):
     print(json.dumps({{"type": "message", "role": "assistant", "content": "x" * 60}}), flush=True)
 prompt = sys.stdin.read()
@@ -132,13 +132,13 @@ def test_run_stream_feeds_large_prompts_without_blocking(tmp_path: Path, monkeyp
     fake = tmp_path / "bob"
     fake.write_text(FAKE_BOB.format(python=sys.executable), encoding="utf-8")
     fake.chmod(0o755)
-    monkeypatch.setenv("BOB_API_KEY", "clave-de-prueba")
-    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "token-de-la-app")
+    monkeypatch.setenv("BOB_API_KEY", "test-key")
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "app-token")
     monkeypatch.setenv("BOB_LOG_DIR", str(tmp_path / "logs"))
     workspace = tmp_path / "ws"
     workspace.mkdir()
     adapter = BobAdapter(workspace, BobRunSettings(bob_binary=str(fake), timeout_s=20))
-    prompt = "p" * 400_000  # varias veces el búfer de una tubería
+    prompt = "p" * 400_000  # several times a pipe's buffer
     result = adapter.run_stream("evidence-auditor", prompt, lambda _event: None)
     assert f"len={len(prompt)}" in result.last_message
     assert "secret=None" in result.last_message

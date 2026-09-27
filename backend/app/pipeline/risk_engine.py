@@ -1,11 +1,11 @@
-"""Motor Determinista de Radio de Explosión, Matriz de Riesgo y Estimación PERT (D-06).
+"""Deterministic blast radius, risk matrix and PERT estimation engine (D-06; not wired into the product).
 
-Regla central de AGENTS.md: 'Los números los calcula código, no la IA'.
-- Construye el grafo de llamadas con NetworkX.
-- Calcula el Composite Blast Radius Score (CBRS) de 0 a 100.
-- Evalúa la matriz determinista de riesgo (Impacto × Incertidumbre).
-- Modela el plan de migración con distribución estadística PERT:
-    E = (O + 4M + P) / 6,  Varianza = ((P - O) / 6)^2.
+Central AGENTS.md rule: 'Numbers are computed by code, not by the AI'.
+- Builds the call graph with NetworkX.
+- Computes the Composite Blast Radius Score (CBRS) from 0 to 100.
+- Evaluates the deterministic risk matrix (Impact × Uncertainty).
+- Models the migration plan with the PERT statistical distribution:
+    E = (O + 4M + P) / 6,  Variance = ((P - O) / 6)^2.
 """
 
 import math
@@ -21,11 +21,11 @@ def calculate_finding_blast_radius(
     graph: nx.DiGraph,
     finding: Finding,
 ) -> Tuple[float, List[str]]:
-    """Calcula el puntaje de radio de explosión transitivo (CBRS) para un hallazgo específico."""
+    """Computes the transitive blast radius score (CBRS) for a specific finding."""
     total_nodes = max(1, graph.number_of_nodes())
     impacted_nodes: Set[str] = set()
 
-    # Identificar nodos raíz afectados a partir de la evidencia o símbolos
+    # Identify the affected root nodes from the evidence or the symbols
     seeds: Set[str] = set()
     for ev in finding.evidence:
         stem = Path(ev.path).stem
@@ -39,17 +39,17 @@ def calculate_finding_blast_radius(
     for seed in seeds:
         if graph.has_node(seed):
             impacted_nodes.add(seed)
-            # Impacto hacia arriba (quién me llama)
+            # Upstream impact (who calls me)
             callers = nx.ancestors(graph, seed)
             impacted_nodes.update(callers)
-            # Impacto hacia abajo (a quién llamo)
+            # Downstream impact (whom I call)
             callees = nx.descendants(graph, seed)
             impacted_nodes.update(callees)
 
     impacted_count = len(impacted_nodes)
     ratio = impacted_count / total_nodes
 
-    # Ponderación según severidad intrínseca
+    # Weighting by intrinsic severity
     severity_weight = {
         "CRITICAL": 1.25,
         "HIGH": 1.10,
@@ -60,7 +60,7 @@ def calculate_finding_blast_radius(
 
     score = min(100.0, round(ratio * 100.0 * severity_weight, 1))
     if score == 0.0:
-        # Fallback base según severidad si el grafo no tiene llamadas explícitas
+        # Base fallback by severity when the graph has no explicit calls
         score = {"CRITICAL": 85.0, "HIGH": 65.0, "MEDIUM": 40.0, "LOW": 20.0, "INFO": 10.0}.get(finding.severity, 15.0)
 
     return score, sorted(list(impacted_nodes))
@@ -70,20 +70,20 @@ def enrich_findings_with_blast_radius(
     repo_dir: Path | str,
     findings: List[Finding],
 ) -> List[Finding]:
-    """Enriquece cada hallazgo con su radio de impacto calculado en el grafo de llamadas."""
+    """Enriches each finding with its blast radius computed on the call graph."""
     graph = build_repository_call_graph(repo_dir)
     enriched = []
     for f in findings:
         score, symbols = calculate_finding_blast_radius(graph, f)
         f.blast_radius_score = score
         if not f.transitive_impacted_symbols:
-            f.transitive_impacted_symbols = symbols[:8]  # Guardar los principales
+            f.transitive_impacted_symbols = symbols[:8]  # Keep the main ones
         enriched.append(f)
     return enriched
 
 
 def calculate_risk_matrix(findings: List[Finding]) -> Dict[str, Any]:
-    """Genera la matriz de riesgo del repositorio: Impacto vs Incertidumbre."""
+    """Builds the repository risk matrix: Impact vs Uncertainty."""
     severity_to_impact = {
         "CRITICAL": 5,
         "HIGH": 4,
@@ -126,62 +126,62 @@ def calculate_risk_matrix(findings: List[Finding]) -> Dict[str, Any]:
 
 
 def generate_pert_migration_plan() -> List[MigrationPhase]:
-    """Genera el plan de migración por fases con estimación probabilística PERT rigurosa."""
+    """Builds the phased migration plan with a rigorous probabilistic PERT estimate."""
     raw_phases = [
         {
             "phase_number": 1,
-            "name": "Fase 1: Harness de Caracterización y Contrato Inmutable",
-            "description": "Estabilización de suite de pruebas de caracterización sobre FacturaYa heredado, fijación de Golden Master de GET /invoices/{id}, schemas Pydantic v2 y configuración del pipeline CI con SQLite en memoria.",
+            "name": "Phase 1: Characterization harness and immutable contract",
+            "description": "Stabilize the characterization test suite on legacy FacturaYa, pin the GET /invoices/{id} golden master, Pydantic v2 schemas and a CI pipeline with in-memory SQLite.",
             "O": 2.0,
             "M": 3.5,
             "P": 6.0,
             "assumptions": [
-                "El esquema de base de datos actual SQLite y los fixtures de clientes/facturas no sufrirán alteraciones.",
-                "Se cuenta con cobertura de pruebas unitarias mínimas que reproduzcan el contrato actual sin alteraciones de red.",
+                "The current SQLite schema and the customer/invoice fixtures will not change.",
+                "Minimal unit test coverage exists that reproduces the current contract without network changes.",
             ],
-            "prerequisites": ["Acceso de solo lectura al código heredado", "Ambiente de sandbox aislado"],
-            "rollback_strategy": "Descarte de pruebas provisionales sin afectación a ningún entorno productivo.",
+            "prerequisites": ["Read-only access to the legacy code", "Isolated sandbox environment"],
+            "rollback_strategy": "Discard the provisional tests with no effect on any production environment.",
         },
         {
             "phase_number": 2,
-            "name": "Fase 2: Primer Corte Strangler Fig (GET /invoices/{id})",
-            "description": "Implementación del micro-módulo FastAPI para consulta de factura, consultas SQLite parametrizadas seguras, validación de pertenencia por propietario (BOLA fix) y enrutador fachada Strangler Fig.",
+            "name": "Phase 2: First Strangler Fig cut (GET /invoices/{id})",
+            "description": "Implement the FastAPI micro-module for invoice lookup, safe parameterized SQLite queries, owner validation (BOLA fix) and the Strangler Fig facade router.",
             "O": 3.0,
             "M": 5.0,
             "P": 9.0,
             "assumptions": [
-                "La fachada Strangler Fig puede coexistir y redirigir el tráfico del endpoint GET /invoices/{id} sin latencia perceptible.",
-                "Los clientes HTTP respetan el contrato JSON idéntico validado en la Fase 1.",
+                "The Strangler Fig facade can coexist with and route traffic for GET /invoices/{id} with no noticeable latency.",
+                "HTTP clients honor the identical JSON contract validated in Phase 1.",
             ],
-            "prerequisites": ["Pruebas de caracterización aprobadas al 100% en la Fase 1"],
-            "rollback_strategy": "Cambio del switch de la fachada para redirigir 100% del tráfico al handler legacy Flask en menos de 1 segundo.",
+            "prerequisites": ["Characterization tests passing 100% in Phase 1"],
+            "rollback_strategy": "Flip the facade switch to send 100% of traffic back to the legacy Flask handler in under 1 second.",
         },
         {
             "phase_number": 3,
-            "name": "Fase 3: Módulos Transaccionales y Reglas de Negocio",
-            "description": "Migración de la ruta monolítica POST /invoices/new y resolución de la divergencia de redondeo en billing/reports mediante motor de descuentos unificado con tipado estricto Decimal.",
+            "name": "Phase 3: Transactional modules and business rules",
+            "description": "Migrate the monolithic POST /invoices/new route and resolve the rounding divergence in billing/reports with a unified discount engine using strict Decimal typing.",
             "O": 5.0,
             "M": 8.0,
             "P": 14.0,
             "assumptions": [
-                "Las partes interesadas financieras aprueban el redondeo bancario ROUND_HALF_UP por línea unificado.",
-                "La base de datos soporta transacciones concurrentes con WAL mode.",
+                "Financial stakeholders approve unified per-line ROUND_HALF_UP banker's rounding.",
+                "The database supports concurrent transactions with WAL mode.",
             ],
-            "prerequisites": ["Fase 2 en producción estable sin incidencias de contrato"],
-            "rollback_strategy": "Aislamiento de la transacción en el nuevo servicio y reintento de fallback a Flask mediante cola de compensación.",
+            "prerequisites": ["Phase 2 stable in production with no contract incidents"],
+            "rollback_strategy": "Isolate the transaction in the new service and fall back to Flask through a compensation queue.",
         },
         {
             "phase_number": 4,
-            "name": "Fase 4: Desmantelamiento del Monolito y Cutover Final",
-            "description": "Retiro definitivo del servicio Flask heredado, eliminación de dependencias obsoletas, unificación de auditoría y monitoreo OpenTelemetry.",
+            "name": "Phase 4: Monolith decommissioning and final cutover",
+            "description": "Retire the legacy Flask service for good, remove obsolete dependencies, unify auditing and OpenTelemetry monitoring.",
             "O": 2.0,
             "M": 4.0,
             "P": 7.0,
             "assumptions": [
-                "Todo el tráfico de producción ha sido redirigido al nuevo backend FastAPI durante al menos 14 días sin fallos.",
+                "All production traffic has been routed to the new FastAPI backend for at least 14 days without failures.",
             ],
-            "prerequisites": ["Cero dependencias activas del monolito Flask"],
-            "rollback_strategy": "Restauración de la imagen del contenedor monolítico desde el registro de artefactos.",
+            "prerequisites": ["Zero active dependencies on the Flask monolith"],
+            "rollback_strategy": "Restore the monolith container image from the artifact registry.",
         },
     ]
 
@@ -213,7 +213,7 @@ def generate_pert_migration_plan() -> List[MigrationPhase]:
 
 
 def calculate_total_pert_metrics(phases: List[MigrationPhase]) -> Dict[str, float]:
-    """Calcula la duración esperada total y el intervalo de confianza al 95% (2 sigma)."""
+    """Computes the total expected duration and the 95% confidence interval (2 sigma)."""
     total_expected = sum(p.pert_expected_days for p in phases)
     total_variance = sum(p.pert_variance for p in phases)
     total_sigma = math.sqrt(total_variance)

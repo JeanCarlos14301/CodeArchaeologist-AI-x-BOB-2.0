@@ -1,11 +1,11 @@
-"""Validador determinista de evidencia (etapa 3, D-06).
+"""Deterministic evidence validator (D-06).
 
-Cada evidencia que cita Bob se comprueba contra el repositorio real:
-- la ruta es relativa, no escapa de la raíz y apunta a un archivo existente;
-- el rango de líneas existe en el archivo;
-- el fragmento citado aparece en esas líneas (sin espacios redundantes; `...` separa
-  trozos que deben aparecer en orden).
-Un hallazgo se acepta solo si todas sus evidencias son válidas.
+Every piece of evidence Bob cites is checked against the real repository:
+- the path is relative, does not escape the root and points to an existing file;
+- the line range exists in the file;
+- the cited snippet appears in those lines (ignoring redundant whitespace; `...` separates
+  pieces that must appear in order).
+A finding is accepted only if all its evidence is valid.
 """
 
 import re
@@ -13,10 +13,10 @@ from pathlib import Path
 
 from app.contracts.schema_v1 import Evidence, EvidenceCheck, Finding
 
-# Margen de líneas tolerado alrededor del rango citado (Bob a veces se desplaza una línea).
+# Line margin tolerated around the cited range (Bob sometimes drifts by one line).
 LINE_TOLERANCE = 1
 _WHITESPACE = re.compile(r"\s+")
-# Bob a veces abrevia fragmentos largos con "..." o "…"; cada trozo debe aparecer en orden.
+# Bob sometimes abbreviates long snippets with "..." or "…"; each piece must appear in order.
 _ELLIPSIS = re.compile(r"\.\.\.|…")
 
 
@@ -25,7 +25,7 @@ def _normalize(text: str) -> str:
 
 
 def _segments_in_order(snippet: str, window: str) -> bool:
-    """True si todos los trozos no vacíos del fragmento aparecen en orden dentro de window."""
+    """True if every non-empty piece of the snippet appears, in order, inside window."""
     segments = [_normalize(part) for part in _ELLIPSIS.split(snippet)]
     segments = [segment for segment in segments if segment]
     if not segments:
@@ -40,7 +40,7 @@ def _segments_in_order(snippet: str, window: str) -> bool:
 
 
 def resolve_inside(repo_root: Path, relative: str) -> Path | None:
-    """Devuelve la ruta absoluta si queda dentro de repo_root; si no, None."""
+    """Returns the absolute path if it stays inside repo_root; otherwise None."""
     if Path(relative).is_absolute():
         return None
     candidate = (repo_root / relative).resolve()
@@ -50,28 +50,28 @@ def resolve_inside(repo_root: Path, relative: str) -> Path | None:
 
 
 def check_evidence(repo_root: Path, evidence: Evidence) -> tuple[bool, str]:
-    """Valida una evidencia; devuelve (es_válida, motivo)."""
+    """Validates one piece of evidence; returns (is_valid, reason)."""
     root = repo_root.resolve()
     target = resolve_inside(root, evidence.path)
     if target is None:
-        return False, "ruta fuera del repositorio"
+        return False, "path outside the repository"
     if not target.is_file():
-        return False, "el archivo no existe"
+        return False, "the file does not exist"
     lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
     if evidence.line_start > len(lines):
-        return False, f"line_start {evidence.line_start} supera las {len(lines)} líneas del archivo"
+        return False, f"line_start {evidence.line_start} exceeds the file's {len(lines)} lines"
     start = max(evidence.line_start - 1 - LINE_TOLERANCE, 0)
     end = min(evidence.line_end + LINE_TOLERANCE, len(lines))
     window = _normalize("\n".join(lines[start:end]))
     if _segments_in_order(evidence.snippet, window):
-        return True, "fragmento encontrado en el rango citado"
-    return False, "el fragmento no aparece en el rango citado"
+        return True, "snippet found in the cited range"
+    return False, "the snippet does not appear in the cited range"
 
 
 def validate_findings(
     repo_root: Path, findings: list[Finding]
 ) -> tuple[list[Finding], list[Finding], list[EvidenceCheck]]:
-    """Separa hallazgos aceptados y rechazados y devuelve el detalle de cada comprobación."""
+    """Splits accepted and rejected findings and returns the detail of every check."""
     accepted: list[Finding] = []
     rejected: list[Finding] = []
     checks: list[EvidenceCheck] = []

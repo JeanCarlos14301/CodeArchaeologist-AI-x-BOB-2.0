@@ -1,8 +1,8 @@
-"""Contrato de datos v1 (D-01): expediente de hallazgos con evidencia por archivo y línea.
+"""Data contract v1 (D-01): dossier of findings with evidence by file and line.
 
-Fuente única del esquema: `contracts/schema-v1.json` se genera desde estos modelos
-(`python -m app.contracts.export`). Bob produce `AuditorOutput`; el pipeline lo
-valida y lo envuelve en `Dossier` con los números calculados por código (D7).
+These models are what the live product uses. Bob produces `AuditorOutput`; the pipeline
+validates it and wraps it in `Dossier` with the numbers computed by code (D7).
+`python -m app.contracts.export` writes this contract as JSON Schema.
 """
 
 from typing import Literal
@@ -27,24 +27,24 @@ EvidenceStatus = Literal["valid", "invalid"]
 
 
 class Evidence(BaseModel):
-    """Referencia verificable a un fragmento del repositorio analizado."""
+    """Verifiable reference to a snippet of the analyzed repository."""
 
     model_config = ConfigDict(extra="forbid")
 
-    path: str = Field(min_length=1, description="Ruta relativa a la raíz del repo analizado.")
-    line_start: int = Field(ge=1, description="Primera línea, 1-indexada.")
-    line_end: int = Field(ge=1, description="Última línea, inclusiva.")
-    snippet: str = Field(min_length=1, description="Fragmento literal presente en esas líneas.")
+    path: str = Field(min_length=1, description="Path relative to the root of the analyzed repo.")
+    line_start: int = Field(ge=1, description="First line, 1-indexed.")
+    line_end: int = Field(ge=1, description="Last line, inclusive.")
+    snippet: str = Field(min_length=1, description="Verbatim snippet present in those lines.")
 
     @model_validator(mode="after")
     def _check_range(self) -> "Evidence":
         if self.line_end < self.line_start:
-            raise ValueError("line_end no puede ser menor que line_start")
+            raise ValueError("line_end cannot be smaller than line_start")
         return self
 
 
 class Finding(BaseModel):
-    """Hallazgo tal como lo emite Bob (evidence-auditor)."""
+    """Finding as Bob (evidence-auditor) emits it."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -60,7 +60,7 @@ class Finding(BaseModel):
 
 
 class AuditorOutput(BaseModel):
-    """Salida esperada de Bob en modo evidence-auditor."""
+    """Expected output of Bob in evidence-auditor mode."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -68,7 +68,7 @@ class AuditorOutput(BaseModel):
 
 
 class EvidenceCheck(BaseModel):
-    """Resultado del validador determinista para una evidencia (etapa 3)."""
+    """Result of the deterministic validator for one piece of evidence."""
 
     finding_id: str
     evidence_index: int
@@ -77,7 +77,7 @@ class EvidenceCheck(BaseModel):
 
 
 class DossierStats(BaseModel):
-    """Métricas calculadas por código, nunca por la IA (D7)."""
+    """Metrics computed by code, never by the AI (D7)."""
 
     findings_reported: int
     findings_validated: int
@@ -89,7 +89,7 @@ class DossierStats(BaseModel):
 
 
 class RiskMetric(BaseModel):
-    """Riesgo calculado con severidad y llamadores medidos en el grafo."""
+    """Risk computed from severity and the callers measured on the graph."""
 
     finding_id: str
     severity_weight: int = Field(ge=1, le=4)
@@ -100,7 +100,7 @@ class RiskMetric(BaseModel):
 
 
 class PertEstimate(BaseModel):
-    """Estimación del primer corte derivada solo de hechos medidos."""
+    """First-cut estimate derived only from measured facts."""
 
     affected_routes: int = Field(ge=0)
     affected_functions: int = Field(ge=0)
@@ -136,37 +136,37 @@ class MigrationResult(BaseModel):
 
 
 class MigrationOption(BaseModel):
-    """Opción de migración propuesta por el arquitecto (etapa migration-architect).
+    """Migration option proposed by the architect (migration-architect stage).
 
-    Cada opción describe una ruta candidata del ranking determinista (migration_ranking.py).
-    No contiene cifras numéricas de días, riesgo ni radio: esos valores los calcula
-    el código determinista y se leen del Dossier.
-    Los pros y cons son texto cualitativo sin porcentajes ni estimaciones.
+    Each option describes a candidate route from the deterministic ranking (migration_ranking.py).
+    It contains no numeric figures for days, risk or radius: those values are computed by
+    deterministic code and read from the Dossier.
+    Pros and cons are qualitative text with no percentages or estimates.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(pattern=r"^OPT-\d+$", description="Identificador secuencial, p.ej. OPT-1.")
+    id: str = Field(pattern=r"^OPT-\d+$", description="Sequential identifier, e.g. OPT-1.")
     name: str = Field(min_length=3, max_length=120)
-    pattern: str = Field(min_length=3, max_length=120, description="Patrón de migración, p.ej. Strangler Fig.")
+    pattern: str = Field(min_length=3, max_length=120, description="Migration pattern, e.g. Strangler Fig.")
     endpoint: str | None = Field(
         default=None,
         max_length=200,
-        description="Endpoint del candidato del ranking que describe esta opción, copiado literalmente.",
+        description="Endpoint of the ranking candidate this option describes, copied verbatim.",
     )
     finding_ids: list[str] = Field(
         default_factory=list,
-        description="IDs de hallazgos que mitiga ese candidato según el motor (puede ir vacío).",
+        description="IDs of the findings that candidate mitigates according to the engine (may be empty).",
     )
     pros: list[str] = Field(min_length=1)
     cons: list[str] = Field(min_length=1)
-    recommended: bool = Field(description="True solo para la opción recomendada; exactamente una debe serlo.")
+    recommended: bool = Field(description="True only for the recommended option; exactly one must be.")
 
 
 class RouteCandidate(BaseModel):
-    """Candidato de ruta Flask para migración Strangler Fig (evaluación determinista A)."""
+    """Flask route candidate for a Strangler Fig migration (deterministic assessment A)."""
 
-    endpoint: str = Field(description="Método y regla, p. ej. 'GET /invoices/{id}'.")
+    endpoint: str = Field(description="Method and rule, e.g. 'GET /invoices/{id}'.")
     http_methods: list[str]
     rule: str
     function_name: str
@@ -186,13 +186,13 @@ class RouteCandidate(BaseModel):
     in_circular_dependency: bool = False
     touches_business_data: bool = Field(
         default=True,
-        description="Su alcance lee o escribe alguna tabla; si no, su puntaje pondera a la mitad (D3: visible para negocio).",
+        description="Its scope reads or writes some table; otherwise its score is weighted by half (D3: visible to the business).",
     )
     why: str = ""
 
 
 class MigrationWave(BaseModel):
-    """Ola en la hoja de ruta Strangler Fig con su propio PERT calculado."""
+    """Wave in the Strangler Fig roadmap with its own computed PERT."""
 
     wave_number: int = Field(ge=1)
     name: str
@@ -202,7 +202,7 @@ class MigrationWave(BaseModel):
 
 
 class MigrationRecommendation(BaseModel):
-    """Recomendación determinista completa de migración por corte y por olas."""
+    """Complete deterministic migration recommendation, by cut and by waves."""
 
     recommended: RouteCandidate | None = None
     alternatives: list[RouteCandidate] = Field(default_factory=list)
@@ -214,7 +214,7 @@ class MigrationRecommendation(BaseModel):
 
 
 class Dossier(BaseModel):
-    """Expediente técnico validado: salida de las etapas 2 y 3."""
+    """Validated technical dossier: output of the audit pipeline."""
 
     schema_version: Literal["1.0"] = SCHEMA_VERSION
     execution_mode: ExecutionMode

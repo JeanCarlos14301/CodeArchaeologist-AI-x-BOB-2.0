@@ -1,11 +1,11 @@
-"""Extractor de Arqueología de Git y Análisis de Hotspots con PyDriller / Git CLI.
+"""Git archaeology and hotspot analysis extractor, with PyDriller or the Git CLI.
 
-Calcula métricas objetivas de la historia de control de versiones:
-- Churn de código por archivo (líneas añadidas + eliminadas).
-- Densidad de defectos (% de commits de corrección de bugs).
-- Acoplamiento temporal (archivos que cambian juntos sin relación directa).
-- Factor de autobús (distribución de autoría por archivo).
-Cumple con la regla de AGENTS.md: 'Los números los calcula código, no la IA'.
+Computes objective metrics from version-control history:
+- Code churn per file (lines added + deleted).
+- Defect density (% of bug-fix commits).
+- Temporal coupling (files that change together without a direct relationship).
+- Bus factor (authorship distribution per file).
+Follows the AGENTS.md rule: 'Numbers are computed by code, not by the AI'.
 """
 
 import os
@@ -55,14 +55,14 @@ BUG_KEYWORDS = re.compile(r"\b(fix|bug|issue|defect|patch|hotfix|revert|crash|er
 
 
 def mine_git_history(repo_dir: str | Path, max_commits: int = 200) -> GitArchaeologyReport:
-    """Extrae métricas forenses del historial Git del repositorio."""
+    """Extracts forensic metrics from the repository's Git history."""
     repo_path = Path(repo_dir)
 
     try:
         from pydriller import Repository
         return _mine_with_pydriller(repo_path, max_commits)
     except ImportError:
-        # Fallback determinista usando git log vía subprocess (sin shell=True)
+        # Deterministic fallback using git log through subprocess (no shell=True)
         return _mine_with_git_subprocess(repo_path, max_commits)
 
 
@@ -113,7 +113,7 @@ def _mine_with_pydriller(repo_path: Path, max_commits: int) -> GitArchaeologyRep
 
 
 def _mine_with_git_subprocess(repo_path: Path, max_commits: int) -> GitArchaeologyReport:
-    """Fallback determinista usando subprocess con lista de argumentos (sin shell=True)."""
+    """Deterministic fallback using subprocess with an argument list (no shell=True)."""
     file_commits: Dict[str, int] = defaultdict(int)
     file_added: Dict[str, int] = defaultdict(int)
     file_deleted: Dict[str, int] = defaultdict(int)
@@ -150,7 +150,7 @@ def _mine_with_git_subprocess(repo_path: Path, max_commits: int) -> GitArchaeolo
 
         for path in valid_files:
             file_commits[path] += 1
-            file_added[path] += 10  # Estimación en modo fallback
+            file_added[path] += 10  # Estimate in fallback mode
             file_authors[path][author] += 1
             if is_bug_fix:
                 file_bug_commits[path] += 1
@@ -213,7 +213,7 @@ def _build_archaeology_report(
             )
         )
 
-    # Ordenar hotspots por churn y commits descendente
+    # Sort hotspots by churn and commits, descending
     hotspots.sort(key=lambda x: (x.churn, x.total_commits), reverse=True)
 
     # Temporal couplings principales

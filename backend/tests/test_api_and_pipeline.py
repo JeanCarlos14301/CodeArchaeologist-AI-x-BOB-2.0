@@ -1,4 +1,4 @@
-"""Pruebas de integración de la API REST de Auditorías y Migración (D-02, D-07, D-08)."""
+"""Integration tests for the audits and migration REST API (D-02, D-07, D-08)."""
 
 from pathlib import Path
 import pytest
@@ -47,7 +47,7 @@ def test_audits_list_endpoint(client: TestClient):
 
 
 def test_migration_endpoint_facturaya_if_available(client: TestClient):
-    """Valida que /api/audits/{id}/migration devuelva la recomendación determinista completa."""
+    """Checks that /api/audits/{id}/migration returns the complete deterministic recommendation."""
     audits_res = client.get("/api/audits")
     assert audits_res.status_code == 200
     audits = audits_res.json()
@@ -71,7 +71,7 @@ def test_migration_endpoint_facturaya_if_available(client: TestClient):
             assert "formula" in rec
             assert "why" in rec
             assert "findings_mitigated" in rec
-            # Validar que el PERT incluya la advertencia de no calibrado
+            # Check that the PERT includes the uncalibrated warning
             first_pert = data["first_cut_pert"]
             assert first_pert is not None
-            assert any("no calibrada" in a.lower() for a in first_pert.get("assumptions", []))
+            assert any("uncalibrated" in a.lower() for a in first_pert.get("assumptions", []))

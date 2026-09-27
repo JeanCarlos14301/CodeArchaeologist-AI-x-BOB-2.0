@@ -1,4 +1,4 @@
-"""Memorando DOCX para junta generado exclusivamente desde el expediente medido."""
+"""Board memo (DOCX) generated exclusively from the measured dossier."""
 
 from pathlib import Path
 
@@ -105,28 +105,28 @@ def _recommendation_section(document: Document, dossier: Dossier) -> None:
     recommendation = dossier.recommendation
     if recommendation is None or recommendation.recommended is None:
         document.add_paragraph(
-            "El análisis no detectó rutas Flask candidatas, así que no hay un ranking de migración por endpoint."
+            "The analysis detected no candidate Flask routes, so there is no migration ranking by endpoint."
         )
         return
     recommended = recommendation.recommended
     document.add_paragraph(
-        "Cada ruta se evalúa con el grafo de llamadas del código: puntaje = valor × facilidad de prueba × datos de "
-        "negocio / riesgo. El valor suma los hallazgos que el corte mitiga; el riesgo suma funciones compartidas, "
-        "tablas escritas, complejidad, líneas y dependencias circulares; una ruta que no lee ni escribe datos de "
-        "negocio pondera a la mitad. El motor es determinista; Bob no elige el corte."
+        "Each route is scored with the code's call graph: score = value × testability × business "
+        "data / risk. Value adds up the findings the cut mitigates; risk adds shared functions, "
+        "written tables, complexity, lines and circular dependencies; a route that reads and writes no business "
+        "data is weighted by half. The engine is deterministic; Bob does not pick the cut."
     )
     lead = document.add_paragraph()
-    lead.add_run("Corte recomendado: ").bold = True
-    lead.add_run(f"{recommended.endpoint} ({recommended.function_name} en {recommended.file_path}). {recommended.why}")
-    document.add_paragraph(f"Cálculo: {recommended.formula}")
+    lead.add_run("Recommended cut: ").bold = True
+    lead.add_run(f"{recommended.endpoint} ({recommended.function_name} in {recommended.file_path}). {recommended.why}")
+    document.add_paragraph(f"Calculation: {recommended.formula}")
     if recommendation.reference_comparison:
         document.add_paragraph(recommendation.reference_comparison)
 
-    rows = [("Corte recomendado", recommended), *[("Alternativa", item) for item in recommendation.alternatives]]
+    rows = [("Recommended cut", recommended), *[("Alternative", item) for item in recommendation.alternatives]]
     if recommendation.do_not_start_here and recommendation.do_not_start_here.endpoint != recommended.endpoint:
-        rows.append(("No empezar por aquí", recommendation.do_not_start_here))
+        rows.append(("Do not start here", recommendation.do_not_start_here))
     table = document.add_table(rows=1, cols=5)
-    for index, value in enumerate(("Papel", "Endpoint", "Valor", "Riesgo", "Puntaje")):
+    for index, value in enumerate(("Role", "Endpoint", "Value", "Risk", "Score")):
         table.cell(0, index).text = value
     for role, candidate in rows:
         cells = table.add_row().cells
@@ -134,53 +134,53 @@ def _recommendation_section(document: Document, dossier: Dossier) -> None:
             cells[index].text = value
     _format_table(table, [1.45, 2.75, 0.8, 0.8, 0.9], margin=60, font_size=8)
     if recommendation.do_not_start_here and recommendation.do_not_start_here.endpoint != recommended.endpoint:
-        document.add_paragraph(f"No empezar por {recommendation.do_not_start_here.endpoint}: {recommendation.do_not_start_here.why}")
+        document.add_paragraph(f"Do not start with {recommendation.do_not_start_here.endpoint}: {recommendation.do_not_start_here.why}")
 
     if recommendation.waves:
-        _add_heading(document, "Hoja de ruta por olas", level=2)
+        _add_heading(document, "Roadmap by waves", level=2)
         waves = document.add_table(rows=1, cols=3)
-        for index, value in enumerate(("Ola", "Endpoints", "Esfuerzo PERT")):
+        for index, value in enumerate(("Wave", "Endpoints", "PERT effort")):
             waves.cell(0, index).text = value
         for wave in recommendation.waves:
             cells = waves.add_row().cells
             cells[0].text = wave.name
-            cells[1].text = ", ".join(candidate.endpoint for candidate in wave.candidates) or "Sin rutas"
+            cells[1].text = ", ".join(candidate.endpoint for candidate in wave.candidates) or "No routes"
             cells[2].text = (
-                f"{wave.pert.expected_days:.2f} d ({wave.pert.optimistic_days:.1f} a {wave.pert.pessimistic_days:.1f})"
-                if wave.pert else "No aplica"
+                f"{wave.pert.expected_days:.2f} d ({wave.pert.optimistic_days:.1f} to {wave.pert.pessimistic_days:.1f})"
+                if wave.pert else "Not applicable"
             )
         _format_table(waves, [2.1, 3.3, 1.5], margin=60, font_size=8)
 
     if dossier.migration_options:
-        _add_heading(document, "Lectura cualitativa de Bob", level=2)
+        _add_heading(document, "Bob's qualitative reading", level=2)
         document.add_paragraph(
-            "Bob (modo migration-architect) redactó una opción por candidato sobre estos mismos datos. "
-            "El código comprobó que describe rutas del ranking, que recomienda el corte del motor y que no trae cifras."
+            "Bob (migration-architect mode) wrote one option per candidate over this same data. "
+            "Code checked that it describes routes from the ranking, recommends the engine's cut and carries no figures."
         )
         for option in dossier.migration_options:
-            marker = " (recomendada)" if option.recommended else ""
+            marker = " (recommended)" if option.recommended else ""
             document.add_paragraph(f"{option.name}{marker}: {option.endpoint or ''}. {option.pattern}.", style="List Bullet")
 
 
 def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
-    """Crea el memo trazable; no acepta cifras fuera del expediente."""
+    """Builds the traceable memo; it accepts no figures outside the dossier."""
     document = Document()
     _configure(document)
 
     title = document.add_paragraph(style="Title")
-    title.add_run(f"Memorando de decisión para {dossier.repo_name}")
+    title.add_run(f"Decision memo for {dossier.repo_name}")
     title_properties = title._p.get_or_add_pPr()
     border = title_properties.find(qn("w:pBdr"))
     if border is not None:
         title_properties.remove(border)
-    subtitle = document.add_paragraph("Auditoría técnica y alcance del primer corte de migración")
+    subtitle = document.add_paragraph("Technical audit and scope of the first migration cut")
     subtitle.style = document.styles["Subtitle"]
 
     metadata = document.add_table(rows=4, cols=2)
-    metadata.cell(0, 0).text, metadata.cell(0, 1).text = "Identificador", job_id
-    metadata.cell(1, 0).text, metadata.cell(1, 1).text = "Hash SHA 256", dossier.source_sha256 or "No disponible"
-    metadata.cell(2, 0).text, metadata.cell(2, 1).text = "Modo", dossier.execution_mode
-    metadata.cell(3, 0).text, metadata.cell(3, 1).text = "Fecha de la auditoría", dossier.generated_at
+    metadata.cell(0, 0).text, metadata.cell(0, 1).text = "Identifier", job_id
+    metadata.cell(1, 0).text, metadata.cell(1, 1).text = "SHA-256 hash", dossier.source_sha256 or "Not available"
+    metadata.cell(2, 0).text, metadata.cell(2, 1).text = "Mode", dossier.execution_mode
+    metadata.cell(3, 0).text, metadata.cell(3, 1).text = "Audit date", dossier.generated_at
     _format_table(metadata, [1.55, 5.35])
 
     validated = dossier.stats.findings_validated
@@ -188,45 +188,45 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
     ratio = dossier.stats.evidence_valid_ratio * 100
     recommended = dossier.recommendation.recommended if dossier.recommendation else None
     opening = document.add_paragraph()
-    opening.add_run("Decisión solicitada. ").bold = True
+    opening.add_run("Decision requested. ").bold = True
     decision = (
-        f"Autorizar el primer corte de migración sobre {recommended.endpoint} ({recommended.function_name} en "
-        f"{recommended.file_path}), la ruta con mejor relación valor/riesgo calculada sobre el código. "
+        f"Authorize the first migration cut on {recommended.endpoint} ({recommended.function_name} in "
+        f"{recommended.file_path}), the route with the best value/risk ratio computed on the code. "
         if recommended
-        else "Autorizar la corrección prioritaria del hallazgo de mayor riesgo medido; no se detectaron rutas migrables. "
+        else "Authorize the priority fix of the finding with the highest measured risk; no migratable routes were detected. "
     )
     opening.add_run(
-        f"{decision}La auditoría validó {validated} de {reported} hallazgos y {ratio:.1f} por ciento de sus referencias de evidencia. "
-        "Este memorando usa solo cifras presentes en el expediente y cálculos deterministas; no incorpora narrativa numérica de Bob."
+        f"{decision}The audit validated {validated} of {reported} findings and {ratio:.1f} percent of their evidence references. "
+        "This memo uses only figures present in the dossier and deterministic calculations; it includes no numeric narrative from Bob."
     )
 
-    _add_heading(document, "1 Conclusión ejecutiva")
+    _add_heading(document, "1 Executive conclusion")
     severity_counts = {
         severity: sum(1 for finding in dossier.findings if finding.severity == severity)
         for severity in ("critical", "high", "medium", "low")
     }
     document.add_paragraph(
-        f"El expediente contiene {severity_counts['critical']} hallazgos críticos, "
-        f"{severity_counts['high']} altos, {severity_counts['medium']} medios y "
-        f"{severity_counts['low']} bajos. La prioridad se ordena con severidad y llamadores "
-        "transitivos medidos en el grafo; el puntaje no es una opinión del modelo."
+        f"The dossier contains {severity_counts['critical']} critical findings, "
+        f"{severity_counts['high']} high, {severity_counts['medium']} medium and "
+        f"{severity_counts['low']} low. Priority is ordered by severity and the transitive callers "
+        "measured on the graph; the score is not the model's opinion."
     )
     if dossier.first_cut_pert:
         pert = dossier.first_cut_pert
         document.add_paragraph(
-            f"El primer corte tiene un rango de {pert.optimistic_days:.1f} a "
-            f"{pert.pessimistic_days:.1f} días laborables, con valor esperado PERT de "
-            f"{pert.expected_days:.2f} días. El rango se debe usar para planificación, no como compromiso de calendario."
+            f"The first cut has a range of {pert.optimistic_days:.1f} to "
+            f"{pert.pessimistic_days:.1f} working days, with a PERT expected value of "
+            f"{pert.expected_days:.2f} days. Use the range for planning, not as a schedule commitment."
         )
 
-    _add_heading(document, "2 Riesgo y radio de impacto")
+    _add_heading(document, "2 Risk and blast radius")
     document.add_paragraph(
-        "La puntuación multiplica el peso de severidad por uno más el número de funciones "
-        "que llaman directa o indirectamente a la función citada. Pesos: crítico 4, alto 3, medio 2 y bajo 1."
+        "The score multiplies the severity weight by one plus the number of functions "
+        "that call the cited function directly or indirectly. Weights: critical 4, high 3, medium 2 and low 1."
     )
     risk_by_id = {item.finding_id: item for item in dossier.risk_matrix}
     risk_table = document.add_table(rows=1, cols=5)
-    for index, value in enumerate(("ID", "Severidad", "Origen", "Llamadores", "Puntaje")):
+    for index, value in enumerate(("ID", "Severity", "Origin", "Callers", "Score")):
         risk_table.cell(0, index).text = value
     ordered_findings = sorted(
         dossier.findings,
@@ -248,24 +248,24 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
             cells[index].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
     _format_table(risk_table, [0.65, 1.15, 1.1, 1.35, 1.0], margin=55, font_size=8)
 
-    recommendation_heading = _add_heading(document, "3 Recomendación de migración")
+    recommendation_heading = _add_heading(document, "3 Migration recommendation")
     recommendation_heading.paragraph_format.page_break_before = True  # type: ignore[attr-defined]
     _recommendation_section(document, dossier)
 
-    _add_heading(document, "4 Alcance y estimación del primer corte")
+    _add_heading(document, "4 Scope and estimate of the first cut")
     if dossier.first_cut_pert:
         pert = dossier.first_cut_pert
         inputs = document.add_table(rows=2, cols=4)
-        labels = ("Rutas afectadas", "Funciones afectadas", "Líneas citadas", "Complejidad acumulada")
+        labels = ("Affected routes", "Affected functions", "Cited lines", "Accumulated complexity")
         values = (pert.affected_routes, pert.affected_functions, pert.affected_lines, pert.affected_complexity)
         for index, label in enumerate(labels):
             inputs.cell(0, index).text = label
             inputs.cell(1, index).text = str(values[index])
             inputs.cell(1, index).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         _format_table(inputs, [1.72, 1.72, 1.72, 1.72])
-        document.add_paragraph(f"Fórmula aplicada: {pert.formula}")
+        document.add_paragraph(f"Formula applied: {pert.formula}")
         pert_table = document.add_table(rows=2, cols=5)
-        labels = ("Optimista", "Más probable", "Pesimista", "Esperado", "Varianza")
+        labels = ("Optimistic", "Most likely", "Pessimistic", "Expected", "Variance")
         values = (
             f"{pert.optimistic_days:.1f} d",
             f"{pert.most_likely_days:.1f} d",
@@ -278,22 +278,22 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
             pert_table.cell(1, index).text = values[index]
             pert_table.cell(1, index).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         _format_table(pert_table, [1.38] * 5)
-        _add_heading(document, "Supuestos", level=2)
+        _add_heading(document, "Assumptions", level=2)
         for assumption in pert.assumptions:
             document.add_paragraph(assumption, style="List Bullet")
     else:
         document.add_paragraph(
-            "No fue posible estimar un primer corte: no se detectaron rutas migrables ni hallazgos validados con alcance medible."
+            "A first cut could not be estimated: no migratable routes and no validated findings with a measurable scope were detected."
         )
 
-    _add_heading(document, "5 Evidencia prioritaria")
+    _add_heading(document, "5 Priority evidence")
     for finding in ordered_findings[:6]:
         metric = risk_by_id.get(finding.id)
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_with_next = True
         paragraph.add_run(f"{finding.id}  {finding.title}").bold = True
         paragraph.add_run(
-            f"\nSeveridad {finding.severity}. Riesgo calculado {metric.score if metric else 0}. "
+            f"\nSeverity {finding.severity}. Computed risk {metric.score if metric else 0}. "
             f"{finding.explanation}"
         )
         for evidence in finding.evidence:
@@ -302,19 +302,19 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
                 style="List Bullet",
             )
 
-    _add_heading(document, "6 Resultado del primer corte")
+    _add_heading(document, "6 First cut result")
     if dossier.migration is None:
-        document.add_paragraph("El expediente no contiene un resultado de migración.")
+        document.add_paragraph("The dossier contains no migration result.")
     elif dossier.migration.status == "not_run":
-        document.add_paragraph(f"No ejecutada. {dossier.migration.reason or ''}")
+        document.add_paragraph(f"Not run. {dossier.migration.reason or ''}")
     else:
         passed = sum(1 for test in dossier.migration.tests if test.status == "passed")
         failed = sum(1 for test in dossier.migration.tests if test.status == "failed")
         document.add_paragraph(
-            f"{dossier.migration.implementation_origin} Resultado: {passed} pruebas pasaron y {failed} fallaron."
+            f"{dossier.migration.implementation_origin} Result: {passed} tests passed and {failed} failed."
         )
         test_table = document.add_table(rows=1, cols=3)
-        for index, value in enumerate(("Destino", "Prueba", "Resultado")):
+        for index, value in enumerate(("Target", "Test", "Result")):
             test_table.cell(0, index).text = value
         for test in dossier.migration.tests:
             cells = test_table.add_row().cells
@@ -323,11 +323,11 @@ def render_board_memo(dossier: Dossier, output_path: Path, job_id: str) -> Path:
             cells[2].text = test.status
         _format_table(test_table, [1.1, 4.5, 1.3], margin=70, font_size=8)
 
-    _add_heading(document, "7 Trazabilidad y límites")
+    _add_heading(document, "7 Traceability and limits")
     document.add_paragraph(
-        "Cada hallazgo incluido conserva archivo, líneas y fragmento literal. El hash identifica el contenido analizado. "
-        "Los puntajes de riesgo provienen del grafo estático y el esfuerzo proviene de los cuatro insumos mostrados. "
-        "La estimación no incluye aprobaciones externas, esperas de despliegue ni trabajo fuera del primer corte."
+        "Every finding included keeps its file, lines and verbatim snippet. The hash identifies the analyzed content. "
+        "Risk scores come from the static graph and the effort comes from the four inputs shown. "
+        "The estimate excludes external approvals, deployment waits and any work beyond the first cut."
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

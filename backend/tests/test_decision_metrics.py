@@ -1,4 +1,4 @@
-"""Riesgo y esfuerzo deben depender del código medido, no de cifras fijas."""
+"""Risk and effort must depend on the measured code, not on fixed figures."""
 
 from pathlib import Path
 
@@ -12,10 +12,10 @@ def _dossier() -> Dossier:
         repo_name="repo",
         generated_at="2026-09-25T13:50:00-05:00",
         findings=[Finding(
-            id="F-1", title="Riesgo medido", category="security", subcategory="test",
+            id="F-1", title="Measured risk", category="security", subcategory="test",
             severity="high", observed_or_inferred="observed",
             evidence=[Evidence(path="app.py", line_start=2, line_end=3, snippet="def target():")],
-            explanation="Hallazgo de prueba con evidencia suficiente.", recommendation="Corregir y probar.",
+            explanation="Test finding with enough evidence.", recommendation="Fix and test.",
         )],
         evidence_checks=[],
         stats=DossierStats(
@@ -43,5 +43,5 @@ def test_two_repositories_produce_different_risk_and_pert(tmp_path: Path) -> Non
     assert small_risk[0].score < large_risk[0].score
     assert small_pert is not None and large_pert is not None
     assert small_pert.expected_days < large_pert.expected_days
-    assert "rutas" in large_pert.formula and "complejidad" in large_pert.formula
+    assert "routes" in large_pert.formula and "complexity" in large_pert.formula
     assert large_pert.assumptions

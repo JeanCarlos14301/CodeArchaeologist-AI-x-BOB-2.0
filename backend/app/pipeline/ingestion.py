@@ -1,11 +1,11 @@
-"""Módulo de Ingesta Segura de Repositorios (D-03).
+"""Safe repository ingestion (D-03).
 
-Implementa protecciones rigurosas contra ataques por descompresión:
-- Protección estricta contra ZipSlip (normalización de rutas y rechazo de escapes).
-- Detección y rechazo de enlaces simbólicos (symlinks) y enlaces duros (hardlinks).
-- Límites de seguridad: máx 5 MB comprimido, máx 20 MB realmente escritos al descomprimir, máx 300 archivos
-  (3000 para proyectos de solo modernización).
-- Sanitización preventiva: eliminación de .env, .bob/, AGENTS.md y binarios ejecutables.
+Strict protections against decompression attacks:
+- Strict ZipSlip protection (path normalization and rejection of escapes).
+- Detection and rejection of symbolic links (symlinks) and hard links.
+- Safety limits: max 5 MB compressed, max 20 MB actually written while extracting, max 300 files
+  (3000 for modernization-only projects).
+- Preventive sanitization: removal of .env, .bob/, AGENTS.md and executable binaries.
 """
 
 import logging
@@ -18,26 +18,26 @@ logger = logging.getLogger(__name__)
 
 MAX_ZIP_COMPRESSED_BYTES = 5 * 1024 * 1024       # 5 MB
 MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024         # 20 MB
-MAX_FILES_COUNT = 300                              # auditoría: acota el presupuesto de Bob
-MODERNIZE_MAX_FILES = 3000                         # modernización: monorepos reales (el tope de bytes sigue igual)
+MAX_FILES_COUNT = 300                              # audit: bounds Bob's budget
+MODERNIZE_MAX_FILES = 3000                         # modernization: real monorepos (the byte cap stays the same)
 _COPY_CHUNK = 64 * 1024
 DANGEROUS_EXTENSIONS = {".exe", ".dll", ".so", ".bin", ".dylib", ".bat", ".cmd", ".vbs"}
 SENSITIVE_FILES_OR_DIRS = {".env", ".bob", "agents.md", ".git", ".github", "hooks"}
 
 
 class IngestionSecurityError(ValueError):
-    """Excepción lanzada cuando un archivo o paquete viola las restricciones de seguridad."""
+    """Raised when a file or archive violates the security constraints."""
     pass
 
 
 def copy_bounded(source: BinaryIO, dest: BinaryIO, budget: int) -> int:
-    """Copia contando los bytes REALES escritos; aborta al superar `budget` (no confía en el tamaño declarado)."""
+    """Copies while counting the REAL bytes written; aborts past `budget` (never trusts the declared size)."""
     written = 0
     while chunk := source.read(_COPY_CHUNK):
         written += len(chunk)
         if written > budget:
             raise IngestionSecurityError(
-                f"El contenido descomprimido excede el límite de {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB"
+                f"The uncompressed content exceeds the {MAX_UNCOMPRESSED_BYTES // (1024 * 1024)} MB limit"
             )
         dest.write(chunk)
     return written
@@ -48,23 +48,23 @@ def validate_and_extract_zip(
     destination_dir: Path,
     max_files: int = MAX_FILES_COUNT,
 ) -> Path:
-    """Valida y extrae un archivo ZIP aplicando todas las restricciones de seguridad."""
+    """Validates and extracts a ZIP file, applying every security constraint."""
     destination_dir.mkdir(parents=True, exist_ok=True)
     dest_resolved = destination_dir.resolve()
 
     if isinstance(zip_bytes_or_path, (str, Path)):
         zip_path = Path(zip_bytes_or_path)
         if not zip_path.exists():
-            raise IngestionSecurityError(f"El archivo ZIP no existe: {zip_path}")
+            raise IngestionSecurityError(f"The ZIP file does not exist: {zip_path}")
         if zip_path.stat().st_size > MAX_ZIP_COMPRESSED_BYTES:
             raise IngestionSecurityError(
-                f"El archivo ZIP excede el tamaño máximo permitido de 5 MB ({zip_path.stat().st_size} bytes)"
+                f"The ZIP file exceeds the maximum allowed size of 5 MB ({zip_path.stat().st_size} bytes)"
             )
         zf = zipfile.ZipFile(zip_path, "r")
     else:
         if len(zip_bytes_or_path) > MAX_ZIP_COMPRESSED_BYTES:
             raise IngestionSecurityError(
-                f"El archivo ZIP excede el tamaño máximo permitido de 5 MB ({len(zip_bytes_or_path)} bytes)"
+                f"The ZIP file exceeds the maximum allowed size of 5 MB ({len(zip_bytes_or_path)} bytes)"
             )
         import io
         zf = zipfile.ZipFile(io.BytesIO(zip_bytes_or_path), "r")
@@ -73,44 +73,44 @@ def validate_and_extract_zip(
         members = zf.infolist()
         if len(members) > max_files:
             raise IngestionSecurityError(
-                f"El archivo ZIP contiene demasiados archivos ({len(members)} > {max_files})"
+                f"The ZIP file contains too many files ({len(members)} > {max_files})"
             )
 
         total_uncompressed = sum(m.file_size for m in members)
         if total_uncompressed > MAX_UNCOMPRESSED_BYTES:
             raise IngestionSecurityError(
-                f"El contenido descomprimido excede el límite de 20 MB ({total_uncompressed} bytes)"
+                f"The uncompressed content exceeds the 20 MB limit ({total_uncompressed} bytes)"
             )
 
         for member in members:
-            # 1. Protección contra ZipSlip: normalización y escape de directorio
+            # 1. ZipSlip protection: normalization and directory escape
             member_path = Path(member.filename)
             target_path = (destination_dir / member_path).resolve()
             if not target_path.is_relative_to(dest_resolved):
                 raise IngestionSecurityError(
-                    f"Violación de seguridad ZipSlip detectada: '{member.filename}' intenta salir del sandbox"
+                    f"ZipSlip security violation detected: '{member.filename}' tries to leave the sandbox"
                 )
             if ".." in member.filename or member.filename.startswith(("/", "\\")):
                 raise IngestionSecurityError(
-                    f"Ruta no permitida en archivo ZIP: '{member.filename}'"
+                    f"Path not allowed in the ZIP file: '{member.filename}'"
                 )
 
-            # 2. Detección de Symlinks y Hardlinks
-            # En formato ZIP Unix, el tipo de archivo vive en los 4 bits altos del external_attr (0o170000)
+            # 2. Symlink and hard link detection
+            # In the Unix ZIP format, the file type lives in the top 4 bits of external_attr (0o170000)
             # 0o120000 = S_IFLNK (symlink)
             unix_mode = member.external_attr >> 16
             if (unix_mode & 0o170000) == 0o120000:
                 raise IngestionSecurityError(
-                    f"Enlace simbólico detectado y rechazado: '{member.filename}'"
+                    f"Symbolic link detected and rejected: '{member.filename}'"
                 )
 
-            # 3. Detección de ejecutables binarios peligrosos
+            # 3. Detection of dangerous executable binaries
             if target_path.suffix.lower() in DANGEROUS_EXTENSIONS:
                 raise IngestionSecurityError(
-                    f"Extensión binaria o ejecutable no permitida: '{member.filename}'"
+                    f"Binary or executable extension not allowed: '{member.filename}'"
                 )
 
-        # Extracción segura miembro a miembro, con el tope aplicado a los bytes que de verdad se escriben.
+        # Safe member-by-member extraction, with the cap applied to the bytes actually written.
         remaining = MAX_UNCOMPRESSED_BYTES
         for member in members:
             target_path = (destination_dir / member.filename).resolve()
@@ -123,14 +123,14 @@ def validate_and_extract_zip(
     finally:
         zf.close()
 
-    # Sanitización preventiva en el directorio descomprimido
+    # Preventive sanitization of the extracted directory
     sanitize_extracted_directory(destination_dir)
 
     return destination_dir
 
 
 def sanitize_extracted_directory(directory: Path) -> None:
-    """Elimina preventivamente archivos sensibles antes de procesar el código."""
+    """Preventively removes sensitive files before the code is processed."""
     for item in list(directory.rglob("*")):
         name_lower = item.name.lower()
         if name_lower in SENSITIVE_FILES_OR_DIRS or any(sens in name_lower for sens in [".env", ".bob"]):
@@ -140,4 +140,4 @@ def sanitize_extracted_directory(directory: Path) -> None:
                 try:
                     item.unlink(missing_ok=True)
                 except OSError:
-                    logger.warning("No se pudo eliminar el archivo sensible %s del ZIP extraído", item.name)
+                    logger.warning("Could not remove the sensitive file %s from the extracted ZIP", item.name)

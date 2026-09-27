@@ -1,10 +1,10 @@
-"""Extractor de Cartografía Estructural AST y Diagramas ER (Mermaid).
+"""Structural AST cartography and ER diagram extractor (Mermaid).
 
-Analiza la estructura estática del repositorio:
-- Identifica símbolos, clases, funciones y rutas.
-- Detecta dependencias circulares.
-- Construye diagramas de Entidad-Relación (ER) y flujo de llamadas en Mermaid.
-Cumple con la regla de AGENTS.md: 'Los números los calcula código, no la IA'.
+Analyzes the static structure of the repository:
+- Identifies symbols, classes, functions and routes.
+- Detects circular dependencies.
+- Builds Entity-Relationship (ER) and call-flow diagrams in Mermaid.
+Follows the AGENTS.md rule: 'Numbers are computed by code, not by the AI'.
 """
 
 import ast
@@ -109,7 +109,7 @@ class ModuleASTVisitor(ast.NodeVisitor):
 
 
 def build_ast_cartography(repo_dir: str | Path) -> ASTCartographyReport:
-    """Escanea el repositorio y genera la cartografía estática AST con diagramas Mermaid."""
+    """Scans the repository and builds the static AST cartography with Mermaid diagrams."""
     repo_path = Path(repo_dir)
     file_visitors: Dict[str, ModuleASTVisitor] = {}
 
@@ -129,7 +129,7 @@ def build_ast_cartography(repo_dir: str | Path) -> ASTCartographyReport:
     total_funcs = sum(len(v.functions) for v in file_visitors.values())
     total_classes = sum(len(v.classes) for v in file_visitors.values())
 
-    # Detectar dependencias circulares simples a nivel de módulo
+    # Detect simple module-level circular dependencies
     circular_deps: List[List[str]] = []
     modules = list(file_visitors.keys())
     for i in range(len(modules)):
@@ -138,7 +138,7 @@ def build_ast_cartography(repo_dir: str | Path) -> ASTCartographyReport:
         for j in range(i + 1, len(modules)):
             m2 = modules[j]
             stem2 = Path(m2).stem
-            # Si m1 importa a m2 y m2 importa a m1
+            # When m1 imports m2 and m2 imports m1
             m1_imports_m2 = any(stem2 in imp for imp in file_visitors[m1].imports)
             m2_imports_m1 = any(stem1 in imp for imp in file_visitors[m2].imports)
             if m1_imports_m2 and m2_imports_m1:
@@ -150,7 +150,7 @@ def build_ast_cartography(repo_dir: str | Path) -> ASTCartographyReport:
         if any(entry in rel.lower() for entry in ["app.py", "wsgi.py", "main.py", "run.py", "server.py"]):
             entrypoints.append(rel)
 
-    # Generar Mermaid ER Diagram a partir de modelos SQLite/SQLAlchemy o archivos de esquema
+    # Build the Mermaid ER diagram from SQLite/SQLAlchemy models or schema files
     er_lines = ["erDiagram"]
     tables_found = False
     for sql_file in repo_path.glob("**/*.sql"):
@@ -164,7 +164,7 @@ def build_ast_cartography(repo_dir: str | Path) -> ASTCartographyReport:
             pass
 
     if not tables_found:
-        # Clases de modelos detectadas
+        # Detected model classes
         for rel, vis in file_visitors.items():
             if "model" in rel.lower():
                 for cls in vis.classes:

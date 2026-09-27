@@ -21,7 +21,7 @@
   "findings": [
     {
       "id": "EF-1",
-      "title": "Inyección SQL por concatenación en búsqueda de facturas",
+      "title": "SQL injection through concatenation in the invoice search",
       "category": "security/sql-injection",
       "severity": "CRITICAL",
       "confidence": "HIGH",
@@ -36,8 +36,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "El parámetro de búsqueda 'q' y el owner_id se concatenan directamente a la consulta SQL sin parametrizar, permitiendo exfiltración de datos no autorizados.",
-      "verification_method": "Inyectar ' OR 1=1 -- en el query parameter de búsqueda; la respuesta devuelve facturas de otros clientes.",
+      "explanation": "The search parameter 'q' and the owner_id are concatenated straight into the SQL query without parameters, allowing unauthorized data exfiltration.",
+      "verification_method": "Inject ' OR 1=1 -- into the search query parameter; the response returns other customers' invoices.",
       "blast_radius_score": 85.0,
       "transitive_impacted_symbols": [
         "app.invoices_search",
@@ -48,7 +48,7 @@
     },
     {
       "id": "EF-2",
-      "title": "Función de ruta monolítica con responsabilidades mezcladas",
+      "title": "Monolithic route function with mixed responsibilities",
       "category": "maintainability/large-function",
       "severity": "HIGH",
       "confidence": "HIGH",
@@ -63,8 +63,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "La función 'invoice_new' tiene 155 líneas y mezcla validación de formulario, reglas de negocio de descuentos, transacciones de BD y renderizado HTML directo.",
-      "verification_method": "Inspección AST y medición de complejidad ciclomática con Radon (CC > 18).",
+      "explanation": "The 'invoice_new' function has 155 lines and mixes form validation, discount business rules, DB transactions and direct HTML rendering.",
+      "verification_method": "AST inspection and cyclomatic complexity measured with Radon (CC > 18).",
       "blast_radius_score": 68.5,
       "transitive_impacted_symbols": [
         "app.invoice_new",
@@ -75,7 +75,7 @@
     },
     {
       "id": "EF-3",
-      "title": "Regla de descuento duplicada con redondeo divergente",
+      "title": "Duplicated discount rule with diverging rounding",
       "category": "business-rule/duplication",
       "severity": "HIGH",
       "confidence": "HIGH",
@@ -97,8 +97,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "Facturación redondea el descuento sobre el subtotal global, mientras que el módulo de reportes redondea línea por línea y luego suma, causando discrepancias contables.",
-      "verification_method": "Factura FY-00001 tiene descuento facturado de 7.51 pero en el reporte contable aparece como 7.50.",
+      "explanation": "Billing rounds the discount on the overall subtotal, while the reports module rounds line by line and then adds up, causing accounting discrepancies.",
+      "verification_method": "Invoice FY-00001 has a billed discount of 7.51 but shows as 7.50 in the accounting report.",
       "blast_radius_score": 54.0,
       "transitive_impacted_symbols": [
         "billing.calculate_discount",
@@ -108,7 +108,7 @@
     },
     {
       "id": "EF-4",
-      "title": "Claves secretas ficticias escritas en código fuente",
+      "title": "Fictitious secret keys written in the source code",
       "category": "security/hardcoded-secret",
       "severity": "CRITICAL",
       "confidence": "HIGH",
@@ -130,8 +130,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "Constantes criptográficas y credenciales de pasarela declaradas en texto plano en el repositorio.",
-      "verification_method": "Inspección estática de config.py y escaneo Bandit.",
+      "explanation": "Cryptographic constants and payment gateway credentials declared in plain text in the repository.",
+      "verification_method": "Static inspection of config.py and a Bandit scan.",
       "blast_radius_score": 40.0,
       "transitive_impacted_symbols": [
         "config.SECRET_KEY",
@@ -141,7 +141,7 @@
     },
     {
       "id": "EF-5",
-      "title": "Dependencia circular diferida entre módulos de negocio",
+      "title": "Deferred circular dependency between business modules",
       "category": "architecture/cyclic-dependency",
       "severity": "MEDIUM",
       "confidence": "HIGH",
@@ -163,8 +163,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "billing.py importa customers a nivel de módulo, y customers.py importa billing de forma diferida dentro de una función, indicando alto acoplamiento.",
-      "verification_method": "Inspección del grafo de imports y prueba de carga diferida.",
+      "explanation": "billing.py imports customers at module level, and customers.py imports billing lazily inside a function, which signals high coupling.",
+      "verification_method": "Inspection of the import graph and a lazy-loading test.",
       "blast_radius_score": 62.0,
       "transitive_impacted_symbols": [
         "billing",
@@ -174,7 +174,7 @@
     },
     {
       "id": "EF-6",
-      "title": "Acceso a JSON de factura sin autorización por propietario (BOLA/IDOR)",
+      "title": "Invoice JSON access without owner authorization (BOLA/IDOR)",
       "category": "security/broken-object-authorization",
       "severity": "CRITICAL",
       "confidence": "HIGH",
@@ -189,8 +189,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "El endpoint GET /invoices/<id> comprueba que exista una sesión activa pero no valida que la factura solicitada pertenezca al usuario autenticado.",
-      "verification_method": "Autenticarse como usuario 'bruno' y solicitar la factura 1 de 'ana'; el sistema responde HTTP 200 con datos ajenos.",
+      "explanation": "The GET /invoices/<id> endpoint checks that an active session exists but does not validate that the requested invoice belongs to the authenticated user.",
+      "verification_method": "Log in as user 'bruno' and request invoice 1 of 'ana'; the system answers HTTP 200 with someone else's data.",
       "blast_radius_score": 72.0,
       "transitive_impacted_symbols": [
         "app.invoice_json",
@@ -200,7 +200,7 @@
     },
     {
       "id": "EF-7",
-      "title": "Consulta SQL de búsqueda de cliente correctamente parametrizada",
+      "title": "Customer search SQL query correctly parameterized",
       "category": "control/parameterized-query",
       "severity": "INFO",
       "confidence": "HIGH",
@@ -215,8 +215,8 @@
           "observed_or_inferred": "observed"
         }
       ],
-      "explanation": "Control negativo: La consulta utiliza el placeholder '?' de SQLite. No constituye vulnerabilidad y debe mantenerse protegida.",
-      "verification_method": "Prueba de caracterización pasando cargas SQL sintéticas; la consulta retorna cero filas sin error de sintaxis.",
+      "explanation": "Negative control: the query uses SQLite's '?' placeholder. It is not a vulnerability and must stay protected.",
+      "verification_method": "Characterization test passing synthetic SQL payloads; the query returns zero rows without a syntax error.",
       "blast_radius_score": 5.0,
       "transitive_impacted_symbols": [
         "db.get_customer_by_email"
@@ -227,16 +227,16 @@
   "architecture_options": [
     {
       "id": "OPT-1",
-      "name": "Extracción Progresiva con Strangler Fig (Recomendada)",
+      "name": "Progressive extraction with Strangler Fig (Recommended)",
       "pattern": "Strangler Fig",
       "pros": [
-        "Bajo riesgo operativo: el sistema antiguo y el nuevo conviven simultáneamente.",
-        "Primer corte verificable con pruebas de caracterización golden-master.",
-        "Despliegue incremental por endpoint sin interrupción del negocio."
+        "Low operational risk: the old and the new system coexist.",
+        "First cut verifiable with golden-master characterization tests.",
+        "Incremental deployment per endpoint without interrupting the business."
       ],
       "cons": [
-        "Requiere mantener una capa de enrutamiento fachada durante la transición.",
-        "Duplicidad temporal de modelos de datos."
+        "Requires keeping a facade routing layer during the transition.",
+        "Temporary duplication of data models."
       ],
       "target_stack": "FastAPI (Python 3.11) + SQLite/Postgres + Pydantic v2",
       "risk_level": "LOW",
@@ -245,34 +245,34 @@
     },
     {
       "id": "OPT-2",
-      "name": "Extracción por Módulos Hoja (Leaf Services)",
+      "name": "Extraction by leaf modules (Leaf Services)",
       "pattern": "Leaf Cut",
       "pros": [
-        "Desacopla componentes sin dependencias entrantes (ej. reports.py).",
-        "Fácil de aislar y testear en contenedores independientes."
+        "Decouples components with no incoming dependencies (e.g. reports.py).",
+        "Easy to isolate and test in independent containers."
       ],
       "cons": [
-        "Bajo impacto directo en el valor percibido por el usuario final.",
-        "No resuelve las vulnerabilidades críticas de autenticación y BOLA en el núcleo."
+        "Low direct impact on the value the end user perceives.",
+        "Does not fix the critical authentication and BOLA vulnerabilities in the core."
       ],
-      "target_stack": "Microservicios FastAPI independientes",
+      "target_stack": "Independent FastAPI microservices",
       "risk_level": "MEDIUM",
       "estimated_effort_days": 24.0,
       "recommended": false
     },
     {
       "id": "OPT-3",
-      "name": "Reescritura Completa desde Cero (Big Bang)",
+      "name": "Full rewrite from scratch (Big Bang)",
       "pattern": "Big Bang Rewrite",
       "pros": [
-        "Código 100% nuevo sin arrastrar decisiones heredadas."
+        "100% new code without dragging legacy decisions along."
       ],
       "cons": [
-        "Riesgo extremo de desviación de cronograma y presupuesto.",
-        "Pérdida de reglas de negocio tácitas y casos borde no documentados.",
-        "Cero entregas de valor hasta el final del proyecto."
+        "Extreme risk of schedule and budget overruns.",
+        "Loss of tacit business rules and undocumented edge cases.",
+        "Zero value delivered until the end of the project."
       ],
-      "target_stack": "FastAPI o NestJS monolítico",
+      "target_stack": "Monolithic FastAPI or NestJS",
       "risk_level": "HIGH",
       "estimated_effort_days": 65.0,
       "recommended": false
@@ -282,54 +282,54 @@
   "pert_plan": [
     {
       "phase_number": 1,
-      "name": "Fase 1: Fijación de Contratos y Pruebas de Caracterización",
-      "description": "Crear suite de pruebas golden-master con pytest que fijen el comportamiento observable actual de GET /invoices/{id}.",
+      "name": "Phase 1: Pin the contracts and write characterization tests",
+      "description": "Create a golden-master pytest suite that pins the current observable behavior of GET /invoices/{id}.",
       "optimistic_days": 2.0,
       "nominal_days": 3.0,
       "pessimistic_days": 5.0,
       "pert_expected_days": 3.17,
       "pert_variance": 0.25,
       "assumptions": [
-        "Acceso a base de datos de prueba con fixtures conocidos de FacturaYa."
+        "Access to a test database with known FacturaYa fixtures."
       ],
       "prerequisites": [
-        "Definición congelada de contratos JSON v1."
+        "Frozen definition of the v1 JSON contracts."
       ],
-      "rollback_strategy": "Descartar suite de pruebas sin impacto en producción."
+      "rollback_strategy": "Discard the test suite with no impact on production."
     },
     {
       "phase_number": 2,
-      "name": "Fase 2: Implementación del Micro-endpoint en FastAPI y Enrutador Fachada",
-      "description": "Construir el nuevo módulo en modern/invoices_api.py con validación Pydantic y fachada que redirige GET /invoices/{id}.",
+      "name": "Phase 2: FastAPI micro-endpoint and facade router",
+      "description": "Build the new module in modern/invoices_api.py with Pydantic validation and a facade that routes GET /invoices/{id}.",
       "optimistic_days": 3.0,
       "nominal_days": 5.0,
       "pessimistic_days": 8.0,
       "pert_expected_days": 5.17,
       "pert_variance": 0.69,
       "assumptions": [
-        "FastAPI puede compartir el acceso a la base de datos SQLite en modo WAL."
+        "FastAPI can share access to the SQLite database in WAL mode."
       ],
       "prerequisites": [
-        "Fase 1 aprobada con 100% de pruebas en verde contra el legado."
+        "Phase 1 approved with 100% of the tests green against the legacy code."
       ],
-      "rollback_strategy": "Conmutar la bandera de enrutamiento en la fachada hacia la ruta original de Flask."
+      "rollback_strategy": "Flip the routing flag in the facade back to the original Flask route."
     },
     {
       "phase_number": 3,
-      "name": "Fase 3: Modernización del Núcleo de Facturación y Clientes",
-      "description": "Reescribir app.invoice_new y billing.py eliminando dependencias circulares y parametrizando todas las consultas.",
+      "name": "Phase 3: Modernize the billing and customers core",
+      "description": "Rewrite app.invoice_new and billing.py, removing circular dependencies and parameterizing every query.",
       "optimistic_days": 6.0,
       "nominal_days": 10.0,
       "pessimistic_days": 16.0,
       "pert_expected_days": 10.33,
       "pert_variance": 2.78,
       "assumptions": [
-        "Las pruebas unitarias y de integración cubren los cálculos de redondeo."
+        "Unit and integration tests cover the rounding calculations."
       ],
       "prerequisites": [
-        "Fase 2 desplegada y estable."
+        "Phase 2 deployed and stable."
       ],
-      "rollback_strategy": "Mantener el contenedor del backend Flask como respaldo activo."
+      "rollback_strategy": "Keep the Flask backend container as an active fallback."
     }
   ],
   "characterization_tests_legacy": {
@@ -448,11 +448,11 @@
     "invalid_references": 0,
     "fidelity_ratio": 1.0,
     "details": [
-      "100% de las citas apuntan a archivos y rangos de líneas válidos en samples/facturaya-v1/."
+      "100% of the citations point to valid files and line ranges in samples/facturaya-v1/."
     ]
   },
-  "executive_summary": "CodeArchaeologist completó el diagnóstico forense de FacturaYa v1. Se identificaron 6 problemas reales (2 críticos de seguridad: SQLi y BOLA/IDOR, 1 secreto ficticio, 1 cálculo contable divergente y 1 dependencia circular). Se recomienda la modernización progresiva con Strangler Fig iniciando en GET /invoices/{id}, logrando un primer paso probado en verde con cero tiempo de inactividad.",
+  "executive_summary": "CodeArchaeologist completed the forensic diagnosis of FacturaYa v1. It identified 6 real problems (2 critical security issues: SQLi and BOLA/IDOR, 1 fictitious secret, 1 diverging accounting calculation and 1 circular dependency). It recommends a progressive Strangler Fig modernization starting with GET /invoices/{id}, achieving a first step tested green with zero downtime.",
   "mermaid_er_diagram": "erDiagram\n    INVOICES {\n        int id PK\n        int owner_id FK\n        string number\n        date issue_date\n        decimal total\n        string status\n    }\n    CUSTOMERS {\n        int id PK\n        int owner_id FK\n        string name\n        string email\n    }\n    INVOICE_ITEMS {\n        int id PK\n        int invoice_id FK\n        string description\n        int quantity\n        decimal unit_price\n        decimal line_total\n    }\n    CUSTOMERS ||--o{ INVOICES : places\n    INVOICES ||--|{ INVOICE_ITEMS : contains",
-  "mermaid_call_flow": "flowchart TD\n    Client[\"Cliente / Navegador\"] --> Facade[\"Fachada Strangler Fig\"]\n    Facade -->|GET /invoices/id| Modern[\"FastAPI (modern/invoices_api.py)\"]\n    Facade -->|Otras rutas| Legacy[\"Flask Monolito (app.py)\"]\n    Modern --> DB[(\"SQLite Database\")]\n    Legacy --> DB",
+  "mermaid_call_flow": "flowchart TD\n    Client[\"Customer / Browser\"] --> Facade[\"Strangler Fig facade\"]\n    Facade -->|GET /invoices/id| Modern[\"FastAPI (modern/invoices_api.py)\"]\n    Facade -->|Other routes| Legacy[\"Flask monolith (app.py)\"]\n    Modern --> DB[(\"SQLite Database\")]\n    Legacy --> DB",
   "execution_mode": "live"
 }

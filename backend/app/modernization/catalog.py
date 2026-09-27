@@ -1,8 +1,8 @@
-"""Catálogo de tecnologías reconocibles y de destinos de migración posibles.
+"""Catalog of recognizable technologies and of possible migration targets.
 
-Es un dato de producto, no una medición: lista qué se sabe reconocer (por dependencias, imágenes o
-extensiones) y entre qué tecnologías del mismo tipo se puede plantear una migración. Nada aquí afirma
-que un proyecto use una tecnología: eso lo decide `stack_scan` con evidencia (archivo y línea).
+It is product data, not a measurement: it lists what can be recognized (by dependencies, images or
+extensions) and between which technologies of the same kind a migration can be proposed. Nothing here
+claims that a project uses a technology: `stack_scan` decides that with evidence (file and line).
 """
 
 from dataclasses import dataclass, field
@@ -15,11 +15,11 @@ class Tech:
     id: str
     name: str
     kind: Kind
-    language: str | None = None  # id del lenguaje del ecosistema (None si es agnóstica)
-    icon: str | None = None  # slug de simple-icons para la interfaz
-    # Nombres de paquete por ecosistema que delatan la tecnología (minúsculas).
+    language: str | None = None  # id of the ecosystem's language (None when agnostic)
+    icon: str | None = None  # simple-icons slug for the interface
+    # Package names per ecosystem that reveal the technology (lowercase).
     packages: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    images: tuple[str, ...] = ()  # nombres de imagen Docker (postgres, redis...)
+    images: tuple[str, ...] = ()  # Docker image names (postgres, redis...)
 
 
 def _t(id: str, name: str, kind: Kind, language: str | None = None, icon: str | None = None,
@@ -32,7 +32,7 @@ def _t(id: str, name: str, kind: Kind, language: str | None = None, icon: str | 
 
 
 TECHS: tuple[Tech, ...] = (
-    # Lenguajes (se detectan por extensión, no por dependencias)
+    # Languages (detected by extension, not by dependencies)
     _t("python", "Python", "language", "python", "python"),
     _t("javascript", "JavaScript", "language", "javascript", "javascript"),
     _t("typescript", "TypeScript", "language", "typescript", "typescript"),
@@ -74,7 +74,7 @@ TECHS: tuple[Tech, ...] = (
     _t("solidjs", "SolidJS", "frontend", "javascript", "solid", npm=("solid-js",)),
     _t("jquery", "jQuery", "frontend", "javascript", "jquery", npm=("jquery",)),
     _t("htmx", "htmx", "frontend", "javascript", "htmx", npm=("htmx.org",)),
-    # Datos
+    # Data
     _t("sqlite", "SQLite", "database", None, "sqlite"),
     _t("postgresql", "PostgreSQL", "database", None, "postgresql",
        pip=("psycopg2", "psycopg2-binary", "psycopg", "asyncpg"), npm=("pg", "postgres"),
@@ -100,7 +100,7 @@ TECHS: tuple[Tech, ...] = (
     _t("kubernetes", "Kubernetes", "infra", None, "kubernetes"),
     _t("github-actions", "GitHub Actions", "infra", None, "githubactions"),
     _t("terraform", "Terraform", "infra", None, "terraform"),
-    # Pruebas y construcción
+    # Testing and build
     _t("pytest", "pytest", "testing", "python", "pytest", pip=("pytest",)),
     _t("jest", "Jest", "testing", "javascript", "jest", npm=("jest",)),
     _t("vitest", "Vitest", "testing", "javascript", "vitest", npm=("vitest",)),
@@ -114,7 +114,7 @@ TECHS: tuple[Tech, ...] = (
 
 BY_ID: dict[str, Tech] = {tech.id: tech for tech in TECHS}
 
-# Los lenguajes se reconocen por extensión (lenguaje -> extensiones).
+# Languages are recognized by extension (language -> extensions).
 LANGUAGE_EXTENSIONS: dict[str, tuple[str, ...]] = {
     "python": (".py",),
     "javascript": (".js", ".jsx", ".mjs", ".cjs"),
@@ -128,12 +128,12 @@ LANGUAGE_EXTENSIONS: dict[str, tuple[str, ...]] = {
     "rust": (".rs",),
 }
 
-# Tipos entre los que tiene sentido plantear una migración.
+# Kinds between which proposing a migration makes sense.
 MIGRATABLE_KINDS = ("backend", "frontend", "database", "orm", "testing", "build")
 
 
 def targets_for(tech_id: str) -> list[Tech]:
-    """Destinos posibles: tecnologías del mismo tipo. Primero las del mismo lenguaje."""
+    """Possible targets: technologies of the same kind. Same-language ones first."""
     source = BY_ID.get(tech_id)
     if source is None or source.kind not in MIGRATABLE_KINDS:
         return []

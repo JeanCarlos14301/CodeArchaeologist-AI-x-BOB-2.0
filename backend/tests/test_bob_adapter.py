@@ -1,4 +1,4 @@
-"""Pruebas del BobAdapter: unitarias con subprocess simulado y una prueba live opcional."""
+"""BobAdapter tests: unit tests with a simulated subprocess and an optional live test."""
 
 import json
 import os
@@ -83,7 +83,7 @@ def test_run_passes_prompt_via_stdin_not_argv(adapter: BobAdapter, monkeypatch: 
 
 def test_run_rejects_unknown_mode(adapter: BobAdapter) -> None:
     with pytest.raises(BobConfigError):
-        adapter.run("modo-inexistente", "hola")
+        adapter.run("missing-mode", "hello")
 
 
 def test_run_rejects_empty_prompt(adapter: BobAdapter) -> None:
@@ -153,12 +153,12 @@ def test_import_result_marks_imported(tmp_path: Path) -> None:
 @pytest.mark.live
 @pytest.mark.skipif(
     not (os.environ.get("BOB_API_KEY") and shutil.which("bob")),
-    reason="Requiere Bob Shell instalado y BOB_API_KEY",
+    reason="Requires Bob Shell installed and BOB_API_KEY",
 )
 def test_live_custom_mode_responds(tmp_path: Path) -> None:
     settings = BobRunSettings(max_turns=1, max_cost=0.5, disable_subagents=True, timeout_s=120)
     result = BobAdapter(bob_adapter.REPO_ROOT, settings).run(
-        "evidence-auditor", "Responde solo la palabra LISTO. No uses herramientas."
+        "evidence-auditor", "Answer only the word READY. Do not use tools."
     )
     assert result.execution_mode == "live"
     assert "LISTO" in result.last_message.upper()

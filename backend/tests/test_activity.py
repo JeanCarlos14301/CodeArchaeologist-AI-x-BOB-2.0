@@ -1,5 +1,5 @@
-"""Actividad en vivo del análisis: intérprete del stream de Bob, streaming real, cierre por presupuesto
-y endpoint de eventos. Bob se sustituye por un ejecutable falso: no se gastan bobcoins."""
+"""Live analysis activity: the Bob stream interpreter, real streaming, budget closing
+and the events endpoint. Bob is replaced with a fake executable: no bobcoins are spent."""
 
 import json
 import stat
@@ -20,7 +20,7 @@ FINDINGS_JSON = json.dumps({"findings": [{
     "id": "F-1", "title": "SQL concatenado", "category": "security", "subcategory": "sql-injection",
     "severity": "critical", "observed_or_inferred": "observed",
     "evidence": [{"path": "app.py", "line_start": 2, "line_end": 2, "snippet": "sql = 'SELECT ' + q"}],
-    "explanation": "La entrada se concatena en el SQL.", "recommendation": "Parametrizar la consulta.",
+    "explanation": "The input is concatenated into the SQL.", "recommendation": "Parameterize the query.",
 }]})
 
 
@@ -41,22 +41,22 @@ def _events(log: EventLog) -> list:
     return read_events(log.path)
 
 
-# --- Intérprete ---------------------------------------------------------------------------
+# --- Interpreter ---------------------------------------------------------------------------
 
 def test_activity_translates_plan_tools_subagents_and_turns(workspace: Path, tmp_path: Path) -> None:
     log = EventLog(tmp_path / "events.jsonl")
     activity = BobActivity(log, workspace)
     stream = [
         {"type": "cost", "costs": {"input": 100, "output": 5}},
-        {"type": "cost", "costs": {"input": 100, "output": 5}},  # repetido: no es un turno nuevo
-        {"type": "message", "role": "assistant", "content": "Voy a leer el punto de entrada "},
-        {"type": "message", "role": "assistant", "content": f"en {workspace}/app.py."},
+        {"type": "cost", "costs": {"input": 100, "output": 5}},  # repeated: not a new turn
+        {"type": "message", "role": "assistant", "content": "I will read the entry point "},
+        {"type": "message", "role": "assistant", "content": f"in {workspace}/app.py."},
         {"type": "tool_use", "tool_name": "update_todo_list", "parameters": {"todos": "[x] Fase 1\n[-] Fase 2: subagentes\n[ ] Fase 3"}},
         {"type": "tool_use", "tool_name": "read_file", "parameters": {"path": str(workspace / "app.py")}},
         {"type": "tool_use", "tool_name": "read_file", "parameters": {"path": "/etc/passwd"}},
         {"type": "tool_use", "tool_name": "use_skill", "parameters": {"skill_name": "legacy-audit-workflow"}},
         {"type": "tool_use", "tool_name": "spawn_subagent", "parameters": {"name": "legacy-sql-auditor"}},
-        {"type": "subagent_start", "agentType": "legacy-sql-auditor", "description": f"Audita SQL en {workspace}/app.py"},
+        {"type": "subagent_start", "agentType": "legacy-sql-auditor", "description": f"Audit SQL in {workspace}/app.py"},
         {"type": "subagent_end", "metadata": {"agentType": "legacy-sql-auditor", "toolUseCount": 7, "loopTurnCount": 4,
                                               "durationMs": 9000, "spend": {"cost": 0.42}, "loopExitReason": "stop"}},
         {"type": "cost", "costs": {"input": 250, "output": 40}},
@@ -74,13 +74,13 @@ def test_activity_translates_plan_tools_subagents_and_turns(workspace: Path, tmp
     plan = next(event for event in events if event.kind == "bob.plan")
     assert [item["state"] for item in plan.data["items"]] == ["done", "active", "pending"]
     reads = [event.title for event in events if event.kind == "bob.tool"]
-    assert reads == ["Leyó app.py", "Leyó passwd"], "nunca se exponen rutas del servidor"
+    assert reads == ["Read app.py", "Read passwd"], "server paths are never exposed"
     assert "bob.skill" in kinds
     start = next(event for event in events if event.kind == "bob.subagent.start")
     assert start.data["agent"] == "legacy-sql-auditor" and str(workspace) not in (start.detail or "")
     end = next(event for event in events if event.kind == "bob.subagent.end")
     assert end.data["cost"] == 0.42 and end.data["tool_uses"] == 7
-    assert "bob.answer" in kinds, "el JSON final no se muestra como razonamiento"
+    assert "bob.answer" in kinds, "the final JSON is not shown as reasoning"
     assert events[-1].kind == "bob.result" and events[-1].data["cost"] == 0.9
     assert all(event.stage == "auditing" for event in events)
 
@@ -93,19 +93,19 @@ def test_activity_reports_progress_while_writing_the_dossier(workspace: Path, tm
         activity.feed({"type": "message", "role": "assistant", "content": "x" * 500})
     writing = [event for event in _events(log) if event.kind == "bob.writing"]
     assert [event.data["chars"] for event in writing] == [2000, 4000]
-    assert all("xxx" not in (event.detail or "") for event in writing), "no se expone el contenido"
+    assert all("xxx" not in (event.detail or "") for event in writing), "the content is not exposed"
 
 
 def test_parse_todos_ignores_noise() -> None:
-    assert parse_todos("titulo\n[x] uno\n  [-] dos\n[ ] tres\nsin marca") == [
-        {"state": "done", "text": "uno"}, {"state": "active", "text": "dos"}, {"state": "pending", "text": "tres"},
+    assert parse_todos("title\n[x] one\n  [-] two\n[ ] three\nno mark") == [
+        {"state": "done", "text": "one"}, {"state": "active", "text": "two"}, {"state": "pending", "text": "three"},
     ]
 
 
 def test_relative_to_workspace_hides_server_paths(workspace: Path) -> None:
     assert relative_to_workspace(str(workspace / "a" / "b.py"), workspace) == "a/b.py"
     assert relative_to_workspace(str(workspace), workspace) == "."
-    assert relative_to_workspace("/home/otro/secreto.py", workspace) == "secreto.py"
+    assert relative_to_workspace("/home/other/secret.py", workspace) == "secret.py"
     assert relative_to_workspace("lib/x.py", workspace) == "lib/x.py"
 
 
@@ -124,10 +124,10 @@ def test_event_log_cursor_and_sequence(tmp_path: Path) -> None:
     for i in range(5):
         log.emit("preparing", "x", "python", f"evento {i}")
     assert [event.seq for event in read_events(log.path, after=3)] == [4, 5]
-    assert EventLog(log.path).emit("done", "y", "python", "sigue").seq == 6, "reabrir continúa la secuencia"
+    assert EventLog(log.path).emit("done", "y", "python", "continues").seq == 6, "reopening continues the sequence"
 
 
-# --- Streaming real con un ejecutable falso ------------------------------------------------
+# --- Real streaming with a fake executable ------------------------------------------------
 
 FAKE_BOB = r'''#!{python}
 import json, os, sys, time
@@ -158,19 +158,19 @@ if log_dir and scenario == "ok":
         log.write(json.dumps({{"ts": stamp(), "module": "workspace", "msg": "detectPath resolved: " + workspace}}) + "\n")
         start = {{"type": "subagent_start", "agentType": "legacy-sql-auditor", "description": "Audita SQL"}}
         end = {{"type": "subagent_end", "metadata": {{"agentType": "legacy-sql-auditor", "toolUseCount": 3, "spend": {{"cost": 0.2}}}}}}
-        noise = {{"type": "message", "role": "assistant", "content": "no debe duplicarse"}}
+        noise = {{"type": "message", "role": "assistant", "content": "must not be duplicated"}}
         for event in (start, noise, end):
             log.write(json.dumps({{"ts": stamp(), "module": "stream-json-renderer", "msg": json.dumps(event)}}) + "\n")
         log.flush()
 if "--resume" in args:
     out({{"type": "message", "role": "user", "content": "prompt original"}})
-    out({{"type": "tool_use", "tool_name": "read_file", "parameters": {{"path": "viejo.py"}}}})
+    out({{"type": "tool_use", "tool_name": "read_file", "parameters": {{"path": "old.py"}}}})
     out({{"type": "message", "role": "user", "content": prompt}})
     out({{"type": "message", "role": "assistant", "content": {findings!r}}})
     out({{"type": "result", "status": "success", "stats": {{"task_id": "t1", "duration_ms": 900, "session_costs": 4.3, "tool_calls": 3}}}})
     sys.exit(0)
 out({{"type": "message", "role": "user", "content": prompt}})
-out({{"type": "message", "role": "assistant", "content": "Primero exploro. "}})
+out({{"type": "message", "role": "assistant", "content": "First I explore. "}})
 out({{"type": "tool_use", "tool_name": "glob", "parameters": {{"pattern": "**/*.py"}}}})
 out({{"type": "tool_result", "status": "success", "output": "app.py"}})
 final = {findings!r} if scenario == "ok" else "No files found"
@@ -204,7 +204,7 @@ def test_run_stream_forwards_events_and_rebuilds_final_message(workspace: Path, 
     seen: list[str] = []
     result = _adapter(workspace, fake_bob).run_stream(AUDITOR_MODE, "audita", lambda event: seen.append(event["type"]))
     assert seen == ["message", "message", "tool_use", "tool_result", "message", "result"]
-    assert result.last_message == FINDINGS_JSON, "solo cuenta el texto posterior a la última herramienta"
+    assert result.last_message == FINDINGS_JSON, "only the text after the last tool counts"
     assert result.stats is not None and result.stats.session_costs == 4.02
 
 
@@ -212,22 +212,22 @@ def test_run_stream_merges_real_time_subagent_events_from_bobs_log(workspace: Pa
                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
-    (log_dir / "bob-shell-19990101T000000.log").write_text("otra sesión de otro workspace\n")
+    (log_dir / "bob-shell-19990101T000000.log").write_text("another session from another workspace\n")
     monkeypatch.setenv("BOB_LOG_DIR", str(log_dir))
     seen: list[dict] = []
     raw = tmp_path / "raw.jsonl"
     _adapter(workspace, fake_bob).run_stream(AUDITOR_MODE, "audita", seen.append, raw_log=raw)
     types = [event["type"] for event in seen]
     assert "subagent_start" in types and "subagent_end" in types
-    assert types.count("message") == 3, "los mensajes del log no se duplican con los de stdout"
+    assert types.count("message") == 3, "log messages are not duplicated with the stdout ones"
     assert all("timestamp" in event for event in seen if event["type"].startswith("subagent"))
-    assert "subagent_end" in raw.read_text(), "la sesión cruda también guarda los eventos del log"
+    assert "subagent_end" in raw.read_text(), "the raw session also stores the log events"
 
 
 def test_run_stream_resume_skips_replayed_history(workspace: Path, fake_bob: Path) -> None:
     seen: list[dict] = []
     result = _adapter(workspace, fake_bob).run_stream(AUDITOR_MODE, FINALIZE_PROMPT, seen.append, resume_task_id="t1")
-    assert all(event.get("parameters", {}).get("path") != "viejo.py" for event in seen)
+    assert all(event.get("parameters", {}).get("path") != "old.py" for event in seen)
     assert result.last_message == FINDINGS_JSON
 
 
@@ -273,7 +273,7 @@ def test_audit_finalizes_when_budget_runs_out(workspace: Path, fake_bob: Path, t
     kinds = [event.kind for event in read_events(log.path)]
     assert kinds[0] == "bob.start" and "bob.finalize" in kinds
     start = read_events(log.path)[0]
-    assert start.data["explore_cost"] == 4.0, "se reserva parte del tope para el cierre"
+    assert start.data["explore_cost"] == 4.0, "part of the cap is reserved for closing"
     assert (tmp_path / "bob-stream.jsonl").is_file()
 
 
@@ -284,7 +284,7 @@ def test_audit_resumes_a_session_cut_by_the_network(workspace: Path, fake_bob: P
     database = tmp_path / "bob.db"
     with sqlite3.connect(database) as connection:
         connection.execute("CREATE TABLE tasks (id TEXT, parent_id TEXT, env TEXT, created_at INTEGER)")
-        connection.execute("INSERT INTO tasks VALUES ('otra', NULL, ?, 1)", (json.dumps({"workspace": "/otro"}),))
+        connection.execute("INSERT INTO tasks VALUES ('other', NULL, ?, 1)", (json.dumps({"workspace": "/other"}),))
         connection.execute("INSERT INTO tasks VALUES ('t1', NULL, ?, 2)", (json.dumps({"workspace": str(workspace.resolve())}),))
     monkeypatch.setenv("BOB_DB_PATH", str(database))
     monkeypatch.setenv("FAKE_BOB_SCENARIO", "cut")
@@ -329,7 +329,7 @@ def test_uploads_keep_their_tests_but_samples_do_not(tmp_path: Path) -> None:
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     from app.main import create_app
 
-    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "token-de-prueba")
+    monkeypatch.setenv("LIVE_AUDIT_TOKEN", "test-token")
     app = create_app(artifacts_dir=tmp_path / "artifacts", frontend_dist=tmp_path / "no-dist")
     with TestClient(app) as test_client:
         yield test_client
@@ -341,7 +341,7 @@ def _wait(client: TestClient, job_id: str) -> None:
         if client.get(f"/api/audits/{job_id}").json()["job"]["status"] in {"done", "failed"}:
             return
         time.sleep(0.05)
-    raise AssertionError("el job no terminó a tiempo")
+    raise AssertionError("the job did not finish in time")
 
 
 def test_events_endpoint_covers_every_stage_of_the_showcase(client: TestClient) -> None:

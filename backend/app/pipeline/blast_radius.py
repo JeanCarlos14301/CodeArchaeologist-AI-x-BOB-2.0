@@ -1,8 +1,8 @@
-"""Módulo determinista de cálculo de Radio de Explosión (Shift-Left Pre-PR).
+"""Deterministic blast radius module (shift-left, before the PR; not wired into the product).
 
-Calcula el impacto transitivo de cambios en el código fuente sobre el resto del
-sistema mediante grafos dirigidos (NetworkX) e inspección de AST.
-Cumple con la regla de AGENTS.md: 'Los números los calcula código, no la IA'.
+Computes the transitive impact of source code changes on the rest of the system
+through directed graphs (NetworkX) and AST inspection.
+Follows the AGENTS.md rule: 'Numbers are computed by code, not by the AI'.
 """
 
 import ast
@@ -42,7 +42,7 @@ class BlastRadiusReport(BaseModel):
 
 
 class CallGraphBuilder(ast.NodeVisitor):
-    """Construye un grafo de llamadas invocaciones intra-repositorio usando el AST de Python."""
+    """Builds an intra-repository call graph using the Python AST."""
 
     def __init__(self, current_module: str, graph: nx.DiGraph):
         self.current_module = current_module
@@ -83,7 +83,7 @@ class CallGraphBuilder(ast.NodeVisitor):
 
 
 def build_repository_call_graph(repo_dir: str | Path) -> nx.DiGraph:
-    """Escanea todos los archivos .py del repositorio y construye el grafo de llamadas dirigido."""
+    """Scans every .py file in the repository and builds the directed call graph."""
     graph = nx.DiGraph()
     repo_path = Path(repo_dir)
 
@@ -109,24 +109,24 @@ def simulate_blast_radius(
     schema_dropped_or_altered: bool = False,
     test_coverage_ratio: float = 0.5,
 ) -> BlastRadiusReport:
-    """Calcula el Composite Blast Radius Score (CBRS) determinista para una lista de símbolos modificados."""
+    """Computes the deterministic Composite Blast Radius Score (CBRS) for a list of modified symbols."""
     graph = build_repository_call_graph(repo_dir)
     total_funcs = max(graph.number_of_nodes(), 1)
 
-    # Invertir el grafo para seguir quién llama a quién (Callee -> Callers)
+    # Invert the graph to follow who calls whom (Callee -> Callers)
     rev_graph = graph.reverse(copy=True)
 
     direct_callers: Set[str] = set()
     transitive_impacted: Set[str] = set()
 
     for sym in modified_symbols:
-        # Encontrar nodos que coincidan con el símbolo
+        # Find nodes that match the symbol
         matching_nodes = [n for n in graph.nodes if sym in n or n.endswith(f".{sym}")]
         for node in matching_nodes:
             # Direct callers
             direct = set(rev_graph.successors(node))
             direct_callers.update(direct)
-            # Transitive callers (toda la cascada hacia arriba)
+            # Transitive callers (the whole cascade upward)
             if nx.has_path(rev_graph, node, node):
                 pass
             transitive = nx.descendants(rev_graph, node)
@@ -156,16 +156,16 @@ def simulate_blast_radius(
     recommendations = []
     if cbrs >= 60.0:
         verdict = "RED_BLOCK"
-        recommendations.append("Bloqueo de PR automático: Impacto sistémico crítico detectado.")
-        recommendations.append("Convocar Tribunal Adversarial (/code-tribunal) antes de continuar.")
-        recommendations.append("Escribir pruebas de caracterización golden-master con contract-keeper.")
+        recommendations.append("Automatic PR block: critical systemic impact detected.")
+        recommendations.append("Convene the adversarial tribunal (/code-tribunal) before continuing.")
+        recommendations.append("Write golden-master characterization tests with contract-keeper.")
     elif cbrs >= 25.0:
         verdict = "YELLOW_REVIEW"
-        recommendations.append("Revisión técnica requerida: Radio de impacto moderado.")
-        recommendations.append("Verificar cobertura de tests en los módulos invocadores afectados.")
+        recommendations.append("Technical review required: moderate blast radius.")
+        recommendations.append("Check test coverage in the affected calling modules.")
     else:
         verdict = "GREEN_PASS"
-        recommendations.append("Riesgo bajo: Apto para revisión convencional.")
+        recommendations.append("Low risk: fit for a regular review.")
 
     return BlastRadiusReport(
         total_functions_count=total_funcs,

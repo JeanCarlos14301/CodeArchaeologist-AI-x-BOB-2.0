@@ -2,11 +2,11 @@
   "schema_version": "1.0",
   "sample_id": "facturaya-v1",
   "source": "https://github.com/JeanCarlos14301/FacturaYa (evaluation/expected-findings.json, evidence paths rebased from samples/facturaya-v1/ to the sample root)",
-  "snapshot_sha256": "d45791058ac483aba258df1e4a2d5b8d53e66bcf891b63363ee1feb33ace479a",
+  "snapshot_sha256": "f4fbb8852312b9cdcabb87c3bb928d59bc4441e79f21ed4e8443459338dac014",
   "findings": [
     {
       "id": "EF-1",
-      "title": "SQL concatenado en busqueda de facturas",
+      "title": "Concatenated SQL in invoice search",
       "category": "security/sql-injection",
       "expected_detection": true,
       "evidence": [
@@ -17,12 +17,12 @@
           "fragment": "sql = \"SELECT id, number, issue_date, total FROM invoices WHERE owner_id = \""
         }
       ],
-      "explanation": "El parametro q se inserta directamente en SQL en la ruta de busqueda.",
-      "verification_method": "La prueba heredada obtiene resultados ajenos con una expresion SQL."
+      "explanation": "The 'q' query parameter is directly interpolated into raw SQL in the invoice search route without parameterization.",
+      "verification_method": "Legacy test retrieves other users' records using a SQL injection expression."
     },
     {
       "id": "EF-2",
-      "title": "Ruta extensa con responsabilidades mezcladas",
+      "title": "Monolithic route handler with mixed concerns",
       "category": "maintainability/large-function",
       "expected_detection": true,
       "evidence": [
@@ -33,12 +33,12 @@
           "fragment": "def invoice_new():"
         }
       ],
-      "explanation": "La ruta valida, calcula, guarda y construye HTML en una sola funcion de 155 lineas.",
-      "verification_method": "Inspeccion AST y prueba de creacion de factura."
+      "explanation": "The route validates input, performs discount calculations, executes database transactions, and generates HTML in a single 155-line function.",
+      "verification_method": "AST inspection and invoice creation test."
     },
     {
       "id": "EF-3",
-      "title": "Regla de descuento duplicada con redondeo divergente",
+      "title": "Duplicated discount rule with diverging rounding behavior",
       "category": "business-rule/duplication",
       "expected_detection": true,
       "evidence": [
@@ -55,12 +55,12 @@
           "fragment": "((Decimal(str(item[\"line_total\"])) * RATE).quantize"
         }
       ],
-      "explanation": "Facturacion redondea el descuento global; reporte redondea por linea y suma.",
-      "verification_method": "FY-00001 tiene descuento facturado 7.51 y reportado 7.50."
+      "explanation": "Billing rounds the overall discount on the subtotal once; reporting rounds line-item discounts individually before summing.",
+      "verification_method": "Invoice FY-00001 yields a 7.51 billed discount and a 7.50 reported discount."
     },
     {
       "id": "EF-4",
-      "title": "Valores secretos ficticios en codigo",
+      "title": "Hardcoded synthetic secrets in configuration",
       "category": "security/hardcoded-secret",
       "expected_detection": true,
       "evidence": [
@@ -77,12 +77,12 @@
           "fragment": "PAYMENT_GATEWAY_KEY = \"DEMO_ONLY_NOT_A_REAL_GATEWAY_KEY\""
         }
       ],
-      "explanation": "Ambas constantes de demostracion estan escritas en el codigo.",
-      "verification_method": "Inspeccion de config.py."
+      "explanation": "Demonstration secret keys and payment gateway credentials are hardcoded as module constants.",
+      "verification_method": "Inspection of config.py constants."
     },
     {
       "id": "EF-5",
-      "title": "Dependencia circular diferida",
+      "title": "Deferred cyclic dependency between billing and customers",
       "category": "architecture/cyclic-dependency",
       "expected_detection": true,
       "evidence": [
@@ -99,12 +99,12 @@
           "fragment": "from billing import count_customer_invoices"
         }
       ],
-      "explanation": "billing importa customers y customers importa billing dentro de invoice_count_for_customer.",
-      "verification_method": "Inspeccion de imports y prueba de consulta de cliente."
+      "explanation": "billing.py imports customers.py at module level, while customers.py imports billing.py inside invoice_count_for_customer.",
+      "verification_method": "Import inspection and customer invoice count test."
     },
     {
       "id": "EF-6",
-      "title": "JSON de factura sin autorizacion por propietario",
+      "title": "Invoice JSON endpoint lacks resource owner authorization (BOLA)",
       "category": "security/broken-object-authorization",
       "expected_detection": true,
       "evidence": [
@@ -115,12 +115,12 @@
           "fragment": "def invoice_json(invoice_id):"
         }
       ],
-      "explanation": "La ruta JSON autentica, pero no comprueba owner_id contra el usuario de sesion.",
-      "verification_method": "La prueba heredada entra como bruno y recibe la factura 1 de ana con 200."
+      "explanation": "The JSON endpoint verifies authentication but does not check owner_id against the active session user.",
+      "verification_method": "Legacy test authenticates as bruno and successfully retrieves invoice 1 owned by ana with status 200."
     },
     {
       "id": "EF-7",
-      "title": "Consulta de correo correctamente parametrizada",
+      "title": "Correctly parameterized customer email query",
       "category": "control/parameterized-query",
       "expected_detection": false,
       "evidence": [
@@ -131,8 +131,8 @@
           "fragment": "SELECT id, owner_id, name, email FROM customers WHERE email = ?"
         }
       ],
-      "explanation": "El correo del usuario se pasa como parametro y no se concatena al SQL.",
-      "verification_method": "La prueba pasa una expresion SQL como correo y no obtiene fila."
+      "explanation": "The customer email parameter is properly bound via a placeholder and not concatenated into SQL.",
+      "verification_method": "Test passes a SQL injection expression as email and retrieves no rows."
     }
   ]
 }

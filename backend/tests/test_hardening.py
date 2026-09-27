@@ -1,5 +1,5 @@
-"""Endurecimiento de lo que se publica: rutas del servidor, errores de Bob, límites del registro de
-actividad y arranque concurrente de auditorías live. No gasta bobcoins."""
+"""Hardening of what gets published: server paths, Bob errors, activity log limits
+and concurrent start of live audits. Spends no bobcoins."""
 
 import threading
 import time
@@ -16,7 +16,7 @@ from app.pipeline import activity as activity_module
 from app.pipeline.activity import BobActivity, EventLog, parse_todos, read_events, redact_paths
 from app.pipeline.evidence_audit import AuditError, run_evidence_audit
 
-SERVER_PATH = "/Users/operador/proyectos/codearch/backend/artifacts/abc123/workspace/app.py"
+SERVER_PATH = "/Users/operator/projects/codearch/backend/artifacts/abc123/workspace/app.py"
 
 
 @pytest.fixture
@@ -34,14 +34,14 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
         yield test_client
 
 
-# --- Rutas del servidor ---------------------------------------------------------------------
+# --- Server paths ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(("text", "expected"), [
-    (f"No se pudo leer {SERVER_PATH}", "No se pudo leer app.py"),
-    ("fallo en /tmp/pytest-7/job/", "fallo en …"),
-    (r"C:\Users\operador\repo\db.py no existe", "db.py no existe"),
-    ("ver https://example.com/docs/api y lib/x.py", "ver https://example.com/docs/api y lib/x.py"),
-    ("ruta relativa app/routes.py:12 y fracción 3/4", "ruta relativa app/routes.py:12 y fracción 3/4"),
+    (f"Could not read {SERVER_PATH}", "Could not read app.py"),
+    ("failure in /tmp/pytest-7/job/", "failure in …"),
+    (r"C:\Users\operator\repo\db.py does not exist", "db.py does not exist"),
+    ("see https://example.com/docs/api and lib/x.py", "see https://example.com/docs/api and lib/x.py"),
+    ("relative path app/routes.py:12 and fraction 3/4", "relative path app/routes.py:12 and fraction 3/4"),
 ])
 def test_redact_paths_keeps_only_the_final_name(text: str, expected: str) -> None:
     assert redact_paths(text) == expected
@@ -51,7 +51,7 @@ def test_tool_errors_and_plan_items_never_expose_server_paths(workspace: Path, t
     log = EventLog(tmp_path / "events.jsonl")
     activity = BobActivity(log, workspace)
     activity.feed({"type": "tool_use", "tool_name": "update_todo_list",
-                   "parameters": {"todos": f"[x] Leer {SERVER_PATH}\n[ ] Revisar /etc/secreto/config.ini"}})
+                   "parameters": {"todos": f"[x] Read {SERVER_PATH}\n[ ] Review /etc/secret/config.ini"}})
     activity.feed({"type": "tool_result", "tool_id": "t1", "status": "error",
                    "output": f"ENOENT: no such file {SERVER_PATH}"})
 
@@ -65,15 +65,15 @@ def test_failure_message_is_published_without_server_paths(client: TestClient, t
     job = service.store.create("facturaya-v1", "example")
     events = service.events(job.id)
 
-    service._fail(job, events, f"Falló la lectura de {SERVER_PATH}")
+    service._fail(job, events, f"Reading {SERVER_PATH} failed")
 
     stored = service.store.get(job.id)
     failure = next(event for event in read_events(events.path) if event.kind == "pipeline.failed")
     assert stored.status == "failed"
-    assert stored.error == failure.detail == "Falló la lectura de app.py"
+    assert stored.error == failure.detail == "Reading app.py failed"
 
 
-# --- Errores de Bob -------------------------------------------------------------------------
+# --- Bob errors -----------------------------------------------------------------------------
 
 class _FailingBob:
     def __init__(self, error: Exception) -> None:
@@ -84,8 +84,8 @@ class _FailingBob:
 
 
 @pytest.mark.parametrize(("error", "expected"), [
-    (BobExecutionError(f"exit 1; stderr: Traceback en {SERVER_PATH}, API key rechazada"), "no se pudo recuperar la sesión"),
-    (BobTimeoutError(f"Bob excedió 900 s en {SERVER_PATH}"), "tiempo máximo"),
+    (BobExecutionError(f"exit 1; stderr: Traceback in {SERVER_PATH}, API key rejected"), "the session could not be recovered"),
+    (BobTimeoutError(f"Bob exceeded 900 s in {SERVER_PATH}"), "time limit"),
 ])
 def test_bob_failures_reach_the_user_without_internal_details(workspace: Path, tmp_path: Path,
                                                               error: Exception, expected: str) -> None:
@@ -94,20 +94,20 @@ def test_bob_failures_reach_the_user_without_internal_details(workspace: Path, t
 
     message = str(failure.value)
     assert expected in message
-    assert "stderr" not in message and "/Users/" not in message and "API key rechazada" not in message
+    assert "stderr" not in message and "/Users/" not in message and "API key rejected" not in message
 
 
-# --- Límites del registro de actividad ------------------------------------------------------
+# --- Activity log limits ------------------------------------------------------------------
 
 def test_event_log_caps_noise_but_keeps_essential_events(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(activity_module, "MAX_EVENTS", 3)
     log = EventLog(tmp_path / "events.jsonl")
     for index in range(10):
-        log.emit("auditing", "bob.tool", "evidence-auditor", f"Leyó el archivo {index}")
-    log.emit("done", "dossier.ready", "pipeline", "Expediente listo")
+        log.emit("auditing", "bob.tool", "evidence-auditor", f"Read file {index}")
+    log.emit("done", "dossier.ready", "pipeline", "Dossier ready")
 
     kinds = [event.kind for event in read_events(log.path)]
-    assert kinds == ["bob.tool"] * 3 + ["dossier.ready"], "el ruido se corta; el cierre siempre llega"
+    assert kinds == ["bob.tool"] * 3 + ["dossier.ready"], "noise is cut; the closing always arrives"
 
 
 def test_read_events_skips_delivered_lines_and_ignores_corrupt_ones(tmp_path: Path) -> None:
@@ -115,8 +115,8 @@ def test_read_events_skips_delivered_lines_and_ignores_corrupt_ones(tmp_path: Pa
     for index in range(4):
         log.emit("preparing", "x", "python", f"evento {index}")
     with log.path.open("a", encoding="utf-8") as handle:
-        handle.write("{esto no es json}\n")
-    log.emit("preparing", "x", "python", "después de la línea corrupta")
+        handle.write("{this is not json}\n")
+    log.emit("preparing", "x", "python", "after the corrupt line")
 
     assert [event.seq for event in read_events(log.path, after=2)] == [3, 4, 5]
 
@@ -136,7 +136,7 @@ def test_concurrent_live_starts_launch_a_single_audit(client: TestClient, monkey
 
     def slow_has_active(mode: str) -> bool:
         active = original_has_active(mode)
-        time.sleep(0.05)  # ensancha la ventana entre comprobar y crear
+        time.sleep(0.05)  # widens the window between checking and creating
         return active
 
     monkeypatch.setattr(service.store, "has_active", slow_has_active)

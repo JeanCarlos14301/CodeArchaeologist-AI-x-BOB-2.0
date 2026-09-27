@@ -1,16 +1,15 @@
-"""Adaptador Integrado de Invocación para IBM Bob Shell 2.0 (D-04, F-02).
+"""Integrated invocation adapter for IBM Bob Shell 2.0 (D-04, F-02).
 
-Unifica la integración de Bob construida por Felipe y el orquestador determinista
-de 11 etapas de Daniel:
-- Invocación segura mediante subprocess.run con lista explícita de argumentos (sin shell=True).
-- Prompt suministrado por stdin para evitar inyección de flags.
-- Inyección limpia de BOB_API_KEY desde variables de entorno o archivo .env.
-- Control de recursos: timeout por etapa, tope de costo y tope de turnos.
-- Tres modos operativos transparentes (Regla D8):
-    1. 'live': Invocación directa del CLI de Bob Shell 2.0.5 con la API Key configurada.
-    2. 'imported': Carga sesiones JSON previamente guardadas en bob-sessions/ o .bob/.
-    3. 'example': Fallback determinista de alta fidelidad basado en hechos reales de AST y evaluation/.
-- Compatibilidad completa con la suite de pruebas unitarias de Bob assets y modos personalizados.
+Joins Felipe's Bob integration and Daniel's deterministic pipeline:
+- Safe invocation through subprocess with an explicit argument list (no shell=True).
+- Prompt passed on stdin, so it can never inject CLI flags.
+- BOB_API_KEY read from environment variables (or a local .env).
+- Resource control: timeout per stage, cost cap and turn cap.
+- Three transparent execution modes (rule D8):
+    1. 'live': direct invocation of the Bob Shell 2.0.5 CLI with the configured API key.
+    2. 'imported': loads a previously recorded Bob session (JSON).
+    3. 'example': deterministic fallback based on real AST facts and evaluation/.
+- Fully compatible with the unit tests for the Bob assets and custom modes.
 """
 
 from datetime import datetime, timezone
@@ -39,28 +38,28 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CUSTOM_MODES_FILE = REPO_ROOT / ".bob" / "custom_modes.yaml"
 _SLUG_PATTERN = re.compile(r"^\s*-\s*slug:\s*([a-z0-9-]+)\s*$", re.MULTILINE)
 _STDERR_TAIL_CHARS = 2000
-# Variables que nunca llegan al proceso de Bob: un subagente o una herramienta no puede filtrar lo que no recibe.
+# Variables that never reach the Bob process: a subagent or a tool cannot leak what it never receives.
 _SECRET_ENV_NAME = re.compile(r"TOKEN|SECRET|PASSW|PRIVATE|CREDENTIAL|API_?KEY|ACCESS_KEY", re.IGNORECASE)
 
 ExecutionMode = Literal["live", "imported", "example"]
 
-# Procesos de Bob en curso: el servidor los termina al apagarse para no dejar sesiones huérfanas
-# que sigan gastando bobcoins sin que nadie lea su salida.
+# Running Bob processes: the server terminates them on shutdown so no orphan session keeps
+# spending bobcoins with nobody reading its output.
 _ACTIVE_PROCESSES: set[subprocess.Popen] = set()
 _ACTIVE_LOCK = threading.Lock()
 
 
-# Eventos que Bob solo escribe en su log (no en stdout con stream-json) y que ocurren en tiempo real.
+# Events Bob writes only to its log (not to stdout with stream-json) and that happen in real time.
 LOG_ONLY_EVENTS = frozenset({"cost", "subagent_start", "subagent_end"})
 LOG_DISCOVERY_S = 20.0
 LOG_POLL_S = 0.5
 
 
 class BobLogTail(threading.Thread):
-    """Sigue el log de ESTA sesión de Bob para recibir en tiempo real el ciclo de vida de los
-    subagentes y el coste por turno (con stream-json esos eventos solo van al log).
+    """Follows the log of THIS Bob session to receive, in real time, the subagent lifecycle and
+    the cost per turn (with stream-json those events only go to the log).
 
-    Best-effort: si no encuentra el log (otra versión de Bob, otro HOME), no emite nada.
+    Best effort: if it cannot find the log (another Bob version, another HOME), it emits nothing.
     """
 
     def __init__(self, workspace: Path, since: float, on_event: Callable[[dict[str, Any]], None],
@@ -101,7 +100,7 @@ class BobLogTail(threading.Thread):
             if self.found is None:
                 self._stop_event.wait(LOG_POLL_S)
         if self.found is None:
-            self.found = self._discover()  # sesiones muy cortas: último intento antes de rendirse
+            self.found = self._discover()  # very short sessions: one last try before giving up
         if self.found is None:
             return
         with self.found.open(encoding="utf-8", errors="replace") as handle:
@@ -127,18 +126,18 @@ class BobLogTail(threading.Thread):
         stamp = str(record.get("ts", ""))
         try:
             if datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp() < self.since - 1:
-                return  # historial de una sesión reanudada
+                return  # history of a resumed session
         except ValueError:
             return
         event["timestamp"] = stamp
         try:
             self.on_event(event)
-        except Exception:  # noqa: BLE001 - la UI nunca tumba la auditoría
-            logger.exception("Error procesando un evento del log de Bob")
+        except Exception:  # noqa: BLE001 - the UI never brings the audit down
+            logger.exception("Error processing an event from the Bob log")
 
 
 def terminate_active_sessions() -> int:
-    """Termina todas las sesiones de Bob en curso. Devuelve cuántas había."""
+    """Terminates every running Bob session. Returns how many there were."""
     with _ACTIVE_LOCK:
         processes = list(_ACTIVE_PROCESSES)
     for process in processes:
@@ -148,23 +147,23 @@ def terminate_active_sessions() -> int:
 
 
 class BobError(RuntimeError):
-    """Error base de la integración con Bob."""
+    """Base error of the Bob integration."""
 
 
 class BobNotInstalledError(BobError):
-    """No se encontró el ejecutable de Bob Shell."""
+    """The Bob Shell executable was not found."""
 
 
 class BobConfigError(BobError):
-    """Configuración inválida: falta API key o el modo no existe."""
+    """Invalid configuration: missing API key or unknown mode."""
 
 
 class BobTimeoutError(BobError):
-    """Bob no terminó dentro del tiempo permitido."""
+    """Bob did not finish within the allowed time."""
 
 
 class BobExecutionError(BobError):
-    """Bob terminó con error o su salida no es un resultado válido."""
+    """Bob exited with an error or its output is not a valid result."""
 
 
 class BobStats(BaseModel):
@@ -183,10 +182,10 @@ class BobResult(BaseModel):
 
 
 def bob_child_env() -> dict[str, str]:
-    """Entorno del proceso de Bob: el del servidor sin los secretos de la aplicación.
+    """Environment of the Bob process: the server's, without the application's secrets.
 
-    Bob solo necesita los suyos (`BOB_*`, p. ej. BOB_API_KEY). LIVE_AUDIT_TOKEN y cualquier otra clave se
-    quitan: aunque un repositorio consiguiera que Bob ejecutara algo, no tendría credenciales que filtrar.
+    Bob only needs its own (`BOB_*`, e.g. BOB_API_KEY). LIVE_AUDIT_TOKEN and any other key are
+    removed: even if a repository got Bob to run something, there would be no credentials to leak.
     """
     env = {
         key: value for key, value in os.environ.items()
@@ -207,7 +206,7 @@ class BobRunSettings(BaseModel):
 
     @classmethod
     def from_env(cls) -> "BobRunSettings":
-        """Lee overrides opcionales de variables de entorno."""
+        """Reads optional overrides from environment variables."""
         overrides: dict[str, object] = {}
         env_map = {
             "BOB_BINARY": "bob_binary",
@@ -225,14 +224,14 @@ class BobRunSettings(BaseModel):
 
 
 def load_custom_mode_slugs(modes_file: Path = CUSTOM_MODES_FILE) -> frozenset[str]:
-    """Extrae los slugs de `.bob/custom_modes.yaml` sin depender de PyYAML."""
+    """Extracts the slugs from `.bob/custom_modes.yaml` without depending on PyYAML."""
     if not modes_file.is_file():
         return frozenset()
     return frozenset(_SLUG_PATTERN.findall(modes_file.read_text(encoding="utf-8")))
 
 
 def _result_payloads(stdout: str) -> list[dict]:
-    """Candidatos JSON: el documento completo (exportado con sangría) o una línea por evento."""
+    """JSON candidates: the whole document (exported with indentation) or one line per event."""
     candidates = [stdout.strip(), *reversed(stdout.strip().splitlines())]
     payloads: list[dict] = []
     for candidate in candidates:
@@ -249,10 +248,10 @@ def _result_payloads(stdout: str) -> list[dict]:
 
 
 def parse_bob_output(stdout: str, mode: str) -> BobResult:
-    """Busca el último evento `result` en la salida JSON de `bob run --format json`."""
+    """Finds the last `result` event in the JSON output of `bob run --format json`."""
     payloads = _result_payloads(stdout)
     if not payloads:
-        raise BobExecutionError("La salida de Bob no contiene un evento 'result' JSON.")
+        raise BobExecutionError("Bob's output has no JSON 'result' event.")
     payload = payloads[0]
     return BobResult(
         mode=mode,
@@ -264,17 +263,17 @@ def parse_bob_output(stdout: str, mode: str) -> BobResult:
 
 
 def get_bob_api_key() -> str:
-    """Obtiene la clave API de IBM Bob configurada en el entorno."""
+    """Gets the IBM Bob API key configured in the environment."""
     return os.environ.get("BOB_API_KEY", "").strip()
 
 
 def is_bob_cli_available() -> bool:
-    """Verifica si el binario de Bob Shell 2.0 está instalado en el PATH del sistema."""
+    """Checks whether the Bob Shell 2.0 binary is installed on the system PATH."""
     return (shutil.which("bob") is not None) or (shutil.which("bob.cmd") is not None)
 
 
 def determine_operational_mode() -> str:
-    """Determina dinámicamente el modo operativo respetando la regla D8 de la arquitectura."""
+    """Determines the execution mode dynamically, following architecture rule D8."""
     forced_mode = os.environ.get("LEGACYLENS_EXECUTION_MODE", "").lower().strip()
     if forced_mode in ["live", "imported", "example"]:
         return forced_mode
@@ -293,7 +292,7 @@ def determine_operational_mode() -> str:
 
 
 class BobAdapter:
-    """Adaptador de ejecución unificado para IBM Bob Shell 2.0."""
+    """Unified execution adapter for IBM Bob Shell 2.0."""
 
     def __init__(
         self,
@@ -321,7 +320,7 @@ class BobAdapter:
         output_format: str = "json",
         resume_task_id: str | None = None,
     ) -> list[str]:
-        """Construye la lista de argumentos; el prompt nunca forma parte de ella."""
+        """Builds the argument list; the prompt is never part of it."""
         settings = settings or self.settings
         command = [
             binary_path,
@@ -345,22 +344,22 @@ class BobAdapter:
 
     def _validate(self, mode: str, prompt: str) -> str:
         if mode not in self.allowed_modes:
-            raise BobConfigError(f"Modo de Bob no permitido: {mode!r}")
+            raise BobConfigError(f"Bob mode not allowed: {mode!r}")
         if not prompt.strip():
-            raise BobConfigError("El prompt para Bob está vacío.")
+            raise BobConfigError("The prompt for Bob is empty.")
         if not os.environ.get("BOB_API_KEY"):
-            raise BobConfigError("Falta BOB_API_KEY en el entorno (ver .env.example).")
+            raise BobConfigError("BOB_API_KEY is missing from the environment (see .env.example).")
         if not self.workspace.is_dir():
-            raise BobConfigError(f"El workspace no existe: {self.workspace}")
+            raise BobConfigError(f"The workspace does not exist: {self.workspace}")
         binary_path = shutil.which(self.settings.bob_binary)
         if binary_path is None:
             raise BobNotInstalledError(
-                f"No se encontró '{self.settings.bob_binary}'. Instala Bob Shell (ver docs/bob-usage.md)."
+                f"'{self.settings.bob_binary}' was not found. Install Bob Shell (see docs/bob-usage.md)."
             )
         return binary_path
 
     def run(self, mode: str, prompt: str) -> BobResult:
-        """Ejecuta un modo con el prompt por stdin y devuelve el resultado `live`."""
+        """Runs a mode with the prompt on stdin and returns the `live` result."""
         binary_path = self._validate(mode, prompt)
         command = self.build_command(mode, binary_path)
         try:
@@ -369,7 +368,7 @@ class BobAdapter:
                 input=prompt,
                 capture_output=True,
                 text=True,
-                encoding="utf-8",  # Bob emite UTF-8; sin esto Windows decodifica con cp1252 y corrompe tildes
+                encoding="utf-8",  # Bob emits UTF-8; without this Windows decodes with cp1252 and corrupts accents
                 errors="replace",
                 timeout=self.settings.timeout_s,
                 cwd=self.workspace,
@@ -378,16 +377,16 @@ class BobAdapter:
             )
         except subprocess.TimeoutExpired as exc:
             raise BobTimeoutError(
-                f"Bob ({mode}) superó el timeout de {self.settings.timeout_s}s."
+                f"Bob ({mode}) exceeded the {self.settings.timeout_s}s timeout."
             ) from exc
         if completed.returncode != 0:
             detail = (completed.stderr or completed.stdout)[-_STDERR_TAIL_CHARS:].strip()
             raise BobExecutionError(
-                f"Bob ({mode}) terminó con código {completed.returncode}: {detail}"
+                f"Bob ({mode}) exited with code {completed.returncode}: {detail}"
             )
         result = parse_bob_output(completed.stdout, mode)
         if result.status != "success":
-            raise BobExecutionError(f"Bob ({mode}) devolvió status {result.status!r}.")
+            raise BobExecutionError(f"Bob ({mode}) returned status {result.status!r}.")
         return result
 
     def run_stream(
@@ -399,18 +398,18 @@ class BobAdapter:
         resume_task_id: str | None = None,
         raw_log: Path | None = None,
     ) -> BobResult:
-        """Ejecuta `bob run --format stream-json` y entrega cada evento a `on_event` mientras ocurre.
+        """Runs `bob run --format stream-json` and hands each event to `on_event` as it happens.
 
-        Con `resume_task_id`, Bob repite primero el historial de la sesión: esos eventos se descartan
-        hasta ver el mensaje de usuario con este prompt. El mensaje final se reconstruye con el texto
-        del asistente posterior a la última herramienta (stream-json no trae `last_message`).
+        With `resume_task_id`, Bob first replays the session history: those events are dropped
+        until the user message carrying this prompt shows up. The final message is rebuilt from the
+        assistant text after the last tool call (stream-json carries no `last_message`).
         """
         settings = settings or self.settings
         binary_path = self._validate(mode, prompt)
         command = self.build_command(mode, binary_path, settings, "stream-json", resume_task_id)
         started_at = time.time()
         child_env = bob_child_env()
-        process = subprocess.Popen(  # noqa: S603 - lista de argumentos, sin shell
+        process = subprocess.Popen(  # noqa: S603 - argument list, no shell
             command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -457,12 +456,12 @@ class BobAdapter:
             stdin = process.stdin
 
             def feed_prompt() -> None:
-                # En su propio hilo: si Bob escribe antes de leer todo el prompt, nadie se queda esperando.
+                # In its own thread: if Bob writes before reading the whole prompt, nobody blocks.
                 try:
                     stdin.write(prompt)
                     stdin.close()
                 except (BrokenPipeError, OSError, ValueError):
-                    logger.debug("Bob cerró stdin antes de leer el prompt completo")
+                    logger.debug("Bob closed stdin before reading the whole prompt")
 
             threading.Thread(target=feed_prompt, name="bob-stdin", daemon=True).start()
             for line in process.stdout:
@@ -487,8 +486,8 @@ class BobAdapter:
                     final = event
                 try:
                     on_event(event)
-                except Exception:  # noqa: BLE001 - la UI nunca debe tumbar una auditoría
-                    logger.exception("Error procesando un evento de Bob")
+                except Exception:  # noqa: BLE001 - the UI must never bring an audit down
+                    logger.exception("Error processing a Bob event")
             process.wait()
         finally:
             timer.cancel()
@@ -496,18 +495,18 @@ class BobAdapter:
             with _ACTIVE_LOCK:
                 _ACTIVE_PROCESSES.discard(process)
             if process.poll() is None:
-                process.kill()  # p. ej. excepción del lector: nunca dejar a Bob corriendo solo
+                process.kill()  # e.g. an exception in the reader: never leave Bob running alone
             drain.join(timeout=2)
             if raw_handle:
                 with raw_lock:
                     raw_handle.close()
         if timed_out.is_set():
-            raise BobTimeoutError(f"Bob ({mode}) superó el timeout de {settings.timeout_s}s.")
+            raise BobTimeoutError(f"Bob ({mode}) exceeded the {settings.timeout_s}s timeout.")
         if process.returncode != 0:
             detail = ("".join(stderr_parts))[-_STDERR_TAIL_CHARS:].strip()
-            raise BobExecutionError(f"Bob ({mode}) terminó con código {process.returncode}: {detail}")
+            raise BobExecutionError(f"Bob ({mode}) exited with code {process.returncode}: {detail}")
         if final is None:
-            raise BobExecutionError("La salida de Bob no contiene un evento 'result'.")
+            raise BobExecutionError("Bob's output has no 'result' event.")
         result = BobResult(
             mode=mode,
             status=final.get("status", "unknown"),
@@ -516,15 +515,15 @@ class BobAdapter:
             execution_mode="live",
         )
         if result.status != "success":
-            raise BobExecutionError(f"Bob ({mode}) devolvió status {result.status!r}.")
+            raise BobExecutionError(f"Bob ({mode}) returned status {result.status!r}.")
         return result
 
     def find_session_id(self) -> str | None:
-        """Última sesión raíz de Bob en este workspace, leída en solo lectura de su base local.
+        """Latest root Bob session in this workspace, read-only from its local database.
 
-        Sirve para reanudar una sesión cuyo stream se cortó antes del evento `result` (p. ej.
-        `read ETIMEDOUT` del servicio de inferencia). Es un rescate best-effort: si la base no
-        existe o cambia de esquema, devuelve None y se informa el error original.
+        Used to resume a session whose stream was cut before the `result` event (e.g.
+        `read ETIMEDOUT` from the inference service). It is a best-effort rescue: if the database
+        does not exist or its schema changes, it returns None and the original error is reported.
         """
         database = Path(os.environ.get("BOB_DB_PATH", Path.home() / ".bob" / "db" / "bob.db"))
         if not database.is_file():
@@ -537,13 +536,13 @@ class BobAdapter:
                     (str(self.workspace),),
                 ).fetchone()
         except sqlite3.Error:
-            logger.warning("No se pudo leer la base de sesiones de Bob", exc_info=True)
+            logger.warning("Could not read the Bob session database", exc_info=True)
             return None
         return str(row[0]) if row else None
 
     @staticmethod
     def import_result(json_path: Path, mode: str) -> BobResult:
-        """Modo asistido (D12): carga un resultado exportado de Bob como `imported`."""
+        """Assisted mode (D12): loads an exported Bob result as `imported`."""
         result = parse_bob_output(json_path.read_text(encoding="utf-8"), mode)
         return result.model_copy(update={"execution_mode": "imported"})
 
